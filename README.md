@@ -9,16 +9,16 @@ A4 인쇄용 문서)을 만든다. 메뉴·페르소나·라우터 없음 — **
 
 ## Status
 
-🚧 **준비 단계 (§A).** 스킬 본체는 아직 빌드 전(§B). 현재는 스캐폴딩 + 사양만 존재.
+🚧 **준비 단계(§A) 완료 — 빌드(§B)는 사용자 승인 대기.** 스킬 본체(SKILL.md 본문)는 아직 스켈레톤.
 
 | 준비 단계 | 상태 |
 |---|---|
 | A1 리포 스캐폴딩 (BUILD_SPEC · SKILL 스켈레톤 · 디렉터리 · .gitignore) | ✅ 완료 |
-| A2 zip 추출·배치 | ⛔ **차단 — `Gems_Input.zip` 미제공** |
-| A3 개인 프로필 보정 (포폴·이력서 기반) | ⛔ **차단 — zip 내 포폴/이력서 필요** |
-| A4 방법론 모듈 추출 (HR/Job PDF) | ⛔ **차단 — zip 내 PDF 필요** |
-| A5 준비 완료 보고 → 정지 | ⏸ zip 제공 후 진행 |
-| §B 빌드 | ⏳ 준비 완료 + 사용자 승인 후 |
+| A2 zip 추출·배치 (31 PDF → 방법론 소스 / 포폴·이력서·타깃은 gitignore) | ✅ 완료 |
+| A3 개인 프로필 보정 (`.private/profile.md`, gitignore·로컬) | ✅ 완료 (사용자 리뷰 대기) |
+| A4 방법론 모듈 추출 (`reference/methodology.md` + `gems/techniques.md`) | ✅ 완료 |
+| A5 준비 완료 보고 → 정지 | ▶ 진행 (사용자 승인 게이트) |
+| §B 빌드 | ⏳ 승인 후 |
 
 ## 7 Tasks (D-2)
 1. JD ↔ 포트폴리오 매칭 (5-D Prism + 매칭 매트릭스 + 갭·보강)
@@ -35,11 +35,11 @@ A4 인쇄용 문서)을 만든다. 메뉴·페르소나·라우터 없음 — **
 ## Repo layout (D-8)
 ```
 BUILD_SPEC.md            사양 원본 (§D + §F)
-SKILL.md                 스킬 정의 (name + description + 본문)   ← 현재 스켈레톤
+SKILL.md                 스킬 정의 (name + description + 본문)   ← 현재 스켈레톤(§B에서 완성)
 reference/
-  gems/                  엔진 레퍼런스 기법 체리픽 (페르소나 이식 금지)
-  private/    [gitignore] 포폴·이력서 (PRIVATE)
-  methodology.md         채용 컨설턴트 방법론 모듈              ← 추출 대기
+  gems/techniques.md     엔진 레퍼런스 체리픽 기법 + 포팅 금지 목록 (페르소나 이식 없음)
+  private/    [gitignore] 포폴·이력서·타깃·소스 PDF·텍스트 캐시 (PRIVATE)
+  methodology.md         채용 컨설턴트 방법론 모듈 (5-D Prism·Truth Tier·STAR-L·Tech-to-Biz + 6 섹션)
 templates/
   report.html            HTML 보고 표준 (D-7a)                  ← 빌드 대기
   a4-doc.html            A4 인쇄용 문서 (D-7b)                  ← 빌드 대기
@@ -50,8 +50,8 @@ README.md
 
 ## Privacy (D-6)
 `.private/`, `reference/private/`는 **gitignore**되어 커밋·번들되지 않는다. 개인 이력서·포트폴리오·
-프로필은 스킬 번들에 포함하지 않으며, 저장 위치는 실행 중 선택(repo private+gitignore / CC 메모리 /
-외부 파일).
+프로필·타깃 리서치는 스킬 번들에 포함하지 않으며, 저장 위치는 실행 중 선택(repo private+gitignore /
+CC 메모리 / 외부 파일).
 
 ## Usage
 > 스킬 빌드(§B) 완료 후 작성 예정. 커맨드명은 빌드 중 사용자가 지정.
