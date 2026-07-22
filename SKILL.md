@@ -7,7 +7,7 @@ description: Personalized job-search and career-change manager. In one conversat
 
 취업·이직을 개인화 지원하는 단일 스킬. **하나의 커맨드가 대화로 의도를 파악해 7개 태스크 중 하나를 자동 판별**하고, 태스크별 **고정 출력 템플릿 1벌**로 산출물을 만든다. 메뉴·페르소나·엔진 전환·라우터·상주 UX **없음**.
 
-> 근거·규칙의 원천: [`BUILD_SPEC.md`](BUILD_SPEC.md)(SSOT) · 방법론 [`reference/methodology.md`](reference/methodology.md) · 평가 루브릭 [`reference/evaluation.md`](reference/evaluation.md) · 엔진 체리픽 [`reference/gems/techniques.md`](reference/gems/techniques.md) · 출력 [`templates/report.html`](templates/report.html)·[`templates/a4-doc.html`](templates/a4-doc.html).
+> 근거·규칙의 원천: [`BUILD_SPEC.md`](BUILD_SPEC.md)(SSOT) · 방법론 [`reference/methodology.md`](reference/methodology.md) · **포트폴리오 빌더(마스터 경험 뱅크·P0–P8)** [`reference/portfolio-builder.md`](reference/portfolio-builder.md) · 문체 [`reference/writing-voice.md`](reference/writing-voice.md) · 평가 루브릭 [`reference/evaluation.md`](reference/evaluation.md) · 엔진 체리픽 [`reference/gems/techniques.md`](reference/gems/techniques.md) · 출력 [`templates/report.html`](templates/report.html)·[`templates/a4-doc.html`](templates/a4-doc.html)·입력폼 [`templates/intake-form.html`](templates/intake-form.html)·지원현황 [`templates/application-tracker.html`](templates/application-tracker.html).
 
 ---
 
@@ -42,7 +42,9 @@ description: Personalized job-search and career-change manager. In one conversat
   - **기본:** repo 내 `.private/profile.md` + `reference/private/`(둘 다 `.gitignore`) ← 빌드 기본값
   - **대안:** Claude Code 메모리 / 외부 파일(사용자 지정 경로)
 - 스킬은 이 컨텍스트를 **read/write**하며 세션마다 개선(새 정량 성과·전형 현황·[T3] 근거 확보 시 반영).
-- **커밋 금지 가드:** 개인 컨텍스트 경로를 git에 add하지 않는다. 산출물에 PII를 넣기 전 사용자 확인. IP·영업비밀 소지 항목은 공개/대외 문서에 **비IP·방어 가능 범위로만** 축약(사용자 프로필 정책 준수).
+- **마스터 경험 뱅크(SSOT) = `.private/experience-bank.md`** — 모든 경험 원자(C·R·A·R·I·KPI·Truth Tier·해시태그)를 담는 durable 원본. ②·①·④·⑤·⑦의 공통 근거 소스. 구축·갱신 절차는 [`reference/portfolio-builder.md`](reference/portfolio-builder.md)(P0–P8). 세션마다 "새 경험/수치 생겼나요?" 자동 확인 후 증분 갱신, `[T3]→[T1]` 승격 리마인드.
+- **지원 히스토리 = `.private/applications/`** — 지원 건별(회사·직무·마감·전형단계·결과 + 제출 파생본 스냅샷) 누적. "지원 현황 보여줘" → [`templates/application-tracker.html`](templates/application-tracker.html)로 렌더(자소설닷컴식 D-day·단계·결과).
+- **커밋 금지 가드:** 개인 컨텍스트 경로(`.private/`·`reference/private/`, 뱅크·지원 히스토리 포함)를 git에 add하지 않는다. 산출물에 PII를 넣기 전 사용자 확인. IP·영업비밀 소지 항목은 공개/대외 문서에 **비IP·방어 가능 범위로만** 축약(사용자 프로필 정책 준수).
 
 ---
 
@@ -98,9 +100,11 @@ description: Personalized job-search and career-change manager. In one conversat
 7. **참조 출처** — insane-search 사용 시 (티어·조회일)
 
 ### ② 문서 작성/첨삭 → 분석은 report.html, 최종 문서는 a4-doc.html
+> **기초 job = 포트폴리오 빌더.** ②의 모든 문서는 **마스터 경험 뱅크**(`.private/experience-bank.md`)에서 파생한다. 뱅크가 없으면 먼저 구축: [`templates/intake-form.html`](templates/intake-form.html) 표준 폼으로 입력받아 → **P0–P8**([`reference/portfolio-builder.md`](reference/portfolio-builder.md))로 경험 분류(필/빌/밉살기·해시태그)·포트폴리오화(C·R·A·R·I·KPI 5버킷·NCS)·방어 시뮬 → 뱅크 저장. 이미 있으면 재입력 없이 파생. **작업용/제출용** 토글로 증빙·메모 노출을 가르고, 모든 문장은 **문체 게이트**([`reference/writing-voice.md`](reference/writing-voice.md), AI-tell 제거·진지문서 이모지 금지)를 통과시킨다.
+
 공통 입력: `문서유형(자소서·이력서KR·resume EN·cover letter EN·포트폴리오) | 회사/직무 | 문항·분량 | 포함 키워드`.
-- **작성(write):** ① 경험 채굴 3문(STAR-L Miner: Crisis·역할 vs 팀·정확한 수치) → ② 초안 v1(요청 언어) → ③ 검증 체크(키워드·수치·면접 방어) → ④ **A4 문서 산출**(a4-doc.html).
-- **첨삭(edit):** ① 면접 꼬리표 위험 진단(공격 포인트·근거 취약·과장 금지 구간) → ② 구조 점수표(두괄식·STAR·직무적합·수치화·회사맞춤, 0–10, Stage 1 보수) → ③ 핵심 감점 사유 → ④ 문장 수술 Top 10(Before/After/Why) → ⑤ 리라이트 v1(Stage 2, 진실하되 강한) → ⑥ 선발 관점 판정(서류·면접방어·확신도). *(진단=report.html, 최종 리라이트 문서=a4-doc.html)*
+- **작성(write):** ① 뱅크 로드(없으면 intake-form→P1–P3) → ② 경험 채굴/보완(STAR-L·C·R·A·R·I: Crisis·역할 vs 팀·정확한 수치, 정량 부족 시 대화로 채움) → ③ 초안 v1(요청 언어, 문체 게이트) → ④ 검증 체크(키워드·수치·면접 방어·수치 무결성) → ⑤ **A4 문서 산출**(a4-doc.html, 작업용/제출용).
+- **첨삭(edit):** ① 면접 꼬리표 위험 진단(공격 포인트·근거 취약·과장 금지 구간) → ② 구조 점수표(두괄식·STAR·직무적합·수치화·회사맞춤, 0–10, Stage 1 보수) → ③ 핵심 감점 사유 → ④ 문장 수술 Top 10(Before/After/Why, 문체 게이트) → ⑤ 리라이트 v1(Stage 2, 진실하되 강한, PR강도 Lv1–3) → ⑥ 선발 관점 판정(서류·면접방어·확신도). *(진단=report.html, 최종 리라이트 문서=a4-doc.html)*
 
 ### ③ 면접 준비 → report.html
 1. **세팅** — `라운드 | 면접관(실무/임원/HR) | 강도`
@@ -146,7 +150,10 @@ description: Personalized job-search and career-change manager. In one conversat
 ## 7. 출력 규격 (D-7)
 
 - **분석·진단·리포트·로드맵 → HTML 보고 표준** = [`templates/report.html`](templates/report.html): 자체완결 1파일 · KR/EN 토글 · easy/expert 토글 · 인라인 SVG · 점진 공개(`<details>`) · 워크플로우/알고리즘은 node-edge 다이어그램 · **색 3색 이내** · 라이트/다크 · **실제 KST 스탬프**(생성 시각) · **외부 라이브러리/네트워크 금지**.
-- **문서(이력서·resume·cover·자소서·포트폴리오) → A4 인쇄용 HTML** = [`templates/a4-doc.html`](templates/a4-doc.html): `@page{size:A4;margin}` + `@media print` · `page-break-inside:avoid` · 오버플로·인쇄 잘림 방지 · **인쇄 시 화면 UI `display:none`** · PDF 인쇄 시 A4에 깔끔히. **샘플 생성 후 인쇄 점검 필수**(`scripts/check_a4.py`).
+- **문서(이력서·resume·cover·자소서·포트폴리오) → A4 인쇄용 HTML** = [`templates/a4-doc.html`](templates/a4-doc.html): `@page{size:A4;margin}` + `@media print` · `page-break-inside:avoid`·`break-after:avoid`(고아 제목 방지) · 오버플로·인쇄 잘림 방지 · **인쇄 시 화면 UI `display:none`** · **국/영 병기·작업용/제출용 토글**(제출용은 메모·증빙 자동 숨김) · PDF 인쇄 시 A4에 깔끔히. **샘플 생성 후 인쇄 점검 필수**(`scripts/check_a4.py`).
+- **입력 수집 → 표준 폼 HTML** = [`templates/intake-form.html`](templates/intake-form.html): 사용자가 채울 값은 동일 양식으로 제공(인적사항·타임라인 년/월·경력·C·R·A·R·I·자격) → **[데이터 복사]**로 구조화 텍스트를 뱅크 구축에 사용.
+- **지원 현황 → 대시보드 HTML** = [`templates/application-tracker.html`](templates/application-tracker.html): 전형단계 파이프라인·D-day·결과 뱃지·제출 파생본. `.private/applications/` 히스토리를 렌더.
+- **런타임 다이얼(세션 중 조절):** 출력모드(작업/제출)·언어(국/영)·평가강도(코칭/균형/압박)·꼬리질문경중(상/중/하)·PR강도(Lv1–3)·전문용어강도(Lv1–3). 정의는 [`reference/portfolio-builder.md`](reference/portfolio-builder.md) §0. **강도류는 톤·표현만 바꾸고 채점 보수성·수치 무결성·날조 금지는 불변.**
 - **태스크당 표준 템플릿 1벌 고정** — 같은 태스크는 항상 같은 섹션·순서.
 
 ## 8. 사용법 (요약)

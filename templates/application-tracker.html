@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<!--
+  career skill — 지원 히스토리 대시보드 (portfolio-builder P8)
+  자소설닷컴 스타일 지원 관리: 회사·직무·지원일·마감(D-day)·전형단계 파이프라인·결과 뱃지 +
+  제출 파생본(내용물) 링크. 자체완결, 외부 네트워크 0.
+  ★ 스킬은 .private/applications/ 누적 히스토리를 아래 APPS 배열로 렌더한다(개인정보 → 커밋 금지).
+    이 파일 자체는 GENERIC 샘플만 포함(PII 금지).
+  D-day 계산은 문서에 박힌 기준일(TODAY)을 쓴다 — 스킬이 렌더 시 실제 날짜로 치환(자체완결·재현성).
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>career — 지원 현황</title>
+<style>
+  :root{
+    --accent:#9a3b2e; --ink:#1b1a17; --muted:#6c675e; --faint:#9b958a;
+    --line:#e7e3da; --line-2:#d4cec3; --wash:#f7efec; --paper:#fff;
+    --ok:#2f7d5b; --warn:#b8823a; --wait:#3a6ea5; --no:#9a3b2e;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',Roboto,sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#eceae4; color:var(--ink); font-family:var(--sans);
+    font-size:14px; line-height:1.5; letter-spacing:-0.002em; }
+  .wrap{ max-width:900px; margin:0 auto; padding:28px 16px 80px; }
+  .bar{ height:3px; width:60px; background:var(--accent); margin-bottom:14px; }
+  h1{ margin:0; font-size:26px; font-weight:800; letter-spacing:-0.02em; }
+  .lead{ margin:8px 0 0; color:var(--muted); font-size:13.5px; }
+
+  /* 요약 */
+  .summary{ display:grid; grid-template-columns:repeat(5,1fr); gap:0; margin:22px 0 6px;
+    border-top:1px solid var(--line-2); border-bottom:1px solid var(--line-2); }
+  .summary .cell{ padding:14px 16px; border-right:1px solid var(--line); }
+  .summary .cell:last-child{ border-right:none; }
+  .summary .num{ font-family:var(--serif); font-size:30px; line-height:1; color:var(--ink); }
+  .summary .lbl{ margin-top:7px; font-size:10.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--faint); }
+  @media(max-width:620px){ .summary{ grid-template-columns:repeat(2,1fr); } }
+
+  /* 필터 */
+  .filters{ display:flex; gap:6px; margin:18px 0 4px; flex-wrap:wrap; }
+  .filters button{ border:1px solid var(--line-2); background:#fff; color:var(--muted); border-radius:20px;
+    padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer; font-family:var(--sans); }
+  .filters button.on{ background:var(--ink); color:#efe9df; border-color:var(--ink); }
+
+  /* 카드 */
+  .app{ background:var(--paper); border:1px solid var(--line); border-radius:11px; padding:17px 19px;
+    margin-top:13px; }
+  .app-top{ display:flex; align-items:center; gap:12px; }
+  .mono{ flex:none; width:38px; height:38px; border:1px solid var(--line-2); border-radius:6px;
+    display:grid; place-items:center; font-family:var(--serif); font-weight:700; font-size:17px;
+    color:var(--accent); background:var(--wash); }
+  .app-id{ flex:1; min-width:0; }
+  .app-id .co{ font-size:15px; font-weight:700; }
+  .app-id .ti{ font-size:12.5px; color:var(--muted); }
+  .badge{ flex:none; font-size:11px; font-weight:700; letter-spacing:0.03em; padding:4px 11px; border-radius:20px; }
+  .badge.progress{ color:var(--warn); background:#f7eede; }
+  .badge.pass{ color:#fff; background:var(--ok); }
+  .badge.fail{ color:var(--no); background:var(--wash); }
+  .badge.wait{ color:var(--wait); background:#e8f0f8; }
+
+  .dates{ display:flex; gap:16px; margin:12px 0 14px; font-size:12px; color:var(--muted); }
+  .dates .dday{ font-weight:700; color:var(--accent); }
+  .dates .dday.past{ color:var(--faint); font-weight:400; }
+
+  /* 전형 파이프라인 */
+  .pipe{ display:flex; align-items:center; gap:0; margin:4px 0 2px; }
+  .pipe .step{ flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; position:relative; }
+  .pipe .step .dot{ width:11px; height:11px; border-radius:50%; background:#fff; border:2px solid var(--line-2); z-index:1; }
+  .pipe .step.done .dot{ background:var(--accent); border-color:var(--accent); }
+  .pipe .step.cur .dot{ background:#fff; border-color:var(--accent); box-shadow:0 0 0 3px var(--wash); }
+  .pipe .step.fail .dot{ background:var(--no); border-color:var(--no); }
+  .pipe .step .lb{ font-size:9px; letter-spacing:0.02em; color:var(--faint); text-align:center; white-space:nowrap; }
+  .pipe .step.done .lb,.pipe .step.cur .lb,.pipe .step.fail .lb{ color:var(--muted); font-weight:600; }
+  .pipe .step .line{ position:absolute; top:5px; left:-50%; width:100%; height:2px; background:var(--line-2); z-index:0; }
+  .pipe .step.done .line,.pipe .step.cur .line,.pipe .step.fail .line{ background:var(--accent); }
+  .pipe .step:first-child .line{ display:none; }
+
+  .docs{ margin-top:13px; padding-top:11px; border-top:1px solid var(--line); font-size:12px; }
+  .docs a{ color:var(--accent); text-decoration:none; margin-right:14px; font-weight:600; }
+  .docs .none{ color:var(--faint); }
+
+  .empty{ text-align:center; color:var(--faint); padding:40px; font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar"></div>
+  <h1>지원 현황</h1>
+  <p class="lead">지원 건별 전형 단계·마감·결과를 한눈에. 제출한 파생본(이력서·자소서)은 각 카드에서 조회합니다.</p>
+
+  <div class="summary" id="summary"></div>
+  <div class="filters" id="filters"></div>
+  <div id="list"></div>
+</div>
+
+<script>
+  // 기준일 — 스킬이 렌더 시 실제 KST 날짜로 치환(자체완결·재현성)
+  const TODAY = '2026-07-22';
+
+  // 전형 단계 표준 파이프라인
+  const STAGES = ['관심','서류접수','서류합격','인적성/과제','1차면접','2차면접','최종'];
+
+  // .private/applications/ 누적 히스토리 (샘플 — 스킬이 실제 데이터로 치환)
+  const APPS = [
+    { co:'핀테크 A', mono:'A', title:'백엔드 엔지니어', applied:'2026-07-01', deadline:'2026-07-25',
+      stage:'1차면접', result:'progress', docs:[{label:'제출 이력서', href:'#'},{label:'자소서 4문항', href:'#'}] },
+    { co:'커머스 B', mono:'B', title:'플랫폼 엔지니어', applied:'2026-06-10', deadline:'2026-06-20',
+      stage:'최종', result:'pass', docs:[{label:'제출본 스냅샷', href:'#'}] },
+    { co:'스타트업 D', mono:'D', title:'서버 개발', applied:'2026-06-05', deadline:'2026-06-15',
+      stage:'서류합격', result:'fail', docs:[{label:'제출 이력서', href:'#'}] },
+    { co:'제조 C', mono:'C', title:'생산기술', applied:'2026-07-18', deadline:'2026-08-05',
+      stage:'서류접수', result:'wait', docs:[] },
+  ];
+
+  const RESULT_LABEL={ progress:'진행중', pass:'최종 합격', fail:'불합격', wait:'결과 대기' };
+
+  function daysBetween(a,b){ return Math.round((Date.parse(b)-Date.parse(a))/86400000); }
+  function ddayText(deadline){
+    const d=daysBetween(TODAY,deadline);
+    if(d>0) return {t:'D-'+d, past:false};
+    if(d===0) return {t:'D-DAY', past:false};
+    return {t:'마감('+(-d)+'일 경과)', past:true};
+  }
+
+  function renderSummary(apps){
+    const c={total:apps.length, progress:0, pass:0, fail:0, wait:0};
+    apps.forEach(a=>c[a.result]++);
+    const cells=[['총 지원',c.total],['진행중',c.progress],['합격',c.pass],['불합격',c.fail],['대기',c.wait]];
+    document.getElementById('summary').innerHTML=cells.map(([l,n])=>
+      `<div class="cell"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join('');
+  }
+
+  function pipeHTML(app){
+    const curIdx=STAGES.indexOf(app.stage);
+    return `<div class="pipe">`+STAGES.map((s,i)=>{
+      let cls='step';
+      if(i<curIdx) cls+=' done';
+      else if(i===curIdx) cls+=(app.result==='fail'?' fail':' cur');
+      return `<div class="${cls}"><span class="line"></span><span class="dot"></span><span class="lb">${s}</span></div>`;
+    }).join('')+`</div>`;
+  }
+
+  function cardHTML(app){
+    const dd=ddayText(app.deadline);
+    const docs= app.docs && app.docs.length
+      ? app.docs.map(d=>`<a href="${d.href}">${d.label} ↗</a>`).join('')
+      : `<span class="none">제출 파생본 없음</span>`;
+    return `<div class="app" data-result="${app.result}">
+      <div class="app-top">
+        <span class="mono">${app.mono||app.co[0]}</span>
+        <div class="app-id"><div class="co">${app.co}</div><div class="ti">${app.title}</div></div>
+        <span class="badge ${app.result}">${RESULT_LABEL[app.result]}</span>
+      </div>
+      <div class="dates">
+        <span>지원일 · ${app.applied}</span>
+        <span>마감 · ${app.deadline}</span>
+        <span class="dday ${dd.past?'past':''}">${dd.t}</span>
+      </div>
+      ${pipeHTML(app)}
+      <div class="docs">제출본 · ${docs}</div>
+    </div>`;
+  }
+
+  let filter='all';
+  function render(){
+    renderSummary(APPS);
+    const shown = filter==='all'? APPS : APPS.filter(a=>a.result===filter);
+    const list=document.getElementById('list');
+    list.innerHTML = shown.length ? shown.map(cardHTML).join('')
+      : `<div class="empty">해당 상태의 지원 건이 없습니다.</div>`;
+  }
+  function renderFilters(){
+    const opts=[['all','전체'],['progress','진행중'],['pass','합격'],['fail','불합격'],['wait','대기']];
+    document.getElementById('filters').innerHTML=opts.map(([k,l])=>
+      `<button class="${k===filter?'on':''}" onclick="setFilter('${k}')">${l}</button>`).join('');
+  }
+  function setFilter(k){ filter=k; renderFilters(); render(); }
+
+  renderFilters(); render();
+</script>
+</body>
+</html>

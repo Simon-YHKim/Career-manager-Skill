@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<!--
+  career skill — 표준 입력 폼 (D-7d / portfolio-builder P0–P3, P8)
+  사용자가 채워야 하는 값을 "동일한 양식"으로 받아 작성 부담을 낮춘다. 자체완결, 외부 네트워크 0.
+  [데이터 복사] → 구조화 텍스트 블록을 클립보드로 → 스킬 대화에 붙여넣으면 스킬이 파싱해
+  마스터 경험 뱅크(.private/experience-bank.md)를 구축한다.
+  ★ 이 폼에 입력한 내용은 개인정보다. 스킬은 gitignore된 .private/ 에만 저장하고 커밋하지 않는다.
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>career — 입력 폼</title>
+<style>
+  :root{
+    --accent:#9a3b2e; --ink:#1b1a17; --muted:#6c675e; --faint:#9b958a;
+    --line:#e7e3da; --line-2:#d4cec3; --wash:#f7efec; --paper:#fff;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',Roboto,sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#eceae4; color:var(--ink); font-family:var(--sans);
+    font-size:14px; line-height:1.55; letter-spacing:-0.002em; }
+  .wrap{ max-width:860px; margin:0 auto; padding:0 16px 80px; }
+
+  /* 헤더 */
+  header.top{ padding:28px 16px 20px; max-width:860px; margin:0 auto; }
+  .bar{ height:3px; width:60px; background:var(--accent); margin-bottom:14px; }
+  h1{ margin:0; font-size:26px; font-weight:800; letter-spacing:-0.02em; }
+  .lead{ margin:8px 0 0; color:var(--muted); font-size:13.5px; max-width:60ch; }
+
+  /* 스티키 액션바 */
+  .actions{ position:sticky; top:0; z-index:20; display:flex; gap:8px; align-items:center;
+    padding:10px 16px; background:rgba(27,26,23,.96); backdrop-filter:blur(4px); }
+  .actions .wrapf{ max-width:860px; margin:0 auto; width:100%; display:flex; gap:8px; align-items:center; }
+  .btn{ border:1px solid #38362f; background:#efe9df; color:#1b1a17; border-radius:7px;
+    padding:8px 15px; font-size:13px; font-weight:700; cursor:pointer; font-family:var(--sans); }
+  .btn.ghost{ background:transparent; color:#efe9df; font-weight:600; }
+  .actions .status{ color:#8a857c; font-size:12px; margin-left:auto; }
+
+  /* 섹션 */
+  section.card{ background:var(--paper); border:1px solid var(--line); border-radius:10px;
+    padding:20px 22px; margin-top:18px; }
+  .sec-h{ display:flex; align-items:baseline; gap:10px; margin:0 0 4px; }
+  .sec-h .n{ font-family:var(--serif); font-style:italic; font-size:14px; color:var(--accent); }
+  .sec-h h2{ margin:0; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; }
+  .sec-guide{ color:var(--faint); font-size:12px; margin:0 0 16px; }
+
+  label{ display:block; font-size:11.5px; font-weight:700; letter-spacing:0.02em; color:var(--muted);
+    text-transform:uppercase; margin:0 0 5px; }
+  .hint{ font-weight:400; text-transform:none; letter-spacing:0; color:var(--faint); font-size:11px; }
+  input,textarea,select{ width:100%; font-family:var(--sans); font-size:13.5px; color:var(--ink);
+    background:#fff; border:1px solid var(--line-2); border-radius:7px; padding:9px 11px; }
+  input:focus,textarea:focus,select:focus{ outline:2px solid var(--wash); border-color:var(--accent); }
+  textarea{ resize:vertical; min-height:60px; line-height:1.5; }
+  .field{ margin-bottom:14px; }
+  .row{ display:grid; gap:12px; }
+  .row.c2{ grid-template-columns:1fr 1fr; }
+  .row.c3{ grid-template-columns:1fr 1fr 1fr; }
+  .row.c4{ grid-template-columns:1fr 1fr 1fr 1fr; }
+  @media(max-width:620px){ .row.c2,.row.c3,.row.c4{ grid-template-columns:1fr; } }
+
+  /* 반복 블록 */
+  .rep{ border:1px solid var(--line); border-left:3px solid var(--line-2); border-radius:8px;
+    padding:15px 16px; margin-bottom:12px; background:#fcfbf9; }
+  .rep-top{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+  .rep-top .tag{ font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--accent); }
+  .rep-top .del{ margin-left:auto; border:none; background:transparent; color:var(--faint);
+    font-size:18px; line-height:1; cursor:pointer; padding:2px 6px; }
+  .add{ border:1px dashed var(--line-2); background:var(--wash); color:var(--accent); border-radius:7px;
+    padding:9px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:var(--sans); }
+
+  .fill-note{ font-size:11.5px; color:var(--faint); margin-top:2px; }
+  details.gd{ margin-top:6px; }
+  details.gd summary{ cursor:pointer; font-size:11.5px; color:var(--accent); font-weight:600; }
+  details.gd p{ margin:6px 0 0; font-size:12px; color:var(--muted); }
+
+  /* 출력 미리보기 */
+  #out{ white-space:pre-wrap; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px;
+    background:#1b1a17; color:#e9e4d8; border-radius:8px; padding:16px; margin-top:14px; display:none; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="bar"></div>
+  <h1>career · 입력 폼</h1>
+  <p class="lead">아래를 채우고 <strong>[데이터 복사]</strong>를 누른 뒤, 복사된 내용을 스킬 대화창에 붙여넣으세요.
+    비워도 됩니다 — 스킬이 빈 곳은 대화로 채우고 정량화를 돕습니다. 모르면 대략·범위로 적어도 좋습니다.
+    입력은 개인정보이며 <strong>.private/</strong>에만 저장되고 커밋되지 않습니다.</p>
+</header>
+
+<div class="actions">
+  <div class="wrapf">
+    <button class="btn" onclick="copyData()">📋 데이터 복사</button>
+    <button class="btn ghost" onclick="togglePreview()">미리보기</button>
+    <span class="status" id="status"></span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- 0. 타깃 / 모드 -->
+  <section class="card">
+    <div class="sec-h"><span class="n">00</span><h2>타깃 · 모드</h2></div>
+    <p class="sec-guide">JD가 있으면 그 기준으로, 없으면 프로필 자체로 진행합니다(외부 타깃을 임의로 가정하지 않음).</p>
+    <div class="row c2">
+      <div class="field">
+        <label>목표 <span class="hint">지금 만들 산출물</span></label>
+        <select id="goal">
+          <option value="master">마스터본 — 모든 경험 정리(durable 원본)</option>
+          <option value="tailored">맞춤형 — 특정 JD에 정렬된 제출본</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>출력 모드</label>
+        <select id="mode">
+          <option value="work">작업용 — 평가·근거·메모 포함</option>
+          <option value="submit">제출용 — 본문만</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>타깃 JD <span class="hint">있으면 붙여넣기 · 없으면 비움</span></label>
+      <textarea id="jd" placeholder="채용 공고 전문 또는 링크. 없으면 비워두세요."></textarea>
+    </div>
+  </section>
+
+  <!-- 1. 인적사항 -->
+  <section class="card">
+    <div class="sec-h"><span class="n">01</span><h2>인적사항</h2></div>
+    <p class="sec-guide">제출용 문서 상단에 들어갈 연락처입니다.</p>
+    <div class="row c2">
+      <div class="field"><label>이름</label><input id="name" placeholder="홍길동"></div>
+      <div class="field"><label>영문 이름 <span class="hint">국/영 병기 시</span></label><input id="name_en" placeholder="Hong Gildong"></div>
+    </div>
+    <div class="row c2">
+      <div class="field"><label>희망 직무 / 직함</label><input id="role" placeholder="예: 생산기술 엔지니어"></div>
+      <div class="field"><label>지역</label><input id="loc" placeholder="서울, 대한민국"></div>
+    </div>
+    <div class="row c3">
+      <div class="field"><label>이메일</label><input id="email" placeholder="name@email.com"></div>
+      <div class="field"><label>전화</label><input id="phone" placeholder="+82 10-0000-0000"></div>
+      <div class="field"><label>링크 <span class="hint">GitHub·포트폴리오</span></label><input id="link" placeholder="github.com/…"></div>
+    </div>
+    <div class="field">
+      <label>한 줄 헤드라인 <span class="hint">비우면 스킬이 후보 제안</span></label>
+      <input id="headline" placeholder="예: CapEx 252억을 방어한 원가 엔지니어">
+    </div>
+  </section>
+
+  <!-- 2. 타임라인: 학력·병역 -->
+  <section class="card">
+    <div class="sec-h"><span class="n">02</span><h2>타임라인 · 학력 · 병역</h2></div>
+    <p class="sec-guide">초/중/고/대학/석사/박사·병역을 <strong>년·월</strong> 단위로. 정확한 기간이 타임라인·연차·공백 진단의 기준입니다. (필요 시 일 단위까지)</p>
+    <div id="edu-list"></div>
+    <button class="add" onclick="addEdu()">＋ 학력/병역 추가</button>
+  </section>
+
+  <!-- 3. 경력 -->
+  <section class="card">
+    <div class="sec-h"><span class="n">03</span><h2>경력</h2></div>
+    <p class="sec-guide">회사·직무·재직 기간. 현재 재직 중이면 종료에 "현재".</p>
+    <div id="job-list"></div>
+    <button class="add" onclick="addJob()">＋ 경력 추가</button>
+  </section>
+
+  <!-- 4. 대표 경험 / 프로젝트 (C·R·A·R·I) -->
+  <section class="card">
+    <div class="sec-h"><span class="n">04</span><h2>대표 경험 · 프로젝트</h2></div>
+    <p class="sec-guide">필살기 후보를 <strong>C·R·A·R·I</strong>로. 수치를 모르면 대략/범위로 — 스킬이 정량화를 돕습니다.</p>
+    <details class="gd"><summary>C·R·A·R·I 작성 가이드</summary>
+      <p><strong>Context</strong> 상황·과제(왜 필요했나) · <strong>Role</strong> 내 역할 + 기여도% · <strong>Action</strong> 실제 한 행동(동사+방법) · <strong>Result</strong> 결과(정량 우선, 출처) · <strong>Insight</strong> 배운 것·전이 통찰</p>
+    </details>
+    <div id="proj-list" style="margin-top:12px;"></div>
+    <button class="add" onclick="addProj()">＋ 경험/프로젝트 추가</button>
+  </section>
+
+  <!-- 5. 수상·자격·스킬 -->
+  <section class="card">
+    <div class="sec-h"><span class="n">05</span><h2>자격 · 수상 · 스킬</h2></div>
+    <div class="field">
+      <label>보유 스킬 <span class="hint">쉼표로 구분</span></label>
+      <input id="skills" placeholder="예: 원가분석, GD&T, Minitab, SQL, 영어(비즈니스)">
+    </div>
+    <p class="sec-guide" style="margin-top:4px;">자격·수상은 항목별로 추가하세요.</p>
+    <div id="cert-list"></div>
+    <button class="add" onclick="addCert()">＋ 자격/수상 추가</button>
+  </section>
+
+  <div id="out"></div>
+</div>
+
+<script>
+  // ── 반복 블록 템플릿 ──
+  function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstChild; }
+  function delBtn(){ return `<button class="del" onclick="this.closest('.rep').remove()">×</button>`; }
+
+  function addEdu(v){ v=v||{};
+    document.getElementById('edu-list').appendChild(el(`
+      <div class="rep" data-kind="edu">
+        <div class="rep-top"><span class="tag">학력 / 병역</span>${delBtn()}</div>
+        <div class="row c2">
+          <div class="field"><label>구분</label>
+            <select data-f="type">
+              <option>대학교</option><option>대학원(석사)</option><option>대학원(박사)</option>
+              <option>고등학교</option><option>중학교</option><option>초등학교</option><option>병역</option>
+            </select></div>
+          <div class="field"><label>기관 / 군별·계급</label><input data-f="org" placeholder="OO대학교 · 기계공학 / 육군 병장"></div>
+        </div>
+        <div class="row c3">
+          <div class="field"><label>시작 (YYYY.MM)</label><input data-f="start" placeholder="2012.03"></div>
+          <div class="field"><label>종료 (YYYY.MM)</label><input data-f="end" placeholder="2016.02 / 현재"></div>
+          <div class="field"><label>비고 <span class="hint">학점·전역유형</span></label><input data-f="note" placeholder="3.4/4.5 / 만기전역"></div>
+        </div>
+      </div>`));
+  }
+
+  function addJob(){
+    document.getElementById('job-list').appendChild(el(`
+      <div class="rep" data-kind="job">
+        <div class="rep-top"><span class="tag">경력</span>${delBtn()}</div>
+        <div class="row c2">
+          <div class="field"><label>회사</label><input data-f="company" placeholder="회사명"></div>
+          <div class="field"><label>직무 / 직함</label><input data-f="title" placeholder="생산기술 엔지니어"></div>
+        </div>
+        <div class="row c3">
+          <div class="field"><label>시작 (YYYY.MM)</label><input data-f="start" placeholder="2020.01"></div>
+          <div class="field"><label>종료 (YYYY.MM)</label><input data-f="end" placeholder="현재"></div>
+          <div class="field"><label>지역</label><input data-f="loc" placeholder="인천"></div>
+        </div>
+      </div>`));
+  }
+
+  function addProj(){
+    document.getElementById('proj-list').appendChild(el(`
+      <div class="rep" data-kind="proj">
+        <div class="rep-top"><span class="tag">경험 / 프로젝트</span>${delBtn()}</div>
+        <div class="row c2">
+          <div class="field"><label>제목</label><input data-f="title" placeholder="라인 레이아웃 재설계"></div>
+          <div class="field"><label>소속·기간</label><input data-f="meta" placeholder="회사 A · 2022"></div>
+        </div>
+        <div class="field"><label>C · Context <span class="hint">상황·과제</span></label><textarea data-f="c" placeholder="무엇이 문제였고 왜 필요했나"></textarea></div>
+        <div class="row c2">
+          <div class="field"><label>R · Role <span class="hint">역할</span></label><input data-f="r" placeholder="설계 리드"></div>
+          <div class="field"><label>기여도 (%)</label><input data-f="contrib" placeholder="70"></div>
+        </div>
+        <div class="field"><label>A · Action <span class="hint">한 행동·방법</span></label><textarea data-f="a" placeholder="어떻게 했는가(동사+방법)"></textarea></div>
+        <div class="field"><label>R · Result <span class="hint">결과·정량·출처</span></label><textarea data-f="res" placeholder="예: 교체시간 22%↓ (2022 라인 데이터)"></textarea></div>
+        <div class="row c2">
+          <div class="field"><label>I · Insight <span class="hint">배운 것</span></label><input data-f="i" placeholder="전이 가능한 통찰"></div>
+          <div class="field"><label>증빙 링크 <span class="hint">작업용만</span></label><input data-f="proof" placeholder="url (선택)"></div>
+        </div>
+        <div class="field"><label>사용 스킬 / 스택</label><input data-f="stack" placeholder="쉼표 구분"></div>
+      </div>`));
+  }
+
+  function addCert(){
+    document.getElementById('cert-list').appendChild(el(`
+      <div class="rep" data-kind="cert">
+        <div class="rep-top"><span class="tag">자격 / 수상</span>${delBtn()}</div>
+        <div class="row c3">
+          <div class="field"><label>명칭</label><input data-f="name" placeholder="일반기계기사"></div>
+          <div class="field"><label>발급 / 주관</label><input data-f="issuer" placeholder="한국산업인력공단"></div>
+          <div class="field"><label>연도</label><input data-f="year" placeholder="2019"></div>
+        </div>
+      </div>`));
+  }
+
+  // 초기 1블록씩
+  addEdu(); addJob(); addProj(); addCert();
+
+  // ── 직렬화 ──
+  function val(id){ return (document.getElementById(id).value||'').trim(); }
+  function reps(kind){
+    return [...document.querySelectorAll('.rep[data-kind="'+kind+'"]')].map(r=>{
+      const o={}; r.querySelectorAll('[data-f]').forEach(f=>o[f.dataset.f]=(f.value||'').trim()); return o;
+    }).filter(o=>Object.values(o).some(v=>v));
+  }
+  function buildText(){
+    let L=[];
+    L.push('=== CAREER 입력 데이터 ===');
+    L.push(`[타깃/모드] 목표=${val('goal')} 출력=${val('mode')}`);
+    if(val('jd')) L.push(`[JD]\n${val('jd')}`);
+    L.push(`[인적사항] 이름=${val('name')} / 영문=${val('name_en')} / 직무=${val('role')} / 지역=${val('loc')}`);
+    L.push(`  연락=${val('email')} · ${val('phone')} · ${val('link')}`);
+    if(val('headline')) L.push(`  헤드라인=${val('headline')}`);
+    const edu=reps('edu'); if(edu.length){ L.push('[타임라인 · 학력/병역]');
+      edu.forEach(e=>L.push(`  - ${e.type||''} | ${e.org||''} | ${e.start||''}~${e.end||''} | ${e.note||''}`)); }
+    const jobs=reps('job'); if(jobs.length){ L.push('[경력]');
+      jobs.forEach(j=>L.push(`  - ${j.company||''} | ${j.title||''} | ${j.start||''}~${j.end||''} | ${j.loc||''}`)); }
+    const pj=reps('proj'); if(pj.length){ L.push('[대표 경험 / 프로젝트 · C·R·A·R·I]');
+      pj.forEach((p,i)=>{ L.push(`  #${i+1} ${p.title||''} (${p.meta||''})`);
+        L.push(`     C: ${p.c||''}`); L.push(`     R: ${p.r||''} (기여 ${p.contrib||'?'}%)`);
+        L.push(`     A: ${p.a||''}`); L.push(`     R: ${p.res||''}`); L.push(`     I: ${p.i||''}`);
+        if(p.stack) L.push(`     Stack: ${p.stack}`); if(p.proof) L.push(`     증빙(작업용): ${p.proof}`); }); }
+    if(val('skills')) L.push(`[스킬] ${val('skills')}`);
+    const ct=reps('cert'); if(ct.length){ L.push('[자격/수상]');
+      ct.forEach(c=>L.push(`  - ${c.name||''} | ${c.issuer||''} | ${c.year||''}`)); }
+    L.push('=== END ===');
+    return L.join('\n');
+  }
+
+  function copyData(){
+    const txt=buildText();
+    navigator.clipboard.writeText(txt).then(()=>{
+      setStatus('복사됨 — 스킬 대화창에 붙여넣으세요');
+    },()=>{ // 클립보드 차단 시 미리보기로 폴백
+      showPreview(txt); setStatus('클립보드 차단 — 아래 내용을 직접 복사하세요');
+    });
+  }
+  function setStatus(s){ const e=document.getElementById('status'); e.textContent=s; setTimeout(()=>e.textContent='',4000); }
+  function showPreview(txt){ const o=document.getElementById('out'); o.textContent=txt||buildText(); o.style.display='block'; }
+  function togglePreview(){ const o=document.getElementById('out'); if(o.style.display==='block'){o.style.display='none';} else {showPreview();} }
+</script>
+</body>
+</html>

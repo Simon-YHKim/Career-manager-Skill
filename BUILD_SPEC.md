@@ -67,6 +67,16 @@
 
 **(c)** 태스크별 출력 포맷은 **항상 동일 형식** — 태스크당 표준 템플릿 1벌 확정(젬 §11·§13 참고).
 
+**(d) 입력 수집 → 표준 폼 HTML** (`templates/intake-form.html`)
+- 사용자가 채워야 하는 값은 **동일한 양식**(HTML 폼)으로 제공해 작성을 용이하게 한다.
+- 수집 항목: 타깃/모드 · 인적사항 · 타임라인(학력·병역, 년/월; 필요 시 일) · 경력 · 대표 경험(C·R·A·R·I·기여도·스택·증빙) · 자격/수상·스킬.
+- **[데이터 복사]** → 구조화 텍스트를 스킬에 붙여넣어 마스터 경험 뱅크 구축. 자체완결, 외부 네트워크 금지.
+
+**(e) 포트폴리오 빌더 = 기초 job** (`reference/portfolio-builder.md`, P0–P8)
+- ②(문서 작성) 및 ①·④·⑤·⑦의 공통 근거인 **마스터 경험 뱅크**(`.private/experience-bank.md`)를 만들고 갱신한다.
+- 작업용/제출용 토글, 문체 게이트(`reference/writing-voice.md`), KPI 5버킷+NCS, 방어 시뮬(2단 채점).
+- **지원 히스토리**(`.private/applications/`) → 지원 현황 대시보드(`templates/application-tracker.html`, 자소설닷컴식 전형단계·D-day·결과·제출 파생본).
+
 ## D-8. 파일 구조
 
 ```
@@ -78,10 +88,18 @@
     gems/                  ← 젬 시스템프롬프트 + 방법론 PDF
     private/               ← [gitignore] 실제 포트폴리오·이력서
     methodology.md         ← 추출·압축한 컨설턴트 방법론 모듈
+    evaluation.md          ← 2단 평가 엔진 + 채점 루브릭
+    portfolio-builder.md   ← 마스터 경험 뱅크 & 포폴 빌더 (P0–P8)
+    writing-voice.md       ← 문체 게이트(AI-tell 제거) + 컨설턴트 문체
   templates/
     report.html            ← HTML 보고 표준 템플릿
-    a4-doc.html            ← A4 인쇄용 문서 템플릿
-  .private/                ← [gitignore] 개인 컨텍스트(profile.md)
+    a4-doc.html            ← A4 인쇄용 문서 템플릿(에디토리얼)
+    intake-form.html       ← 표준 입력 폼 (데이터 복사)
+    application-tracker.html ← 지원 현황 대시보드 (P8)
+  .private/                ← [gitignore] 개인 컨텍스트
+    profile.md             ←   보정 프로필
+    experience-bank.md     ←   마스터 경험 뱅크 (SSOT)
+    applications/          ←   지원 히스토리(건별 스냅샷)
   .gitignore               ← .private/ , reference/private/ , .env
   README.md
 ```
