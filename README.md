@@ -5,7 +5,7 @@
 A4 인쇄용 문서)을 만든다. 메뉴·페르소나·라우터 없음 — **단일 목적 + 점진 공개 + 개인 컨텍스트 분리**.
 
 > Gemini 'Jobs Verstappen' 커리어 OS를 Opus 4.8 + Claude Code에 맞게 **재구축**(포팅 아님).
-> 사양 원본: [`BUILD_SPEC.md`](./BUILD_SPEC.md).
+> 사양 원본(SSOT): [`BUILD_SPEC.md`](./BUILD_SPEC.md) · 빌드 트리거: [`GOAL_CONDITION.txt`](./GOAL_CONDITION.txt).
 
 ## Status
 
@@ -34,7 +34,8 @@ A4 인쇄용 문서)을 만든다. 메뉴·페르소나·라우터 없음 — **
 
 ## Repo layout (D-8)
 ```
-BUILD_SPEC.md            사양 원본 (§D + §F)
+BUILD_SPEC.md            사양 원본 SSOT (D-0~D-10)
+GOAL_CONDITION.txt       /goal 빌드 완료조건
 SKILL.md                 스킬 정의 (name + description + 본문)   ← 현재 스켈레톤(§B에서 완성)
 reference/
   gems/techniques.md     엔진 레퍼런스 체리픽 기법 + 포팅 금지 목록 (페르소나 이식 없음)
