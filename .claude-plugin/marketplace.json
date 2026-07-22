@@ -1,0 +1,11 @@
+{
+  "name": "career-manager",
+  "owner": { "name": "Simon-YHKim" },
+  "plugins": [
+    {
+      "name": "career",
+      "source": ".",
+      "description": "취업·이직 준비 개인화 스킬 — 7 태스크 자동 판별(JD매칭·문서·면접·모의면접·자가진단·연봉·로드맵), 2단 평가, HTML/A4 산출. 개인 컨텍스트는 gitignore로 분리."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "career",
+  "version": "0.1.0",
+  "description": "Personalized job-search & career-change skill: JD↔portfolio matching, resume/자소서 writing & editing, interview prep, mock interviews, metacognitive self-diagnosis, salary negotiation, career roadmap. Self-contained HTML reports + A4 print-ready documents, with cold-diagnosis-then-defensible-max evaluation.",
+  "author": { "name": "Simon-YHKim" },
+  "homepage": "https://github.com/Simon-YHKim/Career-manager-Skill",
+  "repository": "https://github.com/Simon-YHKim/Career-manager-Skill",
+  "keywords": ["career", "job-search", "resume", "interview", "salary-negotiation", "취업", "이직", "자소서"]
+}

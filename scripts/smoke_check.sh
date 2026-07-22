@@ -57,6 +57,19 @@ echo "== A4 print fidelity =="
 if python3 scripts/check_a4.py samples/sample-resume.html /tmp/_smoke_a4.pdf >/tmp/_smoke_a4.log 2>&1 && grep -q 'RESULT: PASS' /tmp/_smoke_a4.log; then
   ok "A4 sample prints clean (A4, no overflow)"; else no "A4 print check"; fi
 
+echo "== plugin packaging =="
+for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json; do
+  [ -f "$f" ] && ok "exists: $f" || no "missing: $f"
+done
+python3 -c "import json; d=json.load(open('.claude-plugin/plugin.json')); assert d['name']=='career'" 2>/dev/null \
+  && ok "plugin.json valid JSON (name=career)" || no "plugin.json invalid"
+python3 -c "import json; d=json.load(open('.claude-plugin/marketplace.json')); assert any(p['name']=='career' for p in d['plugins'])" 2>/dev/null \
+  && ok "marketplace.json valid JSON (lists plugin career)" || no "marketplace.json invalid"
+extra=$(ls .claude-plugin | grep -vE '^(plugin|marketplace)\.json$' || true)
+[ -z "$extra" ] && ok ".claude-plugin holds only manifests" || no ".claude-plugin has extra files: $extra"
+# single-skill shortcut: SKILL.md at plugin root
+[ -f SKILL.md ] && ok "single-skill shortcut: SKILL.md at plugin root" || no "SKILL.md not at root"
+
 echo ""
 echo "== SUMMARY: $pass passed, $fail failed =="
 [ "$fail" -eq 0 ] && { echo "SMOKE: PASS"; exit 0; } || { echo "SMOKE: FAIL"; exit 1; }
