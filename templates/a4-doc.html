@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<!--
+  career skill — A4 인쇄용 문서 템플릿 (D-7b)
+  이력서·resume·cover letter·자소서·포트폴리오 공통 셸. 자체완결, 외부 네트워크 없음.
+  ★ 커밋되는 이 파일은 GENERIC 샘플 콘텐츠만 사용(PII 금지). 스킬은 실제 내용을 채워
+    개인 산출물로 렌더(개인 산출물은 gitignore 경로에 저장, 커밋 금지).
+  인쇄: @page A4 + 15mm 여백, page-break-inside:avoid, 화면 UI는 print 시 숨김.
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resume — A4</title>
+<style>
+  @page { size: A4; margin: 15mm; }
+  :root{ --ink:#1b1b24; --muted:#5c6070; --line:#d9dbe6; --accent:#3f3fa3; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#e9e9f0; color:var(--ink);
+    font-family:-apple-system,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    font-size:10.5pt; line-height:1.5; }
+  /* 화면 전용 UI */
+  .toolbar{ position:sticky; top:0; display:flex; gap:8px; justify-content:center;
+    padding:10px; background:#fff; border-bottom:1px solid var(--line); }
+  .toolbar button{ border:1px solid var(--line); background:#fff; border-radius:8px;
+    padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+  /* A4 시트 */
+  .sheet{ width:210mm; min-height:297mm; padding:15mm; margin:14px auto; background:#fff;
+    box-shadow:0 2px 14px rgba(0,0,0,.14); overflow-wrap:break-word; word-break:break-word; }
+  h1{ font-size:20pt; margin:0 0 2pt; letter-spacing:-.2pt; }
+  .role{ color:var(--accent); font-weight:700; font-size:11pt; margin:0 0 4pt; }
+  .contact{ color:var(--muted); font-size:9pt; margin:0 0 10pt; }
+  h2{ font-size:11pt; color:var(--accent); border-bottom:1.5px solid var(--line);
+    padding-bottom:3pt; margin:13pt 0 6pt; text-transform:uppercase; letter-spacing:.5pt; }
+  .item{ margin-bottom:8pt; page-break-inside:avoid; break-inside:avoid; }
+  .item .top{ display:flex; justify-content:space-between; gap:8pt; }
+  .item .org{ font-weight:700; }
+  .item .date{ color:var(--muted); font-size:9pt; white-space:nowrap; }
+  ul{ margin:3pt 0 0; padding-left:15pt; }
+  li{ margin:2pt 0; }
+  .skills{ display:flex; flex-wrap:wrap; gap:5pt; }
+  .skills span{ border:1px solid var(--line); border-radius:12px; padding:1pt 8pt; font-size:9pt; }
+  .muted{ color:var(--muted); }
+  @media print{
+    html,body{ background:#fff; }
+    .toolbar{ display:none; }
+    .sheet{ width:auto; min-height:0; padding:0; margin:0; box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button onclick="window.print()">🖨 인쇄 / PDF</button>
+  <span class="muted" style="align-self:center;font-size:12px">인쇄 시 이 바는 숨겨집니다</span>
+</div>
+
+<!-- ===== A4 문서 (샘플: 이력서. 스킬이 실제 내용으로 치환) ===== -->
+<div class="sheet">
+
+  <h1>{{NAME}}</h1>
+  <p class="role">{{ROLE — 예: Operational Excellence Engineer}}</p>
+  <p class="contact">{{City · Phone · Email · LinkedIn}}</p>
+
+  <h2>Profile</h2>
+  <p>{{PROFILE — 3~4문장. 성과 중심 요약(정량 지표 포함). 주관 형용사·buzzword 배제.}}</p>
+
+  <h2>Work Experience</h2>
+  <div class="item">
+    <div class="top"><span class="org">{{Company}} — {{Title}}</span><span class="date">{{MM/YYYY – MM/YYYY}}</span></div>
+    <ul>
+      <li>{{과거형 액션동사}} {{무엇을/방법}} {{정량 결과 %/₩/건수}} — 예: Reduced changeover time 22% by redesigning the line to a hybrid layout</li>
+      <li>{{bullet — 반드시 수치로 마감}}</li>
+    </ul>
+  </div>
+  <div class="item">
+    <div class="top"><span class="org">{{Company}} — {{Title}}</span><span class="date">{{MM/YYYY – MM/YYYY}}</span></div>
+    <ul>
+      <li>{{bullet}}</li>
+      <li>{{bullet}}</li>
+    </ul>
+  </div>
+
+  <h2>Skills</h2>
+  <div class="skills">
+    <span>{{Skill}}</span><span>{{Skill}}</span><span>{{Skill}}</span><span>{{Skill}}</span><span>{{Skill}}</span>
+  </div>
+
+  <h2>Education</h2>
+  <div class="item">
+    <div class="top"><span class="org">{{University}} — {{Degree, Major}}</span><span class="date">{{YYYY – YYYY}}</span></div>
+    <p class="muted">{{GPA x.x/4.5 · 관련 coursework}}</p>
+  </div>
+
+  <h2>Certifications</h2>
+  <ul>
+    <li>{{Certification}} — {{Issuer, YYYY}}</li>
+  </ul>
+
+</div>
+</body>
+</html>

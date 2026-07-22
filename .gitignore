@@ -24,3 +24,7 @@ Thumbs.db
 
 # === Node (if tooling is added later) ===
 node_modules/
+
+# === Raw source inputs kept local (IP caution, D-6). Distilled outputs committed: methodology.md, gems/techniques.md ===
+reference/gems/Jobs_Verstappen_Gems_SystemPrompt.txt
+reference/gems/*.pdf

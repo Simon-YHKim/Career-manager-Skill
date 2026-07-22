@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<!--
+  career skill — HTML 보고 표준 템플릿 (D-7a)
+  자체완결 1파일. 외부 라이브러리/네트워크 금지. 색 3색(accent/positive/warn) 이내 + 중립 그레이.
+  스킬이 채우는 곳: <title>, [data-kst]의 실제 KST 생성시각, .ko/.en 쌍, .expert/.easy 쌍, 섹션 본문.
+  분석형 태스크(①③④⑤⑥⑦) 공통 셸. 각 태스크는 §고정 섹션만 갈아끼운다.
+-->
+<html lang="ko" data-theme="auto">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>career 리포트</title>
+<style>
+  :root{
+    /* 3 hues only: accent, positive, warn (+ neutral greys) */
+    --accent:#5b5bd6; --positive:#1a7f5a; --warn:#b3541e;
+    --bg:#f7f7fb; --panel:#ffffff; --text:#1c1c28; --muted:#63667a; --border:#e6e6ef;
+    --accent-soft:#ecebfb; --positive-soft:#e4f3ec; --warn-soft:#faede2;
+  }
+  @media (prefers-color-scheme:dark){:root[data-theme="auto"]{
+    --bg:#0e0f16; --panel:#171826; --text:#e9e9f2; --muted:#9a9db4; --border:#282a3c;
+    --accent:#8f8bff; --positive:#4bc699; --warn:#e0925a;
+    --accent-soft:#211f3d; --positive-soft:#123026; --warn-soft:#32220f;
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0e0f16; --panel:#171826; --text:#e9e9f2; --muted:#9a9db4; --border:#282a3c;
+    --accent:#8f8bff; --positive:#4bc699; --warn:#e0925a;
+    --accent-soft:#211f3d; --positive-soft:#123026; --warn-soft:#32220f;
+  }
+  :root[data-theme="light"]{
+    --bg:#f7f7fb; --panel:#ffffff; --text:#1c1c28; --muted:#63667a; --border:#e6e6ef;
+    --accent:#5b5bd6; --positive:#1a7f5a; --warn:#b3541e;
+    --accent-soft:#ecebfb; --positive-soft:#e4f3ec; --warn-soft:#faede2;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);line-height:1.6;font-size:15px;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif}
+  .wrap{max-width:880px;margin:0 auto;padding:20px 16px 64px}
+  .en{display:none} body.lang-en .ko{display:none} body.lang-en .en{display:revert}
+  body.mode-easy .expert{display:none} .easy{display:none} body.mode-easy .easy{display:revert}
+  header{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+  h1{font-size:20px;margin:0 0 2px;letter-spacing:-.2px}
+  .stamp{color:var(--muted);font-size:12px}
+  .controls{display:flex;gap:6px;flex-wrap:wrap}
+  button.tg{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:8px;
+    padding:6px 10px;font-size:12.5px;font-weight:600;cursor:pointer}
+  button.tg:hover{border-color:var(--accent)}
+  section{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-top:14px}
+  h2{font-size:15px;margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  h2 .tag{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);
+    border-radius:6px;padding:2px 7px}
+  .tbl-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:min(100%,560px)}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.3px}
+  .pill{display:inline-block;font-size:11px;font-weight:700;border-radius:20px;padding:1px 8px}
+  .t1{color:var(--positive);background:var(--positive-soft)}
+  .t2{color:var(--accent);background:var(--accent-soft)}
+  .t3{color:var(--warn);background:var(--warn-soft)}
+  details{border:1px solid var(--border);border-radius:9px;padding:8px 12px;margin:8px 0;background:var(--bg)}
+  summary{cursor:pointer;font-weight:600;font-size:13.5px}
+  svg{display:block;max-width:100%;height:auto;margin:6px 0}
+  .nd{fill:var(--panel);stroke:var(--accent);stroke-width:1.4}
+  .nd-txt{fill:var(--text);font-size:11px;font-weight:600}
+  .edge{stroke:var(--accent);stroke-width:1.5;fill:none}
+  .src{font-size:12px;color:var(--muted)}
+  code{background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px;font-size:12.5px}
+  @media print{.controls{display:none}}
+</style>
+</head>
+<body class="lang-ko mode-expert">
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1><span class="ko">career — 리포트</span><span class="en">career — Report</span></h1>
+      <!-- SKILL: [data-kst]를 실제 생성 KST로 치환 -->
+      <div class="stamp" data-kst>생성: 2026-07-22 00:00 KST</div>
+    </div>
+    <div class="controls">
+      <button class="tg" onclick="tl()" id="langBtn">EN</button>
+      <button class="tg" onclick="tm()" id="modeBtn">easy</button>
+      <button class="tg" onclick="tt()" id="themeBtn">◐</button>
+    </div>
+  </header>
+
+  <!-- ===== 태스크 고정 섹션들 (예: ① JD↔포트폴리오 매칭) ===== -->
+
+  <section>
+    <h2><span class="tag">1</span><span class="ko">입력 요약</span><span class="en">Input summary</span></h2>
+    <div class="tbl-wrap"><table>
+      <tr><th><span class="ko">항목</span><span class="en">Field</span></th><th><span class="ko">내용</span><span class="en">Value</span></th></tr>
+      <tr><td><span class="ko">목표 회사/직무</span><span class="en">Target role</span></td><td>{{target}}</td></tr>
+      <tr><td><span class="ko">전형·진행현황</span><span class="en">Stage</span></td><td>{{stage}}</td></tr>
+      <tr><td><span class="ko">JD 핵심 키워드</span><span class="en">JD keywords</span></td><td>{{keywords}}</td></tr>
+      <tr><td><span class="ko">핵심 자산</span><span class="en">Key assets</span></td><td>{{assets}}</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <h2><span class="tag">2</span><span class="ko">매칭 매트릭스</span><span class="en">Match matrix</span></h2>
+    <div class="tbl-wrap"><table>
+      <tr><th>JD <span class="ko">요구</span><span class="en">req</span></th><th><span class="ko">내 근거</span><span class="en">Evidence</span></th><th>Tier</th><th><span class="ko">갭</span><span class="en">Gap</span></th><th><span class="ko">보강</span><span class="en">Action</span></th></tr>
+      <tr><td>{{req}}</td><td>{{evidence}}</td><td><span class="pill t1">T1</span></td><td>{{gap}}</td><td>{{action}}</td></tr>
+      <tr><td>{{req}}</td><td>{{evidence}}</td><td><span class="pill t3">T3</span></td><td>{{gap}}</td><td>{{action}}</td></tr>
+    </table></div>
+    <p class="expert src ko">Tier: <span class="pill t1">T1</span> 입증·정량 · <span class="pill t2">T2</span> 프레이밍 필요 · <span class="pill t3">T3</span> 미검증(대외 미사용)</p>
+    <p class="easy ko">쉽게: 표는 <b>JD가 원하는 것</b> ↔ <b>내 증거</b>를 한 줄씩 맞춘 것. T3(초록/보라 아닌 주황)는 아직 근거가 약해 이력서엔 쓰지 않아요.</p>
+  </section>
+
+  <section>
+    <h2><span class="tag">3</span><span class="ko">액션 플랜 (워크플로우)</span><span class="en">Action plan</span></h2>
+    <!-- node-edge 다이어그램 (인라인 SVG) -->
+    <svg viewBox="0 0 620 90" role="img" aria-label="7-14-30 action flow">
+      <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--accent)"/></marker></defs>
+      <rect class="nd" x="8" y="26" width="150" height="40" rx="9"/><text class="nd-txt" x="83" y="50" text-anchor="middle">7일: {{d7}}</text>
+      <line class="edge" x1="158" y1="46" x2="196" y2="46" marker-end="url(#ah)"/>
+      <rect class="nd" x="198" y="26" width="150" height="40" rx="9"/><text class="nd-txt" x="273" y="50" text-anchor="middle">14일: {{d14}}</text>
+      <line class="edge" x1="348" y1="46" x2="386" y2="46" marker-end="url(#ah)"/>
+      <rect class="nd" x="388" y="26" width="150" height="40" rx="9"/><text class="nd-txt" x="463" y="50" text-anchor="middle">30일: {{d30}}</text>
+    </svg>
+    <details><summary><span class="ko">세부 근거·계산 펼치기</span><span class="en">Details</span></summary>
+      <p class="ko">{{details}}</p>
+    </details>
+  </section>
+
+  <section>
+    <h2><span class="tag">S</span><span class="ko">참조 출처</span><span class="en">Sources</span></h2>
+    <!-- SKILL: insane-search 사용 시만. Tier 라벨 + 조회일. 미사용 시 이 섹션 생략 -->
+    <p class="src ko">{{sources}} <span class="expert">— 예: 공식 채용공고(S)·통계(A)·커뮤니티(B), 조회 2026-07-22.</span></p>
+  </section>
+
+</div>
+<script>
+  // 자체완결 · 외부 네트워크 없음
+  function tl(){var e=document.body.classList.toggle('lang-en');document.getElementById('langBtn').textContent=e?'한국어':'EN';document.documentElement.lang=e?'en':'ko';}
+  function tm(){var e=document.body.classList.toggle('mode-easy');document.body.classList.toggle('mode-expert',!e);document.getElementById('modeBtn').textContent=e?'expert':'easy';}
+  function tt(){var r=document.documentElement,c=r.getAttribute('data-theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;r.setAttribute('data-theme', c==='auto'?(d?'light':'dark'):(c==='dark'?'light':'dark'));}
+  // 실제 KST 스탬프 fallback: 스킬이 [data-kst]를 생성시각으로 치환하지 않았다면 현재 KST 표시
+  (function(){var el=document.querySelector('[data-kst]');if(el&&/00:00 KST/.test(el.textContent)){var n=new Date(),k=new Date(n.getTime()+ (9*60 - (-n.getTimezoneOffset()))*60000);var p=x=>String(x).padStart(2,'0');el.textContent='생성: '+k.getUTCFullYear()+'-'+p(k.getUTCMonth()+1)+'-'+p(k.getUTCDate())+' '+p(k.getUTCHours())+':'+p(k.getUTCMinutes())+' KST';}})();
+</script>
+</body>
+</html>
