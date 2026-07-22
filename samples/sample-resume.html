@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<!-- GENERIC sample rendered from templates/a4-doc.html (fictional person, no PII). For A4 print-check demo only. -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sample Resume — A4</title>
+<style>
+  @page { size: A4; margin: 15mm; }
+  :root{ --ink:#1b1b24; --muted:#5c6070; --line:#d9dbe6; --accent:#3f3fa3; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#e9e9f0; color:var(--ink);
+    font-family:-apple-system,"Segoe UI","Noto Sans KR",sans-serif; font-size:10.5pt; line-height:1.5; }
+  .toolbar{ position:sticky; top:0; display:flex; gap:8px; justify-content:center;
+    padding:10px; background:#fff; border-bottom:1px solid var(--line); }
+  .toolbar button{ border:1px solid var(--line); background:#fff; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+  .sheet{ width:210mm; min-height:297mm; padding:15mm; margin:14px auto; background:#fff;
+    box-shadow:0 2px 14px rgba(0,0,0,.14); overflow-wrap:break-word; word-break:break-word; }
+  h1{ font-size:20pt; margin:0 0 2pt; letter-spacing:-.2pt; }
+  .role{ color:var(--accent); font-weight:700; font-size:11pt; margin:0 0 4pt; }
+  .contact{ color:var(--muted); font-size:9pt; margin:0 0 10pt; }
+  h2{ font-size:11pt; color:var(--accent); border-bottom:1.5px solid var(--line); padding-bottom:3pt; margin:13pt 0 6pt; text-transform:uppercase; letter-spacing:.5pt; }
+  .item{ margin-bottom:8pt; page-break-inside:avoid; break-inside:avoid; }
+  .item .top{ display:flex; justify-content:space-between; gap:8pt; }
+  .item .org{ font-weight:700; }
+  .item .date{ color:var(--muted); font-size:9pt; white-space:nowrap; }
+  ul{ margin:3pt 0 0; padding-left:15pt; } li{ margin:2pt 0; }
+  .skills{ display:flex; flex-wrap:wrap; gap:5pt; }
+  .skills span{ border:1px solid var(--line); border-radius:12px; padding:1pt 8pt; font-size:9pt; }
+  .muted{ color:var(--muted); }
+  @media print{ html,body{ background:#fff; } .toolbar{ display:none; } .sheet{ width:auto; min-height:0; padding:0; margin:0; box-shadow:none; } }
+</style>
+</head>
+<body>
+<div class="toolbar"><button onclick="window.print()">🖨 Print / PDF</button><span class="muted" style="align-self:center;font-size:12px">Hidden on print</span></div>
+<div class="sheet">
+  <h1>Jordan Alex Rivera</h1>
+  <p class="role">Operational Excellence Engineer</p>
+  <p class="contact">Metro City · +00 000-0000-0000 · jordan.rivera.sample@example.com · linkedin.com/in/sample</p>
+
+  <h2>Profile</h2>
+  <p>Data-driven manufacturing engineer with 6+ years optimizing high-volume production lines. Defended $17M in
+  CapEx and reduced $11M in annual OpEx through simulation, DOE, and motion analysis. Builds reusable diagnostic
+  systems and translates shop-floor gains into executive-level financial outcomes.</p>
+
+  <h2>Work Experience</h2>
+  <div class="item">
+    <div class="top"><span class="org">Northlake Components — Senior Production Innovation Engineer</span><span class="date">05/2022 – Present</span></div>
+    <ul>
+      <li>Led a 5-person task force to build a capacity simulation model via DOE, uncovering hidden capacity to raise productivity 12.8% and defend $8.5M in CapEx</li>
+      <li>Automated MTBF analysis and a real-time monitoring dashboard during an overseas ramp-up, preventing an additional $0.6M in expansion CapEx</li>
+      <li>Executed man-to-machine ratio and motion analyses on a 15-person task force, eliminating 300 headcount to yield $11.8M in annual OpEx savings</li>
+    </ul>
+  </div>
+  <div class="item">
+    <div class="top"><span class="org">Harbor Wiring Systems — Production &amp; NPI Engineer</span><span class="date">04/2019 – 05/2022</span></div>
+    <ul>
+      <li>Architected a 5-step safety interlock (torque, angle, vision, LVDT) achieving a zero-defect rate across three global vehicle programs</li>
+      <li>Internalized equipment modifications via CAD and custom PLC code, boosting line UPH 17% (58→68) with zero investment</li>
+    </ul>
+  </div>
+
+  <h2>Skills</h2>
+  <div class="skills"><span>CapEx/OpEx Optimization</span><span>Lean Manufacturing</span><span>DOE</span><span>Motion Analysis</span><span>Python</span><span>CAD</span><span>PLC</span><span>OEE / MTBF</span></div>
+
+  <h2>Education</h2>
+  <div class="item">
+    <div class="top"><span class="org">Metro National University — B.Eng, Mechanical Systems</span><span class="date">2011 – 2018</span></div>
+    <p class="muted">GPA 3.4/4.5 · Coursework: dynamics, thermofluids, control systems, numerical methods</p>
+  </div>
+
+  <h2>Certifications</h2>
+  <ul><li>General Machinery Engineer — National Board, 2017</li><li>Business English Speaking — 2022</li></ul>
+</div>
+</body>
+</html>
