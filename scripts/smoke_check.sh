@@ -95,6 +95,9 @@ grep -qiE '필살기|무게중심|Truth Tier' reference/glossary.md && ok "gloss
 grep -qiE '콜드스타트|초보' SKILL.md && grep -qiE 'easy 기본|verdict-first' SKILL.md && grep -qF "glossary.md" SKILL.md && ok "SKILL: 초보 콜드스타트 + easy/verdict-first + 용어집 배선" || no "SKILL beginner scaffolding"
 grep -qiE '취린이|초보' BUILD_SPEC.md && grep -qiE '미션' BUILD_SPEC.md && ok "BUILD_SPEC: 초보-포함 미션 명문화(D-0)" || no "BUILD_SPEC mission"
 grep -qF "5.6" reference/evaluation.md && grep -qiE 'claim-audit|재-그라운딩|재그라운딩' reference/evaluation.md && grep -qiE '축별 4단|객관 기준|객관 산정' reference/evaluation.md && ok "evaluation: §5.6 적합도 루브릭(객관 밴드) + §8 claim-audit" || no "evaluation 5.6/8"
+# Phase C: 시장 위치 레이어 + 최대 PR 엔진
+grep -qiE '시장 위치 레이어' reference/evaluation.md && grep -qiE '최대 PR 엔진' reference/evaluation.md && grep -qiE '동일 사실|PR강도 3버전' reference/evaluation.md && ok "evaluation: §5.7 시장 위치 + §9 최대 PR 엔진(3버전·Before/After)" || no "evaluation 5.7/9"
+grep -qiE '시장 위치 레이어|5\.7' SKILL.md && grep -qiE '최대 PR 엔진|§9' SKILL.md && ok "SKILL: 시장 위치 + PR 엔진 배선" || no "SKILL positioning/PR wiring"
 grep -qiE 'claim-audit|재-그라운딩' SKILL.md && grep -qF "session-state" SKILL.md && ok "SKILL: claim-audit + 세션 핸드오프 배선" || no "SKILL anti-drift/handoff"
 
 echo "== A4 print fidelity =="
