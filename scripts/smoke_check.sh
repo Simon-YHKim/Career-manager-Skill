@@ -104,6 +104,8 @@ grep -qiE '관심|적합도|마감임박' templates/application-tracker.html && 
 grep -qiE '아키타입별 3종|매니지먼트/직급' SKILL.md && grep -qiE '아키타입별 3종|부업 수익화 서사' reference/methodology.md && ok "roadmap: Phase 아키타입 3종 분기" || no "roadmap archetype split"
 grep -qiE '연차 캘리브레이션' reference/evaluation.md && ok "evaluation: 연차 캘리브레이션 밴드" || no "evaluation seniority"
 grep -qiE '카운터오퍼|역제안' SKILL.md && ok "SKILL ⑥ 카운터오퍼 대응" || no "counter-offer"
+# Phase E: 미션 완결 오버레이 (§6.1)
+grep -qiE '조건부 오버레이|6\.1' SKILL.md && grep -qiE '전형 관문|콜드스타트' SKILL.md && grep -qiE '지원 제출|해외취업' SKILL.md && grep -qiE '탈락|리퍼럴' SKILL.md && ok "SKILL §6.1 완결성 오버레이(관문·직무탐색·공백기·리퍼럴·제출·해외·오퍼후·탈락)" || no "SKILL 6.1 overlays"
 grep -qiE 'claim-audit|재-그라운딩' SKILL.md && grep -qF "session-state" SKILL.md && ok "SKILL: claim-audit + 세션 핸드오프 배선" || no "SKILL anti-drift/handoff"
 
 echo "== A4 print fidelity =="
