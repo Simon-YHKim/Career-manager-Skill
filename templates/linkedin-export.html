@@ -214,8 +214,11 @@
   ];
 
   const active = {};                       // key -> bool
+  const vals = {};                         // id -> 사용자 입력값(토글 재렌더에도 보존)
   SECTIONS.forEach(s=> active[s.key] = !!s.core);
   function chars(s){ return [...s].length; }
+  function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
 
   function renderPicker(){
     const groups={};
@@ -234,9 +237,11 @@
   function fieldHTML(sk, f){
     const id = sk+'__'+f.k;
     const limAttr = f.limit>0 ? ` data-limit="${f.limit}"` : '';
+    // 편집 유실 방지: 이미 입력한 값(vals[id])이 있으면 그것을, 없으면 샘플을 초기값으로.
+    const cur = (vals[id] !== undefined) ? vals[id] : (f.sample||'');
     const input = f.type==='area'
-      ? `<textarea id="${id}" rows="${f.rows||3}"${limAttr} oninput="upd('${id}')">${f.sample||''}</textarea>`
-      : `<input type="text" id="${id}"${limAttr} oninput="upd('${id}')" value="${(f.sample||'').replace(/"/g,'&quot;')}">`;
+      ? `<textarea id="${id}" rows="${f.rows||3}"${limAttr} oninput="upd('${id}')">${escHtml(cur)}</textarea>`
+      : `<input type="text" id="${id}"${limAttr} oninput="upd('${id}')" value="${escAttr(cur)}">`;
     return `<div class="fld">
       <div class="fl"><label>${f.label}</label><span class="cnt" id="${id}__c"></span></div>
       ${input}
@@ -260,6 +265,7 @@
 
   function upd(id){
     const el=document.getElementById(id); if(!el)return;
+    vals[id]=el.value;                     // 입력값 보존(섹션 토글 재렌더에도 유지)
     const c=document.getElementById(id+'__c'); const lim=parseInt(el.dataset.limit)||0;
     const n=chars(el.value);
     c.textContent = lim? `${n} / ${lim}` : `${n}자`;
@@ -267,7 +273,13 @@
   }
   function flash(btn){ const o=btn.textContent; btn.textContent='복사됨 ✓'; btn.classList.add('done');
     setTimeout(()=>{ btn.textContent=o; btn.classList.remove('done'); },1800); }
-  function write(txt, btn){ navigator.clipboard.writeText(txt).then(()=>btn&&flash(btn), ()=>{}); }
+  function write(txt, btn){
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(()=>btn&&flash(btn), ()=>{}); return; }
+    }catch(e){}
+    // 폴백(클립보드 불가 — 비보안 컨텍스트 등): Fill Plan 영역에 노출해 직접 복사
+    const p=document.getElementById('plan'); if(p){ p.textContent=txt; p.style.display='block'; } if(btn) flash(btn);
+  }
   function copyField(id, btn){ const el=document.getElementById(id); if(el) write(el.value.trim(), btn); }
   function fieldsText(s){
     return s.fields.map(f=>{ const el=document.getElementById(s.key+'__'+f.k);
@@ -293,7 +305,7 @@ ${body}
 
 === END ===`;
     const p=document.getElementById('plan'); p.textContent=txt; p.style.display='block';
-    navigator.clipboard.writeText(txt).then(()=>{},()=>{});
+    try{ if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt); }catch(e){}
   }
 
   renderPicker(); renderSections();

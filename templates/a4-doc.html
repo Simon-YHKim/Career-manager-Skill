@@ -63,6 +63,8 @@
   @media print{
     html,body{ background:#fff; }
     .toolbar{ display:none; }
+    /* 안전: 작업용 메모(자기평가·매칭 전략·근거)는 work-mode 여부와 무관하게 인쇄/PDF에서 항상 숨김 */
+    .work-only{ display:none !important; }
     .page{ width:auto; min-height:0; margin:0; padding:0; box-shadow:none; }
   }
 </style>
@@ -74,7 +76,7 @@
   <button class="ghost" id="btn-work" onclick="toggleWork()">작업용 메모</button>
   <span class="sep"></span>
   <button onclick="window.print()">PDF 저장</button>
-  <span class="hint">인쇄 시 이 바는 숨겨집니다</span>
+  <span class="hint">인쇄·PDF 저장 시 이 바와 <b>작업용 메모</b>는 항상 숨겨집니다(제출 안전)</span>
 </div>
 
 <!-- ===== A4 문서 (샘플: 이력서/포트폴리오. 스킬이 실제 내용으로 치환) ===== -->
@@ -417,6 +419,9 @@
     b.classList.toggle('on', on);
     b.textContent = on ? '✓ 작업용 메모' : '작업용 메모';
   }
+  // 방어선(이중): @media print의 .work-only{display:none} 위에, 인쇄 시 work-mode를 강제 해제해
+  // 어떤 렌더 경로로도 작업용 메모가 제출 PDF에 남지 않게 한다.
+  window.addEventListener('beforeprint', function(){ document.body.classList.remove('work-mode'); });
 </script>
 </body>
 </html>

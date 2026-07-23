@@ -232,7 +232,10 @@
   const SUBLABEL = { fit:'근거적합', feasible:'실현성', growth:'시장성장', intent:'지향부합' };
   const STLABEL = { cur:'현재', next:'다음 목표', later:'이후' };
   let mode='job', filter='all';
-  const picked = new Set();
+  const picked = new Set();               // 안정 키(아키타입␟제목)로 저장 — 따옴표·특수문자 안전
+  function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
+  function pkey(p){ return (p.arch||'')+'␟'+(p.title||''); }
 
   function profHTML(){
     document.getElementById('prof').innerHTML =
@@ -251,21 +254,21 @@
   function trackHTML(list, head){
     if(!list||!list.length) return '';
     return `<div class="timeline"><div class="tl-head">${head}</div><div class="steps">`+
-      list.map(s=>`<div class="step"><div class="when">${s.when}</div><div class="goal">${s.goal}</div>`+
-        `<div class="act">${s.act}</div><div class="metric">📏 지표: <b>${s.metric}</b></div></div>`).join('')+
+      list.map(s=>`<div class="step"><div class="when">${escHtml(s.when)}</div><div class="goal">${escHtml(s.goal)}</div>`+
+        `<div class="act">${escHtml(s.act)}</div><div class="metric">📏 지표: <b>${escHtml(s.metric)}</b></div></div>`).join('')+
       `</div></div>`;
   }
   function cardHTML(p,i){
-    const on=picked.has(p.title), whyCls=p.why.indexOf('⚠️')>=0?'why warn':'why';
+    const on=picked.has(pkey(p)), whyCls=(p.why||'').indexOf('⚠️')>=0?'why warn':'why';
     return `<div class="path ${on?'picked':''}">
       <div class="top">
-        <label class="chk"><input type="checkbox" ${on?'checked':''} onchange="togglePick('${p.title.replace(/'/g,"\\'")}')"></label>
+        <label class="chk"><input type="checkbox" data-k="${escAttr(pkey(p))}" ${on?'checked':''}></label>
         <div class="rank">${i+1}</div>
         <div class="body">
-          <span class="badge">${p.arch}</span>
-          <div class="title">${p.title}</div>
-          <div class="${whyCls}">${p.why}</div>
-          <div class="tags">${p.tags.map(t=>`<span>${t}</span>`).join('')}<span class="risk r-${p.risk}">리스크 ${p.risk}</span></div>
+          <span class="badge">${escHtml(p.arch)}</span>
+          <div class="title">${escHtml(p.title)}</div>
+          <div class="${whyCls}">${escHtml(p.why)}</div>
+          <div class="tags">${p.tags.map(t=>`<span>${escHtml(t)}</span>`).join('')}<span class="risk r-${p.risk}">리스크 ${escHtml(p.risk)}</span></div>
         </div>
         <div class="score">
           <div class="num">${p.score}<small>/100</small></div>
@@ -284,17 +287,17 @@
       `<button class="${k===filter?'on':''}" onclick="setFilter('${k}')">${l}</button>`).join('');
   }
   function setFilter(k){ filter=k; renderFilters(); render(); }
-  function togglePick(t){ if(picked.has(t))picked.delete(t); else picked.add(t); render(); }
+  function togglePick(k){ if(picked.has(k))picked.delete(k); else picked.add(k); render(); }
 
   /* 직급 */
   function reqHTML(r){
     if(!r.length) return '';
     return `<div class="req"><span class="rl">승진 요건</span>`+r.map(x=>
-      typeof x==='object' ? `<span class="c flag">⚑ ${x.t}</span>` : `<span class="c">${x}</span>`).join('')+`</div>`;
+      typeof x==='object' ? `<span class="c flag">⚑ ${escHtml(x.t)}</span>` : `<span class="c">${escHtml(x)}</span>`).join('')+`</div>`;
   }
   function rungHTML(s){
     return `<div class="rung ${s.status}">
-      <div class="rung-top"><span class="lvl">${s.lvl}</span><span class="st ${s.status}">${STLABEL[s.status]}</span></div>
+      <div class="rung-top"><span class="lvl">${escHtml(s.lvl)}</span><span class="st ${s.status}">${STLABEL[s.status]}</span></div>
       ${reqHTML(s.req)}
       ${trackHTML(s.track,'승진 준비 — 목표 · 실행 · 측정지표')}
     </div>`;
@@ -327,7 +330,7 @@
       let rows=PATHS.slice();
       rows.sort((a,b)=> sort==='growth' ? b.sub.growth-a.sub.growth
                       : sort==='feasible' ? b.sub.feasible-a.sub.feasible : b.score-a.score);
-      let shown = filter==='all'?rows : filter==='pick'?rows.filter(p=>picked.has(p.title)) : rows.filter(p=>p.arch===filter);
+      let shown = filter==='all'?rows : filter==='pick'?rows.filter(p=>picked.has(pkey(p))) : rows.filter(p=>p.arch===filter);
       document.getElementById('list').innerHTML = shown.length ? shown.map(cardHTML).join('')
         : `<div class="prof">해당 조건의 경로가 없습니다.</div>`;
       document.getElementById('count').textContent = `경로 ${PATHS.length} · 선택 ${picked.size}`;
@@ -338,7 +341,7 @@
 
   function route(){ mode==='job'?copyPicked():copyLadder(); }
   function copyPicked(){
-    const sel = PATHS.filter(p=>picked.has(p.title));
+    const sel = PATHS.filter(p=>picked.has(pkey(p)));
     if(!sel.length){ setStatus('체크된 경로가 없습니다.'); return; }
     const lines = ['=== 선택 경로 (상세 로드맵 전개 대상) ==='];
     sel.forEach(p=>{
@@ -361,11 +364,21 @@
     lines.push('=== END ==='); emit(lines.join('\n'), '직급 라더 복사됨 — 스킬에 붙여넣어 회사별로 맞춰 채우세요');
   }
   function emit(txt, okmsg){
-    navigator.clipboard.writeText(txt).then(()=>setStatus(okmsg),
-      ()=>{ const o=document.getElementById('out'); o.textContent=txt; o.style.display='block'; setStatus('클립보드 차단 — 아래 내용 직접 복사'); });
+    const showOut=(msg)=>{ const o=document.getElementById('out'); o.textContent=txt; o.style.display='block'; setStatus(msg); };
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(()=>setStatus(okmsg), ()=>showOut('클립보드 차단 — 아래 내용 직접 복사'));
+        return;
+      }
+    }catch(e){}
+    showOut('클립보드 미지원 — 아래 내용 직접 복사');
   }
   function setStatus(s){ const e=document.getElementById('status'); const o=e.textContent; e.textContent=s; setTimeout(()=>e.textContent=o,4000); }
 
+  // 체크박스(직무 경로 모드): 이벤트 위임 — 인라인 onclick 문자열 보간 제거(따옴표·특수문자 안전)
+  document.getElementById('list').addEventListener('change', function(e){
+    const cb = e.target.closest('input[type=checkbox]'); if(cb && cb.dataset.k) togglePick(cb.dataset.k);
+  });
   render();
 </script>
 </body>
