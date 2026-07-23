@@ -54,10 +54,17 @@
   .app-id .co{ font-size:15px; font-weight:700; }
   .app-id .ti{ font-size:12.5px; color:var(--muted); }
   .badge{ flex:none; font-size:11px; font-weight:700; letter-spacing:0.03em; padding:4px 11px; border-radius:20px; }
+  .badge.interest{ color:var(--muted); background:var(--wash); }
   .badge.progress{ color:var(--warn); background:#f7eede; }
   .badge.pass{ color:#fff; background:var(--ok); }
   .badge.fail{ color:var(--no); background:var(--wash); }
   .badge.wait{ color:var(--wait); background:#e8f0f8; }
+  .badge.score{ color:var(--accent); background:var(--wash); font-size:10.5px; }
+  .app.urgent{ border-color:var(--accent); box-shadow:0 0 0 1px var(--wash); }
+  .urgent-flag{ display:inline-block; margin-left:8px; font-size:10px; font-weight:700; color:#fff;
+    background:var(--accent); border-radius:20px; padding:2px 9px; vertical-align:middle; }
+  .app-id .link{ font-size:11.5px; margin-top:2px; }
+  .app-id .link a{ color:var(--accent); text-decoration:none; font-weight:600; }
 
   .dates{ display:flex; gap:16px; margin:12px 0 14px; font-size:12px; color:var(--muted); }
   .dates .dday{ font-weight:700; color:var(--accent); }
@@ -87,7 +94,7 @@
 <div class="wrap">
   <div class="bar"></div>
   <h1>지원 현황</h1>
-  <p class="lead">지원 건별 전형 단계·마감·결과를 한눈에. 제출한 파생본(이력서·자소서)은 각 카드에서 조회합니다.</p>
+  <p class="lead">관심 공고부터 지원·전형·결과까지 한눈에. <b>마감임박·미지원</b>을 최상단에 띄우고(놓침 방지), 제출 파생본은 각 카드에서 조회합니다.</p>
 
   <div class="summary" id="summary"></div>
   <div class="filters" id="filters"></div>
@@ -101,19 +108,24 @@
   // 전형 단계 표준 파이프라인
   const STAGES = ['관심','서류접수','서류합격','인적성/과제','1차면접','2차면접','최종'];
 
+  function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
+
   // .private/applications/ 누적 히스토리 (샘플 — 스킬이 실제 데이터로 치환)
+  // 관심(위시리스트 → 미지원): applied 비움 + result:'interest' + link(공고)·score(적합도). 발굴 보드에서 유입.
   const APPS = [
-    { co:'핀테크 A', mono:'A', title:'백엔드 엔지니어', applied:'2026-07-01', deadline:'2026-07-25',
+    { co:'제조 C', mono:'C', title:'생산기술 · 공정혁신', link:'#', score:82, applied:'', deadline:'2026-07-24',
+      stage:'관심', result:'interest', docs:[] },
+    { co:'핀테크 A', mono:'A', title:'백엔드 엔지니어', link:'#', score:86, applied:'2026-07-01', deadline:'2026-07-25',
       stage:'1차면접', result:'progress', docs:[{label:'제출 이력서', href:'#'},{label:'자소서 4문항', href:'#'}] },
-    { co:'커머스 B', mono:'B', title:'플랫폼 엔지니어', applied:'2026-06-10', deadline:'2026-06-20',
+    { co:'커머스 B', mono:'B', title:'플랫폼 엔지니어', link:'#', score:79, applied:'2026-06-10', deadline:'2026-06-20',
       stage:'최종', result:'pass', docs:[{label:'제출본 스냅샷', href:'#'}] },
-    { co:'스타트업 D', mono:'D', title:'서버 개발', applied:'2026-06-05', deadline:'2026-06-15',
+    { co:'스타트업 D', mono:'D', title:'서버 개발', link:'#', score:64, applied:'2026-06-05', deadline:'2026-06-15',
       stage:'서류합격', result:'fail', docs:[{label:'제출 이력서', href:'#'}] },
-    { co:'제조 C', mono:'C', title:'생산기술', applied:'2026-07-18', deadline:'2026-08-05',
-      stage:'서류접수', result:'wait', docs:[] },
   ];
 
-  const RESULT_LABEL={ progress:'진행중', pass:'최종 합격', fail:'불합격', wait:'결과 대기' };
+  const RESULT_LABEL={ interest:'관심(미지원)', progress:'진행중', pass:'최종 합격', fail:'불합격', wait:'결과 대기' };
+  function urgent(a){ const d=daysBetween(TODAY,a.deadline); return !a.applied && d>=0 && d<=3; }
 
   function daysBetween(a,b){ return Math.round((Date.parse(b)-Date.parse(a))/86400000); }
   function ddayText(deadline){
@@ -124,9 +136,10 @@
   }
 
   function renderSummary(apps){
-    const c={total:apps.length, progress:0, pass:0, fail:0, wait:0};
-    apps.forEach(a=>c[a.result]++);
-    const cells=[['총 지원',c.total],['진행중',c.progress],['합격',c.pass],['불합격',c.fail],['대기',c.wait]];
+    const c={total:apps.length, interest:0, progress:0, pass:0, fail:0, wait:0};
+    apps.forEach(a=>c[a.result]=(c[a.result]||0)+1);
+    const urg=apps.filter(urgent).length;
+    const cells=[['총 지원/관심',c.total],['관심(미지원)',c.interest],['진행중',c.progress],['합격',c.pass],['마감임박',urg]];
     document.getElementById('summary').innerHTML=cells.map(([l,n])=>
       `<div class="cell"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join('');
   }
@@ -143,18 +156,24 @@
 
   function cardHTML(app){
     const dd=ddayText(app.deadline);
+    const urg=urgent(app);
     const docs= app.docs && app.docs.length
-      ? app.docs.map(d=>`<a href="${d.href}">${d.label} ↗</a>`).join('')
+      ? app.docs.map(d=>`<a href="${escAttr(d.href)}" target="_blank" rel="noopener">${escHtml(d.label)} ↗</a>`).join('')
       : `<span class="none">제출 파생본 없음</span>`;
-    return `<div class="app" data-result="${app.result}">
+    return `<div class="app ${urg?'urgent':''}" data-result="${app.result}">
       <div class="app-top">
-        <span class="mono">${app.mono||app.co[0]}</span>
-        <div class="app-id"><div class="co">${app.co}</div><div class="ti">${app.title}</div></div>
-        <span class="badge ${app.result}">${RESULT_LABEL[app.result]}</span>
+        <span class="mono">${escHtml(app.mono||app.co[0])}</span>
+        <div class="app-id">
+          <div class="co">${escHtml(app.co)}${urg?'<span class="urgent-flag">마감임박 · 미지원</span>':''}</div>
+          <div class="ti">${escHtml(app.title)}</div>
+          ${app.link?`<div class="link"><a href="${escAttr(app.link)}" target="_blank" rel="noopener">공고 ↗</a></div>`:''}
+        </div>
+        ${app.score?`<span class="badge score">적합도 ${escHtml(app.score)}</span>`:''}
+        <span class="badge ${app.result}">${RESULT_LABEL[app.result]||app.result}</span>
       </div>
       <div class="dates">
-        <span>지원일 · ${app.applied}</span>
-        <span>마감 · ${app.deadline}</span>
+        <span>${app.applied?('지원일 · '+escHtml(app.applied)):'<b style="color:var(--accent)">미지원</b>'}</span>
+        <span>마감 · ${escHtml(app.deadline)}</span>
         <span class="dday ${dd.past?'past':''}">${dd.t}</span>
       </div>
       ${pipeHTML(app)}
@@ -165,13 +184,17 @@
   let filter='all';
   function render(){
     renderSummary(APPS);
-    const shown = filter==='all'? APPS : APPS.filter(a=>a.result===filter);
+    let shown = filter==='all'? APPS.slice()
+      : filter==='urgent'? APPS.filter(a=>!a.applied && daysBetween(TODAY,a.deadline)>=0 && daysBetween(TODAY,a.deadline)<=7)
+      : APPS.filter(a=>a.result===filter);
+    // 정렬: 마감임박·미지원을 최상단, 그다음 마감 임박순
+    shown.sort((a,b)=> (urgent(a)?0:1)-(urgent(b)?0:1) || Date.parse(a.deadline)-Date.parse(b.deadline));
     const list=document.getElementById('list');
     list.innerHTML = shown.length ? shown.map(cardHTML).join('')
       : `<div class="empty">해당 상태의 지원 건이 없습니다.</div>`;
   }
   function renderFilters(){
-    const opts=[['all','전체'],['progress','진행중'],['pass','합격'],['fail','불합격'],['wait','대기']];
+    const opts=[['all','전체'],['urgent','마감임박'],['interest','관심'],['progress','진행중'],['pass','합격'],['fail','불합격']];
     document.getElementById('filters').innerHTML=opts.map(([k,l])=>
       `<button class="${k===filter?'on':''}" onclick="setFilter('${k}')">${l}</button>`).join('');
   }
