@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<!--
+  career skill — LinkedIn 최적화 export (② / reference/linkedin.md)
+  LinkedIn 입력 포맷을 최대한 모두 구현 → 사용자가 섹션을 선택(활성화)해 채운다.
+  두 반영 모드: A. 복사-붙여넣기(기본·안전)  B. computer-use 자동 입력(런타임 가능 시·게이트, Fill Plan 내보내기).
+  ★ 안전: 자격증명 미저장/미전송, 로그인은 사용자 본인, 섹션별 사전 확인. LinkedIn 편집 공개 API 없음 +
+    무단 자동화는 ToS 위반 → 자동 입력은 '사용자 본인 계정·사용자 로그인·섹션별 승인' 안에서만.
+  ★ 뱅크 기반 생성, 자체완결, 외부 네트워크 0. 커밋되는 이 파일은 GENERIC 샘플만(PII 금지).
+  ★ 글자수 상한은 LinkedIn 기준(변동 가능). 하드 카운터는 확실한 값만(Headline 220·About 2,600·설명 2,000·직함 100).
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>career — LinkedIn export</title>
+<style>
+  :root{
+    --accent:#9a3b2e; --ink:#1b1a17; --muted:#6c675e; --faint:#9b958a;
+    --line:#e7e3da; --line-2:#d4cec3; --wash:#f7efec; --paper:#fff; --over:#b23b2e; --ok:#2f7d5b; --mid:#b8823a;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',Roboto,sans-serif;
+  }
+  *{ box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  html,body{ margin:0; padding:0; background:#eceae4; color:var(--ink); font-family:var(--sans);
+    font-size:14px; line-height:1.55; letter-spacing:-0.002em; }
+  .wrap{ max-width:860px; margin:0 auto; padding:26px 16px 40px; }
+  .bar{ height:3px; width:60px; background:var(--accent); margin-bottom:14px; }
+  h1{ margin:0; font-size:24px; font-weight:800; letter-spacing:-0.02em; }
+  .lead{ margin:8px 0 0; color:var(--muted); font-size:13px; }
+  .note{ margin-top:12px; padding:11px 14px; background:var(--wash); border-left:3px solid var(--accent);
+    border-radius:4px; font-size:12.5px; color:var(--muted); }
+
+  /* 섹션 활성화 패널 */
+  .panel{ margin-top:16px; background:var(--paper); border:1px solid var(--line); border-radius:11px; padding:14px 16px; }
+  .panel h2{ margin:0 0 4px; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+  .panel .sub{ font-size:11.5px; color:var(--faint); margin-bottom:10px; }
+  .grp{ margin-top:9px; }
+  .grp .gl{ font-size:10.5px; font-weight:700; color:var(--faint); letter-spacing:.04em; text-transform:uppercase; margin-bottom:5px; }
+  .chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{ font-family:var(--sans); font-size:12px; border:1px solid var(--line-2); background:#fff; color:var(--muted);
+    border-radius:20px; padding:5px 12px; cursor:pointer; user-select:none; }
+  .chip.on{ background:var(--ink); color:#efe9df; border-color:var(--ink); }
+  .chip.core{ background:var(--wash); color:var(--accent); border-color:var(--accent); cursor:default; }
+
+  /* 섹션 카드 */
+  .sec{ background:var(--paper); border:1px solid var(--line); border-radius:11px; padding:16px 18px; margin-top:14px; }
+  .sec-top{ display:flex; align-items:baseline; gap:10px; margin-bottom:4px; }
+  .sec-top .n{ font-family:var(--serif); font-style:italic; font-size:14px; color:var(--accent); }
+  .sec-top h3{ margin:0; font-size:13px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; }
+  .sec-top .grpb{ margin-left:auto; font-size:10px; color:var(--faint); border:1px solid var(--line); border-radius:10px; padding:1px 8px; }
+  .sec .repeat{ font-size:11px; color:var(--mid); margin:0 0 8px; }
+  .fld{ margin-top:11px; }
+  .fld .fl{ display:flex; align-items:baseline; gap:8px; margin-bottom:4px; }
+  .fld .fl label{ font-size:12px; font-weight:700; color:var(--ink); }
+  .fld .fl .cnt{ margin-left:auto; font-size:11px; color:var(--faint); }
+  .fld .fl .cnt.over{ color:var(--over); font-weight:700; }
+  .fld .hint{ font-size:11px; color:var(--faint); margin-top:5px; }
+  input[type=text], textarea{ width:100%; resize:vertical; font-family:var(--sans); font-size:13.5px; line-height:1.55;
+    color:var(--ink); background:#fcfbf9; border:1px solid var(--line-2); border-radius:8px; padding:9px 12px; }
+  textarea:focus, input[type=text]:focus{ outline:2px solid var(--wash); border-color:var(--accent); }
+  .copy{ margin-top:7px; border:1px solid var(--line-2); background:#fff; color:var(--accent); border-radius:7px;
+    padding:5px 12px; font-size:11.5px; font-weight:700; cursor:pointer; font-family:var(--sans); }
+  .copy.sec-copy{ color:var(--ink); }
+  .copy.done{ background:var(--ok); color:#fff; border-color:var(--ok); }
+
+  /* 자동 입력 카드 */
+  .auto{ margin-top:16px; background:#1b1a17; color:#e9e4d8; border-radius:11px; padding:16px 18px; }
+  .auto h2{ margin:0 0 6px; font-size:14px; font-weight:800; color:#efe9df; }
+  .auto p{ margin:6px 0 0; font-size:12.5px; color:#c9c3b6; line-height:1.55; }
+  .auto ul{ margin:8px 0 0; padding-left:18px; }
+  .auto li{ font-size:12px; color:#c9c3b6; margin:3px 0; }
+  .auto b{ color:#efe9df; }
+  .auto .modes{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+  .auto button{ border:none; border-radius:8px; padding:9px 15px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:var(--sans); }
+  .auto .primary{ background:#efe9df; color:#1b1a17; }
+  .auto .ghost{ background:transparent; color:#efe9df; border:1px solid #4a4640; }
+  #plan{ display:none; white-space:pre-wrap; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11px;
+    background:#0f0e0c; color:#d9d4c8; border-radius:8px; padding:13px; margin-top:12px; max-height:340px; overflow:auto; }
+  .warn{ color:#e8b04b; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar"></div>
+  <h1>LinkedIn 최적화 패키지</h1>
+  <p class="lead">뱅크에서 파생한 LinkedIn 전 입력 포맷입니다. 반영할 <strong>섹션을 켜서</strong> 채우고, <strong>[복사]</strong>로 붙여넣거나 <strong>Fill Plan</strong>으로 자동 입력하세요.</p>
+  <div class="note">⚠️ <strong>기본은 복사-붙여넣기(A 모드)</strong> — 계정·ToS 리스크 0. LinkedIn은 프로필 편집 공개 <strong>API가 없고</strong> 무단 자동화는 <strong>ToS 위반</strong>이라, 자동 입력(B 모드)은 <em>사용자 본인 계정·사용자 직접 로그인·섹션별 승인</em> 안에서만 지원합니다. 자격증명은 저장·전송하지 않습니다.</div>
+
+  <div class="panel">
+    <h2>반영할 섹션 선택 (활성화)</h2>
+    <div class="sub">핵심 섹션은 항상 켜져 있고, 나머지는 눌러서 활성화합니다. 활성화한 섹션만 아래에 나타나고 Fill Plan에 포함됩니다.</div>
+    <div id="picker"></div>
+  </div>
+
+  <div id="sections"></div>
+
+  <div class="auto">
+    <h2>B 모드 — computer-use 자동 입력 (런타임 지원 시)</h2>
+    <p>사용자 환경이 <b>브라우저 자동화(computer use·chrome use)</b>를 지원하면(예: Claude cowork, Codex 등) 스킬이 <b>대신 입력</b>할 수 있습니다. 없으면 위 <b>복사(A 모드)</b>로 진행하세요.</p>
+    <ul>
+      <li>🔒 <b>로그인은 사용자 본인</b>이 직접 — 스킬은 아이디·비밀번호·2FA를 묻지도·저장하지도·전송하지도 않습니다. 로그인·2FA·보안창을 만나면 정지.</li>
+      <li>👤 <b>본인 계정만</b> — 타인 계정·대량 자동화·연결요청/메시지 발송·스크래핑 금지(ToS).</li>
+      <li>✅ <b>섹션별 사전 확인</b> — 각 필드에 무엇을 넣을지 보여주고 승인받은 뒤 입력·저장.</li>
+      <li>🛡️ <b>덮어쓰기 보호</b> — 기존 값을 먼저 읽어 보존/병합 확인 후 반영, 결과 검증.</li>
+      <li><span class="warn">⚠️ [T3]·미검증 값은 자동 입력에도 넣지 않습니다(날조 금지 승계).</span></li>
+    </ul>
+    <div class="modes">
+      <button class="primary" onclick="exportPlan()">🧭 Fill Plan 내보내기 (활성 섹션)</button>
+      <button class="ghost" onclick="copyAllActive()">활성 섹션 전체 텍스트 복사</button>
+    </div>
+    <pre id="plan"></pre>
+  </div>
+</div>
+
+<script>
+  // 상한: 확실한 값만 하드 카운터(over 플래그). 0 = 카운트만(상한은 hint의 기준값 참고).
+  const SECTIONS = [
+    // ── 핵심 (core: 항상 활성) ──
+    { key:'headline', name:'Headline', group:'핵심', core:true, fields:[
+      {k:'headline', label:'헤드라인', limit:220, type:'text',
+        hint:'직무 정체성 + 검색 키워드. 접힘 노출 1순위(≤220).',
+        sample:'데이터로 이익을 설계하는 제조혁신 엔지니어 | CapEx 방어 · OpEx 최적화 · Zero-Defect'} ]},
+    { key:'about', name:'About', group:'핵심', core:true, fields:[
+      {k:'about', label:'소개(About)', limit:2600, type:'area', rows:8,
+        hint:'첫 ~3줄이 미리보기 — 훅을 앞에(≤2,600).',
+        sample:'제조 현장의 실제 작동 원리를 데이터로 해석해, 대규모 투자 없이 생산성을 끌어올리는 일을 합니다.\n\n• 시뮬레이션·DOE로 CapEx를 방어하고 공정 병목을 해소\n• 공수·동작 분석(IE)으로 OpEx를 구조적으로 개선\n• 5중 검사 로직으로 Zero-Defect 품질 시스템 구축\n\n직관이 아니라 데이터가 해답이라고 믿습니다.'} ]},
+    { key:'experience', name:'Experience', group:'핵심', core:true, repeat:true, fields:[
+      {k:'title', label:'직함', limit:100, type:'text', hint:'≤100.', sample:'생산혁신 엔지니어'},
+      {k:'employment', label:'고용형태', limit:0, type:'text', hint:'정규직/계약직/인턴 등.', sample:'정규직'},
+      {k:'company', label:'회사', limit:0, type:'text', hint:'LinkedIn 회사 검색과 일치시키기.', sample:'회사명'},
+      {k:'location', label:'위치·근무형태', limit:0, type:'text', hint:'도시 · 원격/하이브리드/출근.', sample:'경기 · 하이브리드'},
+      {k:'period', label:'기간', limit:0, type:'text', hint:'재직 중이면 종료란 비움.', sample:'2022.03 – 현재'},
+      {k:'desc', label:'설명', limit:2000, type:'area', rows:5, hint:'동사+수치 불릿(X-Y-Z)로 마감(≤2,000).',
+        sample:'• 무투자 생산성 개선안을 DOE로 검증해 설비투자 123억 절감, 생산성 +12.8%\n• 공수·동작 분석 TF로 300명 규모 인력 효율화, 연 $11.8M OpEx 개선\n• 글로벌 법인 파견, MTBF 자동분석·실시간 모니터링 대시보드 구축'},
+      {k:'skills', label:'연결 스킬', limit:0, type:'text', hint:'이 경력에 태깅할 스킬(쉼표).', sample:'DOE, Industrial Engineering, Cost Optimization'} ]},
+    { key:'education', name:'Education', group:'핵심', core:true, repeat:true, fields:[
+      {k:'school', label:'학교', limit:0, type:'text', sample:'○○대학교'},
+      {k:'degree', label:'학위', limit:0, type:'text', sample:'학사'},
+      {k:'major', label:'전공', limit:0, type:'text', sample:'기계공학'},
+      {k:'period', label:'기간', limit:0, type:'text', sample:'2014 – 2020'},
+      {k:'grade', label:'성적(선택)', limit:0, type:'text', sample:'3.8/4.5'},
+      {k:'activities', label:'활동·동아리', limit:0, type:'text', hint:'기준 ~500.', sample:'제조공정 학회, 캡스톤 우수상'},
+      {k:'edesc', label:'설명(선택)', limit:0, type:'area', rows:2, hint:'coursework·프로젝트로 직무관련성(기준 ~1,000).', sample:'공정설계 캡스톤: 라인 밸런싱 최적화 프로젝트 팀 리드.'} ]},
+    { key:'skills', name:'Skills', group:'핵심', core:true, fields:[
+      {k:'skills', label:'스킬(쉼표, 최대 50개)', limit:0, type:'area', rows:2,
+        hint:'JD 키워드·검색 노출 정렬. 상위 3개는 프로필 상단 고정 권장.',
+        sample:'CapEx Defense, Cost Optimization, Industrial Engineering, DOE, MTBF/OEE, Lean Manufacturing, Zero-Defect Quality, CATIA, PLC, Python, Data Analysis'} ]},
+
+    // ── Intro 카드 ──
+    { key:'industry', name:'Industry & Location', group:'Intro 카드', fields:[
+      {k:'industry', label:'산업(Industry)', limit:0, type:'text', hint:'LinkedIn 사전값에서 선택 → 검색 필터 노출.', sample:'Manufacturing'},
+      {k:'location', label:'위치', limit:0, type:'text', sample:'대한민국 경기'} ]},
+    { key:'customurl', name:'Custom URL', group:'Intro 카드', fields:[
+      {k:'url', label:'맞춤 공개 URL', limit:0, type:'text', hint:'linkedin.com/in/뒤 5–30자, 영문·하이픈. 명함·검색용.', sample:'linkedin.com/in/yourname-mfg'} ]},
+    { key:'opentowork', name:'Open to Work', group:'Intro 카드', fields:[
+      {k:'titles', label:'희망 직함', limit:0, type:'text', sample:'생산혁신, Operational Excellence, 제조 DX'},
+      {k:'locations', label:'희망 지역', limit:0, type:'text', sample:'경기, 서울, 원격'},
+      {k:'types', label:'고용·근무형태', limit:0, type:'text', sample:'정규직 · 하이브리드/원격'},
+      {k:'start', label:'시작 시기', limit:0, type:'text', sample:'즉시 / 협의'},
+      {k:'visibility', label:'공개 범위', limit:0, type:'text', hint:'재직 중이면 "리크루터에게만" 권장.', sample:'리크루터에게만'} ]},
+    { key:'contact', name:'Contact Info (PII 확인)', group:'Intro 카드', fields:[
+      {k:'contact', label:'연락처(선택 노출)', limit:0, type:'text', hint:'⚠️ PII — 공개 전 사용자 확인. 이메일·웹사이트 등.', sample:'(공개할 이메일/웹사이트만 사용자 확인 후 입력)'} ]},
+
+    // ── 추천 ──
+    { key:'featured', name:'Featured', group:'추천', repeat:true, fields:[
+      {k:'featured', label:'대표 콘텐츠', limit:0, type:'area', rows:2, hint:'게시물·글·외부 링크·미디어(포폴 딥링크). 링크는 LinkedIn에서 첨부.',
+        sample:'포트폴리오: 생산혁신 사례집 (딥링크 첨부)\n대표 글: "무투자로 설비투자 123억을 방어한 방법"'} ]},
+    { key:'licenses', name:'Licenses & Certifications', group:'추천', repeat:true, fields:[
+      {k:'name', label:'이름', limit:0, type:'text', sample:'6시그마 그린벨트'},
+      {k:'issuer', label:'발급기관', limit:0, type:'text', sample:'○○협회'},
+      {k:'issued', label:'발급일 / 만료일', limit:0, type:'text', sample:'2023.06 / 무기한'},
+      {k:'credid', label:'자격증 ID·URL(선택)', limit:0, type:'text', hint:'검증 링크는 LinkedIn에서 입력.', sample:'ID: (자격증 번호)'},
+      {k:'cskills', label:'연결 스킬', limit:0, type:'text', sample:'DMAIC, SPC, Process Optimization'} ]},
+    { key:'projects', name:'Projects', group:'추천', repeat:true, fields:[
+      {k:'name', label:'프로젝트명', limit:0, type:'text', sample:'설비 자동화 내재화 프로젝트'},
+      {k:'period', label:'기간', limit:0, type:'text', sample:'2023.01 – 2023.09'},
+      {k:'pdesc', label:'설명', limit:2000, type:'area', rows:3, hint:'≤2,000. 역할·기여%·수치.',
+        sample:'CATIA + 자체 PLC로 무투자 설비 자동화 라인을 설계·구축, 사이클타임 18% 단축(기여 70%).'},
+      {k:'assoc', label:'연결(직무·학력)·URL(선택)', limit:0, type:'text', sample:'연결: 생산혁신 엔지니어'} ]},
+    { key:'courses', name:'Courses', group:'추천', repeat:true, fields:[
+      {k:'course', label:'강좌명·번호', limit:0, type:'text', sample:'데이터 분석 실무 (Python)'},
+      {k:'cassoc', label:'연결', limit:0, type:'text', sample:'연결: 제조 DX'} ]},
+    { key:'volunteer', name:'Volunteer Experience', group:'추천', repeat:true, fields:[
+      {k:'org', label:'기관', limit:0, type:'text', sample:'공학 멘토링 봉사단'},
+      {k:'role', label:'역할 · 분야', limit:0, type:'text', sample:'멘토 · 교육'},
+      {k:'vperiod', label:'기간', limit:0, type:'text', sample:'2021 – 현재'},
+      {k:'vdesc', label:'설명', limit:2000, type:'area', rows:2, hint:'≤2,000.', sample:'공학 전공 진로 멘토링, 누적 40명 지도.'} ]},
+    { key:'honors', name:'Honors & Awards', group:'추천', repeat:true, fields:[
+      {k:'htitle', label:'제목', limit:0, type:'text', sample:'사내 생산혁신 대상'},
+      {k:'hissuer', label:'발급기관 · 일자', limit:0, type:'text', sample:'회사 · 2024.12'},
+      {k:'hdesc', label:'설명(선택)', limit:1000, type:'area', rows:2, hint:'기준 ~1,000.', sample:'연 절감 $11.8M 성과로 전사 1위 수상.'} ]},
+    { key:'languages', name:'Languages', group:'추천', repeat:true, fields:[
+      {k:'lang', label:'언어 · 능숙도', limit:0, type:'text', hint:'원어민/전문/실무/기초.', sample:'영어 · 실무 능숙 / 한국어 · 원어민'} ]},
+
+    // ── 부가 ──
+    { key:'publications', name:'Publications', group:'부가', repeat:true, fields:[
+      {k:'ptitle', label:'제목 · 발행처 · 일자', limit:0, type:'text', sample:'제조 데이터 기반 수율 개선 · 학회지 · 2024'},
+      {k:'purl', label:'URL·저자(선택)', limit:0, type:'text', sample:'저자: 본인 외'},
+      {k:'pdesc2', label:'설명(선택)', limit:0, type:'area', rows:2, sample:''} ]},
+    { key:'patents', name:'Patents', group:'부가', repeat:true, fields:[
+      {k:'pat', label:'제목 · 특허청 · 번호 · 상태', limit:0, type:'text', sample:'설비 자동화 장치 · KIPO · 10-2024-xxxxxx · 출원'},
+      {k:'patdesc', label:'발명자·설명(선택)', limit:0, type:'area', rows:2, sample:''} ]},
+    { key:'testscores', name:'Test Scores', group:'부가', repeat:true, fields:[
+      {k:'test', label:'시험명 · 점수 · 일자', limit:0, type:'text', sample:'TOEIC · 900 · 2024.03'} ]},
+    { key:'organizations', name:'Organizations', group:'부가', repeat:true, fields:[
+      {k:'orgn', label:'이름 · 직위 · 기간', limit:0, type:'text', sample:'한국공학회 · 정회원 · 2021 – 현재'},
+      {k:'orgdesc', label:'설명(선택)', limit:0, type:'area', rows:2, sample:''} ]},
+
+    // ── 타인 작성 ──
+    { key:'recommendations', name:'Recommendations (요청 문구)', group:'타인 작성', fields:[
+      {k:'recreq', label:'추천서 요청 문구 초안', limit:0, type:'area', rows:3,
+        hint:'추천서는 동료·상사가 작성 — 스킬은 요청 문구만. 내가 대신 쓰지 않음.',
+        sample:'안녕하세요 ○○님, 함께한 △△ 프로젝트에서의 협업을 바탕으로 LinkedIn 추천서를 부탁드려도 될까요? 제가 기여한 부분(생산성 +12.8%)을 중심으로 짧게 남겨주시면 큰 도움이 됩니다. 감사합니다.'} ]},
+  ];
+
+  const active = {};                       // key -> bool
+  SECTIONS.forEach(s=> active[s.key] = !!s.core);
+  function chars(s){ return [...s].length; }
+
+  function renderPicker(){
+    const groups={};
+    SECTIONS.forEach(s=>{ (groups[s.group]=groups[s.group]||[]).push(s); });
+    const order=['핵심','Intro 카드','추천','부가','타인 작성'];
+    document.getElementById('picker').innerHTML = order.filter(g=>groups[g]).map(g=>
+      `<div class="grp"><div class="gl">${g}</div><div class="chips">`+
+      groups[g].map(s=> s.core
+        ? `<span class="chip core">✓ ${s.name}</span>`
+        : `<span class="chip ${active[s.key]?'on':''}" onclick="toggle('${s.key}')">${active[s.key]?'✓ ':''}${s.name}</span>`
+      ).join('')+`</div></div>`
+    ).join('');
+  }
+  function toggle(k){ active[k]=!active[k]; renderPicker(); renderSections(); }
+
+  function fieldHTML(sk, f){
+    const id = sk+'__'+f.k;
+    const limAttr = f.limit>0 ? ` data-limit="${f.limit}"` : '';
+    const input = f.type==='area'
+      ? `<textarea id="${id}" rows="${f.rows||3}"${limAttr} oninput="upd('${id}')">${f.sample||''}</textarea>`
+      : `<input type="text" id="${id}"${limAttr} oninput="upd('${id}')" value="${(f.sample||'').replace(/"/g,'&quot;')}">`;
+    return `<div class="fld">
+      <div class="fl"><label>${f.label}</label><span class="cnt" id="${id}__c"></span></div>
+      ${input}
+      ${f.hint?`<div class="hint">${f.hint}</div>`:''}
+      <button class="copy" onclick="copyField('${id}',this)">복사</button>
+    </div>`;
+  }
+  function secHTML(s){
+    return `<section class="sec" data-sec="${s.key}">
+      <div class="sec-top"><span class="n">${s.core?'★':'+'}</span><h3>${s.name}</h3><span class="grpb">${s.group}</span></div>
+      ${s.repeat?`<div class="repeat">↻ 반복 섹션 — LinkedIn에서 항목마다 새로 추가하세요. 아래는 한 항목 예시.</div>`:''}
+      ${s.fields.map(f=>fieldHTML(s.key,f)).join('')}
+      <button class="copy sec-copy" onclick="copySection('${s.key}',this)">이 섹션 전체 복사</button>
+    </section>`;
+  }
+  function renderSections(){
+    document.getElementById('sections').innerHTML =
+      SECTIONS.filter(s=>active[s.key]).map(secHTML).join('');
+    SECTIONS.filter(s=>active[s.key]).forEach(s=> s.fields.forEach(f=> upd(s.key+'__'+f.k)));
+  }
+
+  function upd(id){
+    const el=document.getElementById(id); if(!el)return;
+    const c=document.getElementById(id+'__c'); const lim=parseInt(el.dataset.limit)||0;
+    const n=chars(el.value);
+    c.textContent = lim? `${n} / ${lim}` : `${n}자`;
+    c.classList.toggle('over', lim>0 && n>lim);
+  }
+  function flash(btn){ const o=btn.textContent; btn.textContent='복사됨 ✓'; btn.classList.add('done');
+    setTimeout(()=>{ btn.textContent=o; btn.classList.remove('done'); },1800); }
+  function write(txt, btn){ navigator.clipboard.writeText(txt).then(()=>btn&&flash(btn), ()=>{}); }
+  function copyField(id, btn){ const el=document.getElementById(id); if(el) write(el.value.trim(), btn); }
+  function fieldsText(s){
+    return s.fields.map(f=>{ const el=document.getElementById(s.key+'__'+f.k);
+      const v=el?el.value.trim():''; return v?`${f.label}: ${v}`:null; }).filter(Boolean).join('\n');
+  }
+  function copySection(k, btn){ const s=SECTIONS.find(x=>x.key===k); if(s) write(`[${s.name}]\n`+fieldsText(s), btn); }
+
+  function activeText(){
+    return SECTIONS.filter(s=>active[s.key]).map(s=>`[${s.name}]${s.repeat?' (반복)':''}\n`+fieldsText(s)).join('\n\n');
+  }
+  function copyAllActive(){ write(activeText(), null); const p=document.getElementById('plan');
+    p.textContent='활성 섹션 전체 텍스트를 클립보드에 복사했습니다.\n\n'+activeText(); p.style.display='block'; }
+  function exportPlan(){
+    const body = SECTIONS.filter(s=>active[s.key]).map(s=>{
+      const t=fieldsText(s); return t?`### ${s.name}${s.repeat?' (항목마다 반복)':''}\n${t}`:null;
+    }).filter(Boolean).join('\n\n');
+    const txt =
+`=== LINKEDIN FILL PLAN (computer-use B 모드) ===
+안전: 로그인=사용자 본인 · 자격증명 미취급 · 섹션별 사전 확인 후 저장 · 본인 계정만 · [T3] 제외.
+아래 "필드: 값"을 순서대로, 섹션마다 승인받고 입력하세요.
+
+${body}
+
+=== END ===`;
+    const p=document.getElementById('plan'); p.textContent=txt; p.style.display='block';
+    navigator.clipboard.writeText(txt).then(()=>{},()=>{});
+  }
+
+  renderPicker(); renderSections();
+</script>
+</body>
+</html>

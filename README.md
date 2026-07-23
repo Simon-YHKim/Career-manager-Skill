@@ -79,6 +79,8 @@ reference/
   portfolio-builder.md   마스터 경험 뱅크 & 포폴 빌더 (P0–P8)
   writing-voice.md       문체 게이트(AI-tell 제거) + 컨설턴트 문체 + Action Verbs
   jd-browsing.md         내장 웹 리서치 모듈(공고 발굴·기업·연봉·인재상; 게이트=추론+직접확인)
+  linkedin.md            LinkedIn 필드 카탈로그 + 반영 2모드(복사 / computer-use 자동입력·게이트)
+  handoff.md             세션 핸드오프(simon-handoff 최적화·PII는 .private/로 라우팅)
   gems/techniques.md     엔진 체리픽 기법 + 포팅 금지 목록
   gems/*  [gitignore]    젬 시스템프롬프트 원본(로컬)
   private/  [gitignore]  포폴·이력서·타깃·소스 PDF (PRIVATE)
@@ -86,8 +88,11 @@ templates/
   report.html            HTML 보고 표준 (D-7a)
   a4-doc.html            A4 인쇄용 문서 (D-7b, 에디토리얼·사람/포폴)
   resume-ats.html        ATS-세이프 단일컬럼 resume EN (기계 제출용)
+  cover-letter.html      자소서 (문항+답변+글자수 카운터)
+  linkedin-export.html   LinkedIn 전 필드 (섹션 선택·글자수·복사 + Fill Plan[computer-use])
   intake-form.html       표준 입력 폼 (D-7d, 데이터 복사)
   jd-discovery.html      공고 발굴 보드 (순위·적합도 점수·한줄요약·링크·위시리스트)
+  roadmap.html           다중 경로 로드맵 보드 (⑦ 경로 추천·적합도·연차별 목표·선택)
   application-tracker.html 지원 현황 대시보드 (P8, 일정관리)
 samples/sample-resume.html   A4 렌더 샘플(제네릭·PII 없음)
 scripts/

@@ -92,12 +92,17 @@
     portfolio-builder.md   ← 마스터 경험 뱅크 & 포폴 빌더 (P0–P8)
     writing-voice.md       ← 문체 게이트(AI-tell 제거) + 컨설턴트 문체
     jd-browsing.md         ← 내장 웹 리서치 모듈(구 insane-search 클론·개명)
+    linkedin.md            ← LinkedIn 필드 카탈로그 + 반영 2모드(복사 / computer-use)
+    handoff.md             ← 세션 핸드오프(simon-handoff 최적화·PII는 .private/)
   templates/
     report.html            ← HTML 보고 표준 템플릿
     a4-doc.html            ← A4 인쇄용 문서 템플릿(에디토리얼)
     resume-ats.html        ← ATS-세이프 단일컬럼 resume EN(기계 제출)
+    cover-letter.html      ← 자소서(문항+글자수 카운터)
+    linkedin-export.html   ← LinkedIn 전 필드(섹션 선택·복사 + Fill Plan[computer-use])
     intake-form.html       ← 표준 입력 폼 (데이터 복사)
     jd-discovery.html      ← 공고 발굴 보드 (순위·점수·위시리스트·일정)
+    roadmap.html           ← 다중 경로 로드맵 보드 (⑦ 경로 추천·연차별 목표)
     application-tracker.html ← 지원 현황 대시보드 (P8)
   .private/                ← [gitignore] 개인 컨텍스트
     profile.md             ←   보정 프로필
