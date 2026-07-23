@@ -42,7 +42,7 @@ description: Personalized job-search and career-change manager. In one conversat
   - **기본:** repo 내 `.private/profile.md` + `reference/private/`(둘 다 `.gitignore`) ← 빌드 기본값
   - **대안:** Claude Code 메모리 / 외부 파일(사용자 지정 경로)
 - 스킬은 이 컨텍스트를 **read/write**하며 세션마다 개선(새 정량 성과·전형 현황·[T3] 근거 확보 시 반영).
-- **마스터 경험 뱅크(SSOT) = `.private/experience-bank.md`** — 모든 경험 원자(C·R·A·R·I·KPI·Truth Tier·해시태그)를 담는 durable 원본. ②·①·④·⑤·⑦의 공통 근거 소스. 구축·갱신 절차는 [`reference/portfolio-builder.md`](reference/portfolio-builder.md)(P0–P8). 세션마다 "새 경험/수치 생겼나요?" 자동 확인 후 증분 갱신, `[T3]→[T1]` 승격 리마인드.
+- **마스터 경험 뱅크(SSOT) = `.private/experience-bank.md`** — 모든 경험 원자(C·R·A·R·I·KPI·Truth Tier·해시태그)를 담는 durable 원본. **①–⑦ 전 태스크의 공통 근거 소스**(③ 면접·⑥ 연봉 포함 — 필살기·성과 근거를 소비). 로드·파생·write-back 규율은 §6.0 계약 #1. 구축·갱신 절차는 [`reference/portfolio-builder.md`](reference/portfolio-builder.md)(P0–P8). 세션마다 "새 경험/수치 생겼나요?" 자동 확인 후 증분 갱신, `[T3]→[T1]` 승격 리마인드.
 - **지원 히스토리 = `.private/applications/`** — 지원 건별(회사·직무·마감·전형단계·결과 + 제출 파생본 스냅샷) 누적. "지원 현황 보여줘" → [`templates/application-tracker.html`](templates/application-tracker.html)로 렌더(자소설닷컴식 D-day·단계·결과).
 - **커밋 금지 가드:** 개인 컨텍스트 경로(`.private/`·`reference/private/`, 뱅크·지원 히스토리 포함)를 git에 add하지 않는다. 산출물에 PII를 넣기 전 사용자 확인. IP·영업비밀 소지 항목은 공개/대외 문서에 **비IP·방어 가능 범위로만** 축약(사용자 프로필 정책 준수).
 
@@ -50,7 +50,7 @@ description: Personalized job-search and career-change manager. In one conversat
 
 ## 3. 2단 평가 (D-3) — 냉정 진단 → 최대 PR, 강도는 런타임 선택
 
-모든 진단·채점·첨삭·모의면접 채점은 2단으로 수행. 상세 루브릭·점수 상한은 [`reference/evaluation.md`](reference/evaluation.md).
+모든 진단·채점·첨삭·모의면접 채점은 2단으로 수행. 상세 루브릭·점수 상한은 [`reference/evaluation.md`](reference/evaluation.md). **적용 범위 = 진단성 태스크 ①③⑤⑥⑦ + ②④**(§6.0 계약 #2). 각 진단 산출은 **종결에 확신도(높음/중간/낮음) + 핵심 리스크 2–3**을 붙인다.
 
 **Stage 1 — 냉정 진단 (보수적, 근거 우선):**
 - 실제 선발 경쟁 기준으로 채점(빈 종이가 아니라 **경쟁 지원자** 대비). skeptical → evidence → conservative → realism.
@@ -89,6 +89,20 @@ description: Personalized job-search and career-change manager. In one conversat
 ## 6. 7 태스크 — 고정 출력 템플릿 (D-2·D-7c)
 
 각 태스크는 **아래 고정 섹션 구조**를 항상 동일하게 산출한다. 분석형(①③④⑤⑥⑦)은 **HTML 보고 표준**(`templates/report.html`), 문서형(②의 최종 문서)은 **A4 인쇄용 HTML**(`templates/a4-doc.html`)로 렌더(§7).
+
+### 6.0 공통 계약 (모든 태스크가 상속 — 태스크별로 재정의하지 않음)
+
+아래 7개는 §6의 모든 태스크(①–⑦)에 공통 적용된다. 각 태스크 블록은 이 계약을 **상속**하고 고유 섹션만 추가한다.
+
+1. **뱅크 I/O** — 세션 시작 시 `.private/experience-bank.md`를 **로드**(재입력 없이 파생), 종료 시 새 수치·갭·`[T3]→[T1]` 승격을 **write-back**(P8 증분 갱신). 뱅크는 **①–⑦ 전 태스크의 공통 근거 소스**. 단 **원샷 산출(면접 치트시트·연봉 스크립트 1회성)은 뱅크 없이 최소 입력 허용**(뱅크는 권유만) — 문서·매칭·로드맵은 뱅크 권장.
+2. **2단 평가 + 확신도** — 진단성 태스크(①③⑤⑥⑦ + ②④)는 §3 2단 평가(냉정→PR) + evaluation.md Score Caps·Mandatory Deductions·Calibration을 적용하고, **종결에 확신도(높음/중간/낮음) + 핵심 리스크 2–3** 블록을 붙인다.
+3. **공유 증거 테이블** — 근거 제시는 자유서술이 아니라 표준 스키마: `요구·질문 원자 | 회사 페인포인트 | 내 근거(뱅크 경험 ID·해시태그·기여%) | Tech-to-Biz 환산($/%/수율) | Truth Tier | 갭 | 보강`. **① 매칭 매트릭스가 원형**, ②③④⑥가 재사용(report.html 매트릭스 확장).
+4. **무게중심 선탐색** — 균등 취급 금지. 진단·매칭·준비 앞단에서 "이 타깃의 채점 결정 축"을 먼저 찾아 리소스를 가중(①=채용 장벽 매트릭스+히든배리어, ③④=지원사 평가 프레임, ⑤⑦=CORE 역량). 축은 **직무군별 자동 선정**(제조·테크 편향 고정 3축 금지).
+5. **런타임 6다이얼 + 작업/제출** — 모든 태스크 설정에 6다이얼(출력모드·언어·평가강도·꼬리질문경중·PR강도·전문용어강도) 노출 + 각 단계 훅. **작업용 = 근거·증빙·Truth Tier·전략 노출 / 제출용 = 대외 산출물만(`[T3]`·내부 전략 자동 은닉).** 강도류는 톤만 바꾸고 채점 보수성·수치 무결성·날조 금지는 **불변**.
+6. **태스크 체이닝(병합 아님)** — 중복은 라우터·모드전환(§5 금지) 없이 **산출→소비 체이닝**으로 푼다: ①→②(JD-맞춤 뷰), ③→④(드릴 덱), ⑤→⑦(진단 결과), 오퍼→`.private/applications/`. 앞 태스크 결과를 뱅크·`.private` 경유로 재입력 없이 소비.
+7. **Truth Tier 3계층 + 문체 게이트** — 데이터(뱅크)·문서(산출)·대외노출 전 계층에 T1/T2/T3 태깅. **`[T3]`·미입증·bluff는 대외/제출 렌더에서 자동 배제**, 단 내부 훈련(④ 압박 표적·⑤ 자가진단)에선 공격 포인트로 노출. 모든 자연어 산출(문서·모범답변·스크립트·로드맵)은 문체 게이트([`reference/writing-voice.md`](reference/writing-voice.md)) 통과.
+
+> **스펙 존중(SSOT):** BUILD_SPEC·기존 고정 스펙(예: ③ 질문분류 Technical/Behavioral/Culture/Case = D-2)은 계약이 **덮어쓰지 않고 위에 얹는다(overlay)**. 계약과 스펙이 충돌하면 사용자에게 확인.
 
 ### ① JD ↔ 포트폴리오 매칭 → report.html
 1. **입력 요약** — 표: `목표 회사/직무 | 전형·진행현황 | JD 핵심 키워드 | 사용자 핵심 자산`
