@@ -12,7 +12,7 @@ echo "== files =="
 for f in SKILL.md BUILD_SPEC.md GOAL_CONDITION.txt README.md .gitignore \
          reference/methodology.md reference/evaluation.md reference/gems/techniques.md \
          reference/portfolio-builder.md reference/writing-voice.md reference/jd-browsing.md \
-         reference/handoff.md reference/linkedin.md \
+         reference/handoff.md reference/linkedin.md reference/glossary.md \
          templates/report.html templates/a4-doc.html \
          templates/intake-form.html templates/application-tracker.html templates/resume-ats.html templates/jd-discovery.html \
          templates/cover-letter.html templates/linkedin-export.html templates/roadmap.html; do
@@ -90,6 +90,10 @@ grep -qiE 'Path Recommender|다중 경로' SKILL.md && grep -qF "roadmap.html" S
 grep -qF "session-state" reference/handoff.md && grep -qiE 'prepend|덮어쓰지' reference/handoff.md && grep -qF ".private" reference/handoff.md \
   && ok "handoff.md: 세션 핸드오프 + PII 라우팅(.private/session-state)" || no "handoff.md content"
 grep -qF "handoff.md" SKILL.md && ok "SKILL wired to reference/handoff.md" || no "SKILL handoff wiring"
+# 초보 진입 스캐폴딩 + 미션 명문화 (Phase B)
+grep -qiE '필살기|무게중심|Truth Tier' reference/glossary.md && ok "glossary: 초보 용어집" || no "glossary content"
+grep -qiE '콜드스타트|초보' SKILL.md && grep -qiE 'easy 기본|verdict-first' SKILL.md && grep -qF "glossary.md" SKILL.md && ok "SKILL: 초보 콜드스타트 + easy/verdict-first + 용어집 배선" || no "SKILL beginner scaffolding"
+grep -qiE '취린이|초보' BUILD_SPEC.md && grep -qiE '미션' BUILD_SPEC.md && ok "BUILD_SPEC: 초보-포함 미션 명문화(D-0)" || no "BUILD_SPEC mission"
 grep -qF "5.6" reference/evaluation.md && grep -qiE 'claim-audit|재-그라운딩|재그라운딩' reference/evaluation.md && grep -qiE '축별 4단|객관 기준|객관 산정' reference/evaluation.md && ok "evaluation: §5.6 적합도 루브릭(객관 밴드) + §8 claim-audit" || no "evaluation 5.6/8"
 grep -qiE 'claim-audit|재-그라운딩' SKILL.md && grep -qF "session-state" SKILL.md && ok "SKILL: claim-audit + 세션 핸드오프 배선" || no "SKILL anti-drift/handoff"
 

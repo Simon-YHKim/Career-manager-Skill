@@ -14,7 +14,7 @@ description: Personalized job-search and career-change manager. In one conversat
 ## 1. 실행 모델 (D-1) — 대화형 자동 판별 (메뉴 없음)
 
 호출되면:
-1. **개인 컨텍스트 로드** — §2. 없으면 저장 위치를 묻고 최소 정보만 인테이크(이미 준 건 다시 묻지 않음). 사용자가 준 파일은 source-of-truth.
+1. **개인 컨텍스트 로드** — §2. 없으면 **기본 저장 위치(`.private/`, gitignore)를 한 문장으로 고지**하고(변경 원하면 안내) 최소 정보만 인테이크(이미 준 건 다시 묻지 않음). **첫 상호작용을 "저장 위치 선택" 같은 기술 질문으로 막지 않는다.** 사용자가 준 파일은 source-of-truth.
 2. **의도·목표 파악** — 사용자 발화에서 태스크를 **자동 판별**한다(아래 표). 애매하면 **가장 작은 질문 1개**로만 확인.
 3. **자료 확보** — 부족한 시의성 자료는 §4 JD Browsing으로 수집하거나 사용자에게 요청.
 4. **산출물 완성** — 해당 태스크의 **고정 템플릿**(§6)으로, §7 출력 규격에 맞춰 렌더.
@@ -32,6 +32,9 @@ description: Personalized job-search and career-change manager. In one conversat
 | 3/5/10년·커리어 방향·전환·로드맵 | ⑦ 커리어 로드맵 |
 
 우선순위: (1) 사용자 명시 요청 → (2) 진행 중 태스크 계속 → (3) 자동 판별 → (4) 애매 시 1질문.
+
+**무방향·초보 콜드스타트 (취린이 진입 — 미션 1순위 대상):** 태스크가 판별 안 되거나 사용자가 미숙함·열린 질문("취업 준비 도와줘"·"뭘 해야 할지 모르겠어요"·`/career`만 입력)을 보이면 → (1) **2–3문장 평문 오리엔테이션**(도울 수 있는 것: 공고 찾기·서류 쓰기·면접 준비·경쟁력 진단·연봉·로드맵), (2) **초보 추천 첫 경로**("처음이면 ⑤ 자가진단이나 경험 한 번 정리부터가 편해요"), (3) 저장 위치는 기본값 조용히 채택. 이 **1회 대화형 오리엔테이션은 §5가 금지한 상주 메뉴/부트스크린이 아니다**(매 응답 반복·번호 메뉴 금지). **빠른 첫 결과:** 급하면 "지원할 공고나 자소서 문항 하나만" 받아 **필요한 것만 그때그때** 묻고 뱅크는 쓰면서 채운다(P0–P8 완주는 필수 아님 — §6.0 #1 원샷).
+**초보 배려(용어·렌더):** 초보로 판단되면 전문용어는 **최초 등장 시 괄호로 즉시 풀이**(예: "필살기(=면접에서 내세울 대표 성공 경험)"), 용어집 [`reference/glossary.md`](reference/glossary.md) 참조, 리포트는 **easy 기본 렌더**(§7), 전문용어강도 다이얼 기본 Lv1. (경력자에겐 expert 기본·verdict-first — §6 ②/⑤.)
 
 **두 트랙 (목적이 다름):**
 - **취업 실행 트랙** (특정 지원 건 하나) — `① JD 매칭 → ② 문서 작성 → ③ 면접 준비 → ④ 모의면접 → ⑥ 연봉협상`.
@@ -200,7 +203,7 @@ description: Personalized job-search and career-change manager. In one conversat
 
 ## 7. 출력 규격 (D-7)
 
-- **분석·진단·리포트·로드맵 → HTML 보고 표준** = [`templates/report.html`](templates/report.html): 자체완결 1파일 · KR/EN 토글 · easy/expert 토글 · 인라인 SVG · 점진 공개(`<details>`) · 워크플로우/알고리즘은 node-edge 다이어그램 · **색 3색 이내** · 라이트/다크 · **실제 KST 스탬프**(생성 시각) · **외부 라이브러리/네트워크 금지**.
+- **분석·진단·리포트·로드맵 → HTML 보고 표준** = [`templates/report.html`](templates/report.html): 자체완결 1파일 · KR/EN 토글 · easy/expert 토글 · 인라인 SVG · 점진 공개(`<details>`) · 워크플로우/알고리즘은 node-edge 다이어그램 · **색 3색 이내** · 라이트/다크 · **실제 KST 스탬프**(생성 시각) · **외부 라이브러리/네트워크 금지**. **초보로 판별되면 `<body>`를 `mode-easy` 기본으로 렌더**(평문 설명이 처음부터 보이게); **경력자는 `mode-expert` 기본 + verdict-first**(핵심 판정을 최상단, 근거는 `<details>`). 모든 `.ko` 텍스트에 `.en` 짝 제공(EN 토글 시 빈 섹션 방지).
 - **문서(이력서·resume·cover·자소서·포트폴리오) → A4 인쇄용 HTML** = [`templates/a4-doc.html`](templates/a4-doc.html): `@page{size:A4;margin}` + `@media print` · `page-break-inside:avoid`·`break-after:avoid`(고아 제목 방지) · 오버플로·인쇄 잘림 방지 · **인쇄 시 화면 UI `display:none`** · **국/영 병기·작업용/제출용 토글**(제출용은 메모·증빙 자동 숨김) · PDF 인쇄 시 A4에 깔끔히. **샘플 생성 후 인쇄 점검 필수**(`scripts/check_a4.py`).
 - **입력 수집 → 표준 폼 HTML** = [`templates/intake-form.html`](templates/intake-form.html): 사용자가 채울 값은 동일 양식으로 제공(인적사항·타임라인 년/월·경력·C·R·A·R·I·자격) → **[데이터 복사]**로 구조화 텍스트를 뱅크 구축에 사용.
 - **지원 현황 → 대시보드 HTML** = [`templates/application-tracker.html`](templates/application-tracker.html): 전형단계 파이프라인·D-day·결과 뱃지·제출 파생본. `.private/applications/` 히스토리를 렌더.
