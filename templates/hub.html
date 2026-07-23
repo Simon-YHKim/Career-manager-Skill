@@ -112,12 +112,13 @@
 
 <div class="onb" id="onb">
   <button class="x" onclick="dismissOnb()">×</button>
-  <b>3가지 방식 — 원하는 만큼만</b>
+  <b>3가지 방식 — 원하는 만큼만 (더 안 해도 됩니다)</b>
   <div class="steps">
-    <span class="chip">① <b>로컬</b> — 그냥 쓰면 이 브라우저에 자동 저장(설정 불필요)</span>
-    <span class="chip">② <b>내 백엔드</b> — 무료 Worker 배포 후 연결 → 기기 간 동기화</span>
-    <span class="chip">③ <b>+AI</b> — Worker에 AI 키 넣으면 여기서 바로 AI로 다듬기</span>
+    <span class="chip">① <b>로컬</b> — 그냥 쓰면 이 브라우저에 자동 저장(<b>설정 불필요</b>)</span>
+    <span class="chip">② <b>내 백엔드</b> — <i>선택</i>: 무료 Worker 연결 → 기기 간 동기화</span>
+    <span class="chip">③ <b>+AI</b> — <i>선택</i>: Worker에 AI 키 넣으면 여기서 바로 다듬기</span>
   </div>
+  <div style="margin-top:7px;font-size:11.5px;color:var(--faint);">💡 처음이면 <b>①만으로 충분</b>합니다. ②③은 익숙해진 뒤 원할 때만 — 그리고 정보 디벨롭은 언제든 <b>Claude/Codex 스킬</b>에 말만 하면 됩니다(가장 쉬운 길).</div>
 </div>
 
 <div class="nav">
@@ -125,7 +126,7 @@
   <button data-tab="bank" onclick="tab('bank')">경험 뱅크</button>
   <button data-tab="apps" onclick="tab('apps')">지원 현황</button>
   <button data-tab="out" onclick="tab('out')">산출물</button>
-  <button data-tab="set" onclick="tab('set')">설정 · 동기화 · AI</button>
+  <button data-tab="set" onclick="tab('set')">설정·동기화·AI (선택)</button>
   <span class="sv" id="sv"></span>
 </div>
 
