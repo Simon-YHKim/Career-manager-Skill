@@ -3,7 +3,7 @@
 2. BUILD_SPEC D-2의 7개 태스크가 본문에 각각 고정 출력 템플릿과 함께 구현 — 표시.
 3. 2단 평가(냉정·근거우선 자가진단 → 최대 방어가능 PR) 구현, 평가 강도는 실행 중 사용자 선택 — 표시.
 4. reference/gems 자료에서 추출·압축한 채용 컨설턴트 방법론 모듈(reference/methodology.md)이 실행 가능한 규칙 형태로 존재 — 표시.
-5. 지식 하이브리드 — durable 방법론 내장, 시의성 데이터는 런타임 insane-search 수집(로그인/페이월 정지), 내장 정적정보엔 최신성 주석 — 표시.
+5. 지식 하이브리드 — durable 방법론 내장, 시의성 데이터는 런타임 JD Browsing 수집(로그인/페이월 정지), 내장 정적정보엔 최신성 주석 — 표시.
 6. 개인 컨텍스트는 .gitignore된 별도 저장소로 스킬이 read/write, 저장 위치 실행 중 사용자 선택, 절대 번들·커밋 안 함 — cat .gitignore 및 git ls-files 로 미추적 표시.
 7. 분석 산출물은 HTML 보고 표준(KR/EN·easy/expert·인라인 SVG·점진공개·node-edge·색 3색·라이트/다크·실제 KST); 문서 산출물(이력서·resume·cover letter·자소서·포트폴리오)은 A4 인쇄용 HTML — 샘플 1건이 A4 인쇄 시 밀림·잘림 없이 앉고 화면 전용 UI 숨김 — 샘플과 인쇄 점검 결과 표시.
 8. 페르소나(Loti/Ailey&Bailey/Ailey Debate)·멀티엔진·라우터·M/E 메뉴·Command Center·표현 안정성 프로토콜 없음 — 확인 표시.

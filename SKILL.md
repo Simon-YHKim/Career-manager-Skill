@@ -7,7 +7,7 @@ description: Personalized job-search and career-change manager. In one conversat
 
 취업·이직을 개인화 지원하는 단일 스킬. **하나의 커맨드가 대화로 의도를 파악해 7개 태스크 중 하나를 자동 판별**하고, 태스크별 **고정 출력 템플릿 1벌**로 산출물을 만든다. 메뉴·페르소나·엔진 전환·라우터·상주 UX **없음**.
 
-> 근거·규칙의 원천: [`BUILD_SPEC.md`](BUILD_SPEC.md)(SSOT) · 방법론 [`reference/methodology.md`](reference/methodology.md) · **포트폴리오 빌더(마스터 경험 뱅크·P0–P8)** [`reference/portfolio-builder.md`](reference/portfolio-builder.md) · 문체 [`reference/writing-voice.md`](reference/writing-voice.md) · 평가 루브릭 [`reference/evaluation.md`](reference/evaluation.md) · 엔진 체리픽 [`reference/gems/techniques.md`](reference/gems/techniques.md) · 출력 [`templates/report.html`](templates/report.html)·[`templates/a4-doc.html`](templates/a4-doc.html)·입력폼 [`templates/intake-form.html`](templates/intake-form.html)·지원현황 [`templates/application-tracker.html`](templates/application-tracker.html).
+> 근거·규칙의 원천: [`BUILD_SPEC.md`](BUILD_SPEC.md)(SSOT) · 방법론 [`reference/methodology.md`](reference/methodology.md) · **포트폴리오 빌더(마스터 경험 뱅크·P0–P8)** [`reference/portfolio-builder.md`](reference/portfolio-builder.md) · 문체 [`reference/writing-voice.md`](reference/writing-voice.md) · 웹 리서치 [`reference/jd-browsing.md`](reference/jd-browsing.md) · 평가 루브릭 [`reference/evaluation.md`](reference/evaluation.md) · 엔진 체리픽 [`reference/gems/techniques.md`](reference/gems/techniques.md) · 출력 [`templates/report.html`](templates/report.html)·[`templates/a4-doc.html`](templates/a4-doc.html)·입력폼 [`templates/intake-form.html`](templates/intake-form.html)·지원현황 [`templates/application-tracker.html`](templates/application-tracker.html).
 
 ---
 
@@ -16,7 +16,7 @@ description: Personalized job-search and career-change manager. In one conversat
 호출되면:
 1. **개인 컨텍스트 로드** — §2. 없으면 저장 위치를 묻고 최소 정보만 인테이크(이미 준 건 다시 묻지 않음). 사용자가 준 파일은 source-of-truth.
 2. **의도·목표 파악** — 사용자 발화에서 태스크를 **자동 판별**한다(아래 표). 애매하면 **가장 작은 질문 1개**로만 확인.
-3. **자료 확보** — 부족한 시의성 자료는 §4 insane-search로 수집하거나 사용자에게 요청.
+3. **자료 확보** — 부족한 시의성 자료는 §4 JD Browsing으로 수집하거나 사용자에게 요청.
 4. **산출물 완성** — 해당 태스크의 **고정 템플릿**(§6)으로, §7 출력 규격에 맞춰 렌더.
 
 **태스크 자동 판별 (의도 → 태스크):**
@@ -71,7 +71,7 @@ description: Personalized job-search and career-change manager. In one conversat
 ## 4. 지식·검색 (D-5) — 하이브리드
 
 - **Durable 방법론은 내장** — [`reference/methodology.md`](reference/methodology.md)(자소서·이력서·면접·로드맵·매칭·연봉), [`reference/evaluation.md`](reference/evaluation.md)(채점), [`reference/gems/techniques.md`](reference/gems/techniques.md). 먼저 이걸 근거로 삼는다.
-- **시의성 데이터는 런타임 insane-search로 수집**(프리즈 금지): 채용시장·기업 최신정보·직무 트렌드·평판·JD 원문·연봉 밴드·인재상 문구 등. 방법론 문서의 `§런타임 재수집 목록` 참조.
+- **시의성 데이터는 런타임 JD Browsing으로 수집**(프리즈 금지) — 스킬 **내장·자체완결** 웹 리서치 모듈 [`reference/jd-browsing.md`](reference/jd-browsing.md)(외부 스킬 의존 없음). 대상: 공고 발굴·채용시장·기업 최신정보·직무 트렌드·평판·JD 원문·연봉 밴드·인재상 문구 등. 방법론 문서의 `§런타임 재수집 목록`도 참조.
   - **공개 콘텐츠 Phase 0→3**로 수집. **로그인/페이월 도달 시 즉시 정지 → "인증 필요" 보고**(우회·자격증명 저장/전송 금지).
   - 못 찾으면 지어내지 말고 **'데이터 확보 실패' 명시** + 사용자에게 요청.
   - 인용은 **Truth Tier**(S 공식/원천·A 정부·메이저·B 커뮤니티 주의) 라벨 + **조회일** 부착. 리포트 하단 '참조 출처'에 평문으로.
@@ -105,13 +105,18 @@ description: Personalized job-search and career-change manager. In one conversat
 > **스펙 존중(SSOT):** BUILD_SPEC·기존 고정 스펙(예: ③ 질문분류 Technical/Behavioral/Culture/Case = D-2)은 계약이 **덮어쓰지 않고 위에 얹는다(overlay)**. 계약과 스펙이 충돌하면 사용자에게 확인.
 
 ### ① JD ↔ 포트폴리오 매칭 → report.html
-1. **입력 요약** — 표: `목표 회사/직무 | 전형·진행현황 | JD 핵심 키워드 | 사용자 핵심 자산`
-2. **JD 원자 분해 (5-D Prism)** — Competency / Intent(회사 속마음) / KPI / Attack Point / Culture
-3. **(선택) 7-Lens 기업 분석** — BM·시장 / 제품 차별 / 조직 시그널 / 기술·운영성숙도 / 채용 시그널 / 리스크 / Fit *(기업 최신정보는 insane-search)*
-4. **매칭 매트릭스** — 표: `JD 요구(원자) | 내 근거(프로젝트/수치) | Truth Tier | 갭 | 보강 액션`
-5. **즉시 수정 Top 5**
-6. **액션 플랜** — 7일 / 14일 / 30일 (node-edge 다이어그램)
-7. **참조 출처** — insane-search 사용 시 (티어·조회일)
+> **§6.0 공통 계약 상속**(뱅크 I/O·2단평가+확신도·공유 증거테이블·6다이얼·Truth Tier). 타깃 JD가 없으면 **0. 발굴 모드** 먼저.
+
+0. **(JD 없음/"공고 찾아줘") 공고 발굴 모드** — [`jd-browsing.md`](reference/jd-browsing.md) §2: 뱅크·프로필로 **탐색 프로파일**(역량·타깃 방향·연차·지역 + **언어 능력→공고 언어 범위**) → 국내/해외 공개 검색(요청일 기준; 게이트된 상세는 공개 신호로 추론 + `[직접 확인]` 플래그) → **적합도 포트폴리오 매트릭스**(`공고 | 회사 | 출처·조회일·Tier | 요구 핵심 | 적합도 등급 | Winning Angle | 추천도 | 지원현실`) → 사용자 선택 → 아래 심층. 관심 공고는 `.private/applications/` '관심'으로 저장.
+1. **입력 요약** — 표: `목표 회사/직무 | 전형·진행현황 | JD 핵심 키워드 | 사용자 핵심 자산`. (JD 2개+면 발굴 모드의 적합도 포트폴리오로 우선순위화 후 1차 타깃만 심층.)
+2. **무게중심 선탐색 (§6.0 #4)** — 세그먼트 판정 + **채용 장벽 매트릭스**(직무군별 축 자동 선정, 각 1–5 → 최고점=무게중심) + **히든배리어**(현직자 후기·JD 행간, JD Browsing) + 근무현실(3교대·출장·램프업) 확인.
+3. **JD 원자 분해 (5-D Prism)** — Competency / Intent(회사 속마음) / KPI / Attack Point / Culture. *(무게중심 축에 가중)*
+4. **(선택) 7-Lens 기업 분석** — BM·시장 / 제품 차별 / 조직 시그널 / 기술·운영성숙도 / 채용 시그널 / 리스크 / Fit *(기업 최신정보는 JD Browsing)*
+5. **매칭 매트릭스 (공유 증거테이블 §6.0 #3)** — 표: `JD 요구(원자) | 회사 페인포인트 | 내 근거(뱅크 EXP-ID·기여%) | Tech-to-Biz 환산($/%/수율) | Truth Tier | 갭 | 보강`
+6. **적합도 판정 (2단 평가 §6.0 #2)** — Stage 1 냉정(Score Caps·무게중심 가중) → **합격가능성 등급(상/중상/중/하) + 무게중심 축별 세부 + 확신도(높음/중간/낮음) + 핵심 리스크 2–3** → Stage 2 방어 가능 최대 포지셔닝.
+7. **즉시 수정 Top 5** *(Stage 2 산출)*
+8. **액션 플랜** — 7일 / 14일 / 30일 (node-edge 다이어그램)
+9. **핸드오프·참조 출처** — **JD-맞춤 뷰 저장**(②가 재입력 없이 소비, §6.0 #6) + 갭·미검증 수치 **뱅크 write-back**. 참조 출처(Tier·조회일).
 
 ### ② 문서 작성/첨삭 → 분석 report.html · 문서 a4-doc.html(사람·포폴) / ATS-세이프(기계 제출)
 > **기초 job = 포트폴리오 빌더.** 모든 문서는 뱅크에서 파생(§6.0 #1; 없으면 [`intake-form.html`](templates/intake-form.html)→**P0–P8** [`portfolio-builder.md`](reference/portfolio-builder.md) 구축). **§6.0 공통 계약 상속**(뱅크 I/O·2단평가+확신도·공유 증거테이블·6다이얼·Truth Tier·문체 게이트). 아래는 ②-고유 절차. 방법론 상세는 [`methodology.md`](reference/methodology.md)(cover-letter·resume-en).
@@ -152,14 +157,14 @@ description: Personalized job-search and career-change manager. In one conversat
 2. **총보상 계산** — 기본급 + 성과급(PS/PI/OPI) + 현금성 복지 + 주식(RSU)
 3. **전략 3안** — 강공 / 균형 / 안전
 4. **스크립트(KR/EN)** — 선제 역질문(예산 파악) · 레인지 전략 · 품의 시스템 대응
-5. **리스크 & 대응** *(시장 밴드는 insane-search, 출처 티어)*
+5. **리스크 & 대응** *(시장 밴드는 JD Browsing, 출처 티어)*
 
 ### ⑦ 커리어 로드맵 → report.html
 1. **현재 진단** — 무기 2 / 시장 적합 / 리스크 1
 2. **로드맵 표** — `기간(3/5/10년) | 목표 타이틀 | 핵심 스킬 | 증거 | 실행` — 각 단계 [목표·실행·**측정지표**] 필수
 3. **융합·희소성 설계** — Base(본캐) + Plus(부캐) → 타겟 직무
 4. **30일 스프린트** — 주 단위 (node-edge)
-5. *(시장·산업·연봉 데이터는 insane-search)*
+5. *(시장·산업·연봉 데이터는 JD Browsing)*
 
 ---
 
