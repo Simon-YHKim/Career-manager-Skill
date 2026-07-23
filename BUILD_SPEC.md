@@ -108,6 +108,7 @@
     intake-form.html       ← 표준 입력 폼 (데이터 복사)
     jd-discovery.html      ← 공고 발굴 보드 (순위·점수·위시리스트·일정)
     roadmap.html           ← 다중 경로 로드맵 보드 (⑦ 경로 추천·연차별 목표)
+    interview-prep.html    ← 면접 대비 포트폴리오 버전 (항목별 예상질문 3개)
     application-tracker.html ← 지원 현황 대시보드 (P8)
   .private/                ← [gitignore] 개인 컨텍스트
     profile.md             ←   보정 프로필

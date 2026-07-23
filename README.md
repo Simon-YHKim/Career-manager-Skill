@@ -103,6 +103,7 @@ templates/
   intake-form.html       표준 입력 폼 (D-7d, 데이터 복사)
   jd-discovery.html      공고 발굴 보드 (순위·적합도 점수·한줄요약·링크·위시리스트)
   roadmap.html           다중 경로 로드맵 보드 (⑦ 경로 추천·적합도·연차별 목표·선택)
+  interview-prep.html    면접 대비 포트폴리오 버전 (항목별 예상질문 3개·의도·방어)
   application-tracker.html 지원 현황 대시보드 (P8, 일정관리)
 samples/sample-resume.html   A4 렌더 샘플(제네릭·PII 없음)
 scripts/

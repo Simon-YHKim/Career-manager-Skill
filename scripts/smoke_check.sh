@@ -15,7 +15,7 @@ for f in SKILL.md BUILD_SPEC.md GOAL_CONDITION.txt README.md .gitignore \
          reference/handoff.md reference/linkedin.md reference/glossary.md \
          templates/report.html templates/a4-doc.html \
          templates/intake-form.html templates/application-tracker.html templates/resume-ats.html templates/jd-discovery.html \
-         templates/cover-letter.html templates/linkedin-export.html templates/roadmap.html; do
+         templates/cover-letter.html templates/linkedin-export.html templates/roadmap.html templates/interview-prep.html; do
   [ -f "$f" ] && ok "exists: $f" || no "missing: $f"
 done
 
@@ -55,7 +55,7 @@ else
 fi
 
 echo "== self-contained HTML (no external network) =="
-for h in templates/report.html templates/a4-doc.html templates/intake-form.html templates/application-tracker.html templates/resume-ats.html templates/jd-discovery.html templates/cover-letter.html templates/linkedin-export.html templates/roadmap.html; do
+for h in templates/report.html templates/a4-doc.html templates/intake-form.html templates/application-tracker.html templates/resume-ats.html templates/jd-discovery.html templates/cover-letter.html templates/linkedin-export.html templates/roadmap.html templates/interview-prep.html; do
   if grep -qiE 'https?://|src=|<link|@import|integrity=' "$h"; then no "external ref in $h"; else ok "self-contained: $h"; fi
 done
 
@@ -71,7 +71,11 @@ grep -qiE 'AI-tell|AI 티' reference/writing-voice.md && grep -qiE '이모지' r
 grep -qF "데이터 복사" templates/intake-form.html && ok "intake-form: 데이터 복사 button" || no "intake-form copy button"
 grep -qiE '전형|D-day|dday' templates/application-tracker.html && ok "application-tracker: 전형/D-day" || no "application-tracker content"
 grep -qiE '위시리스트|적합도|한줄|발전' templates/jd-discovery.html && grep -qiE '공고|link|href' templates/jd-discovery.html && ok "jd-discovery: 순위·점수·위시리스트·링크" || no "jd-discovery content"
-grep -qiE '문항|글자수|counter' templates/cover-letter.html && ok "cover-letter: 문항·글자수 카운터" || no "cover-letter content"
+grep -qiE '문항|글자수|counter' templates/cover-letter.html && grep -qiE '의도|q-intent' templates/cover-letter.html && ok "cover-letter: 문항·글자수 카운터 + 문항 의도" || no "cover-letter content"
+# 입력 폼 프로젝트 필드(프로젝트명·기간·성과·역할·기술) + 면접대비 버전(항목별 예상질문 3개)
+grep -qiE 'data-f="period"|기간 \(YYYY' templates/intake-form.html && grep -qiE 'data-f="stack"|기술' templates/intake-form.html && ok "intake-form: 프로젝트 기간·기술 필드 분리" || no "intake-form project fields"
+grep -qiE '예상질문|면접 대비' templates/interview-prep.html && grep -qiE '검증|진위|심화' templates/interview-prep.html && grep -qiE '평가 의도|방어 포인트' templates/interview-prep.html && ok "interview-prep: 항목별 예상질문 3개 + 의도·방어·Truth Tier" || no "interview-prep content"
+grep -qF "interview-prep.html" SKILL.md && ok "SKILL ③ wired to interview-prep.html" || no "SKILL interview-prep wiring"
 # linkedin-export: all fields + user-selectable activation + copy + Fill Plan(computer-use) + ToS/API + credential guard
 grep -qiE '복사|copy' templates/linkedin-export.html && grep -qiE 'ToS|API' templates/linkedin-export.html \
   && grep -qiE 'Fill Plan|computer-use' templates/linkedin-export.html && grep -qiE '활성화|섹션 선택' templates/linkedin-export.html \

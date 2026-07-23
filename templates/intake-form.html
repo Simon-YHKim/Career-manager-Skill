@@ -237,9 +237,10 @@
     document.getElementById('proj-list').appendChild(el(`
       <div class="rep" data-kind="proj">
         <div class="rep-top"><span class="tag">경험 / 프로젝트</span>${delBtn()}</div>
-        <div class="row c2">
-          <div class="field"><label>제목</label><input data-f="title" placeholder="라인 레이아웃 재설계"></div>
-          <div class="field"><label>소속·기간</label><input data-f="meta" placeholder="회사 A · 2022"></div>
+        <div class="row c3">
+          <div class="field"><label>프로젝트명</label><input data-f="title" placeholder="라인 레이아웃 재설계"></div>
+          <div class="field"><label>소속 <span class="hint">회사/학교</span></label><input data-f="org" placeholder="회사 A"></div>
+          <div class="field"><label>기간 (YYYY.MM~)</label><input data-f="period" placeholder="2022.03~2022.09"></div>
         </div>
         <div class="field"><label>C · Context <span class="hint">상황·과제</span></label><textarea data-f="c" placeholder="무엇이 문제였고 왜 필요했나"></textarea></div>
         <div class="row c2">
@@ -247,12 +248,12 @@
           <div class="field"><label>기여도 (%)</label><input data-f="contrib" placeholder="70"></div>
         </div>
         <div class="field"><label>A · Action <span class="hint">한 행동·방법</span></label><textarea data-f="a" placeholder="어떻게 했는가(동사+방법)"></textarea></div>
-        <div class="field"><label>R · Result <span class="hint">결과·정량·출처</span></label><textarea data-f="res" placeholder="예: 교체시간 22%↓ (2022 라인 데이터)"></textarea></div>
+        <div class="field"><label>R · Result <span class="hint">성과 · 정량 · 출처</span></label><textarea data-f="res" placeholder="예: 교체시간 22%↓ (2022 라인 데이터)"></textarea></div>
         <div class="row c2">
           <div class="field"><label>I · Insight <span class="hint">배운 것</span></label><input data-f="i" placeholder="전이 가능한 통찰"></div>
           <div class="field"><label>증빙 링크 <span class="hint">작업용만</span></label><input data-f="proof" placeholder="url (선택)"></div>
         </div>
-        <div class="field"><label>사용 스킬 / 스택</label><input data-f="stack" placeholder="쉼표 구분"></div>
+        <div class="field"><label>사용 스킬 / 기술 · 스택</label><input data-f="stack" placeholder="쉼표 구분 (예: CATIA, DOE, Python)"></div>
       </div>`));
   }
 
@@ -291,7 +292,7 @@
     const jobs=reps('job'); if(jobs.length){ L.push('[경력]');
       jobs.forEach(j=>L.push(`  - ${j.company||''} | ${j.title||''} | ${j.start||''}~${j.end||''} | ${j.loc||''}`)); }
     const pj=reps('proj'); if(pj.length){ L.push('[대표 경험 / 프로젝트 · C·R·A·R·I]');
-      pj.forEach((p,i)=>{ L.push(`  #${i+1} ${p.title||''} (${p.meta||''})`);
+      pj.forEach((p,i)=>{ L.push(`  #${i+1} ${p.title||''} (${p.org||''} · ${p.period||''})`);
         L.push(`     C: ${p.c||''}`); L.push(`     R: ${p.r||''} (기여 ${p.contrib||'?'}%)`);
         L.push(`     A: ${p.a||''}`); L.push(`     R: ${p.res||''}`); L.push(`     I: ${p.i||''}`);
         if(p.stack) L.push(`     Stack: ${p.stack}`); if(p.proof) L.push(`     증빙(작업용): ${p.proof}`); }); }

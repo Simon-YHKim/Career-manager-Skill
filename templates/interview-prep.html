@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<!--
+  career skill — 면접 대비 포트폴리오 버전 (③ 면접 준비 / 포트폴리오의 '면접 대비용' 화면)
+  포트폴리오/뱅크의 각 항목(프로젝트·경험)에서 예상 면접질문 3개를 추출한다:
+    Q1 수치·기술 검증 / Q2 기여도·진위(팀→개인) / Q3 심화·성장·한계.
+  각 질문에 [평가 의도] + [방어 포인트](필살기 3요소·꼬리질문 대비) + Truth Tier 공격면.
+  ★ 스킬이 뱅크(+JD Browsing 기업 특화)로 ITEMS를 치환한다. 날조 금지·[T3]는 대외 답변 미사용(단
+    내부 훈련용 공격 포인트로는 노출). 자체완결·외부 네트워크 0. 커밋 파일은 GENERIC 샘플만(PII 금지).
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>career — 면접 대비 (포트폴리오)</title>
+<style>
+  :root{
+    --accent:#9a3b2e; --ink:#1b1a17; --muted:#6c675e; --faint:#9b958a;
+    --line:#e7e3da; --line-2:#d4cec3; --wash:#f7efec; --paper:#fff;
+    --hi:#2f7d5b; --mid:#b8823a; --lo:#9a3b2e; --wait:#3a6ea5;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',Roboto,sans-serif;
+  }
+  *{ box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  html,body{ margin:0; padding:0; background:#eceae4; color:var(--ink); font-family:var(--sans);
+    font-size:14px; line-height:1.55; letter-spacing:-0.002em; }
+  .wrap{ max-width:900px; margin:0 auto; padding:26px 16px 90px; }
+  .bar{ height:3px; width:60px; background:var(--accent); margin-bottom:14px; }
+  h1{ margin:0; font-size:25px; font-weight:800; letter-spacing:-0.02em; }
+  .lead{ margin:8px 0 0; color:var(--muted); font-size:13px; }
+  .note{ margin-top:12px; padding:11px 14px; background:var(--wash); border-left:3px solid var(--accent);
+    border-radius:4px; font-size:12px; color:var(--muted); }
+
+  .controls{ position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+    padding:10px 0; margin-top:12px; background:#eceae4; }
+  .seg{ display:flex; gap:4px; flex-wrap:wrap; }
+  .seg button{ font-family:var(--sans); font-size:12px; border:1px solid var(--line-2); background:#fff;
+    color:var(--muted); border-radius:20px; padding:6px 12px; font-weight:600; cursor:pointer; }
+  .seg button.on{ background:var(--ink); color:#efe9df; border-color:var(--ink); }
+  .controls .count{ margin-left:auto; font-size:12px; color:var(--faint); }
+
+  /* 항목 카드 */
+  .item{ background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin-top:13px; }
+  .item-top{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .item-top .t{ font-size:16px; font-weight:700; color:var(--ink); }
+  .item-top .m{ font-size:12px; color:var(--faint); }
+  .tier{ font-size:10px; font-weight:700; padding:1px 8px; border-radius:20px; margin-left:auto; }
+  .tier.T1{ color:var(--hi); background:#e7f1eb; } .tier.T2{ color:var(--mid); background:#f7eede; }
+  .tier.T3{ color:var(--lo); background:var(--wash); }
+  .sum{ font-size:12.5px; color:var(--muted); margin:6px 0 0; }
+  .sum b{ color:var(--ink); }
+
+  .qs{ margin-top:12px; display:grid; gap:9px; }
+  .qa{ border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:9px;
+    padding:11px 13px; background:#fcfbf9; }
+  .qa .qh{ display:flex; align-items:baseline; gap:8px; }
+  .qa .qn{ font-family:var(--serif); font-style:italic; font-size:13px; color:var(--accent); flex:none; }
+  .qa .q{ font-size:13.5px; font-weight:700; color:var(--ink); }
+  .qa .kind{ margin-left:auto; font-size:9.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--faint); border:1px solid var(--line); border-radius:10px; padding:1px 7px; flex:none; }
+  .qa .row{ margin-top:7px; font-size:12px; line-height:1.5; }
+  .qa .row .lb{ display:inline-block; font-size:9.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--accent); margin-right:6px; }
+  .qa .intent{ color:var(--muted); } .qa .defense{ color:var(--ink); }
+  .qa details{ margin-top:7px; } .qa summary{ cursor:pointer; font-size:11.5px; color:var(--wait); font-weight:600; }
+  .qa details ul{ margin:6px 0 0; padding-left:18px; } .qa details li{ font-size:11.5px; color:var(--muted); margin:2px 0; }
+
+  .actionbar{ position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; justify-content:center;
+    gap:10px; padding:12px; background:rgba(27,26,23,.96); }
+  .actionbar button{ border:none; border-radius:7px; padding:9px 16px; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:var(--sans); background:#efe9df; color:#1b1a17; }
+  .actionbar .status{ color:#8a857c; font-size:12px; align-self:center; }
+  #out{ display:none; white-space:pre-wrap; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px;
+    background:#1b1a17; color:#e9e4d8; border-radius:8px; padding:14px; margin-top:14px; }
+  @media print{ .controls,.actionbar{ display:none } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar"></div>
+  <h1>면접 대비 — 포트폴리오 버전</h1>
+  <p class="lead">포트폴리오/경험 <b>항목별 예상 면접질문 3개</b> + 평가 의도 + 방어 포인트. 이 화면으로 항목마다 답을 준비하세요.</p>
+  <div class="note">🎯 3질문 축: <b>Q1 수치·기술 검증</b> · <b>Q2 기여도·진위(팀→개인)</b> · <b>Q3 심화·성장·한계</b>. ⚑ <b>[T2]/[T3]</b>는 면접관이 파고들 <b>공격면</b> — 근거를 미리 무장하고, 미검증은 대외 답변에 쓰지 않습니다(날조 금지).</div>
+
+  <div class="controls">
+    <div class="seg" id="filters"></div>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div id="list"></div>
+  <pre id="out"></pre>
+</div>
+
+<div class="actionbar">
+  <button onclick="copyAll()">📋 학습용 전체 복사</button>
+  <button onclick="window.print()">🖨 인쇄</button>
+  <span class="status" id="status">항목별 예상질문·방어 포인트를 복사/인쇄해 연습</span>
+</div>
+
+<script>
+  function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  const KIND = ['검증','진위','심화'];
+
+  // 스킬이 뱅크(+JD Browsing 기업 특화)로 치환. 각 항목 = 예상질문 3개(검증/진위/심화).
+  const ITEMS = [
+    { title:'결제 게이트웨이 재설계', meta:'핀테크 A · 2023', tier:'T1',
+      summary:'처리량 <b>10×</b> · p99 <b>−38%</b> · 신규 PG 연동 <b>2주→2일</b>',
+      questions:[
+        { q:'처리량 10×를 어떤 조건에서 어떻게 측정·검증했나요?', intent:'수치 진위 + 기술 깊이',
+          defense:'부하테스트 조건(동시성·기간)·before/after 지표·병목 원인을 구체적으로. 필살기: 유사(대규모)·정량(10×)·인사이트(관측성이 무중단 확장의 전제).',
+          probes:['그 수치는 피크 기준인가 평균인가?','10×에서 새 병목은 무엇이었나?'] },
+        { q:'설계에서 본인이 직접 결정한 것과 팀이 한 것을 구분하면?', intent:'기여도 진위(팀→개인 분리)',
+          defense:'내 의사결정 지점(이벤트소싱 채택·PG 플러그인화)·리딩 범위(엔지니어 4명)를 명확히. 기여도% 정직하게, 과장 없이.',
+          probes:['반대 의견은 없었나? 어떻게 설득했나?','실패했다면 누구 책임이었나?'] },
+        { q:'다시 한다면 무엇을 다르게 하겠습니까? 한계는?', intent:'성장 마인드·자기인식',
+          defense:'솔직한 한계 1개 + 이후 보완(회피·외부귀인 금지). 배운 것을 다음에 어떻게 적용했는지까지.',
+          probes:['그 한계가 지금도 남아있나?'] },
+      ]},
+    { title:'주문 처리 파이프라인 개편', meta:'커머스 B · 2019–2022', tier:'T1',
+      summary:'정산 지연 <b>일→분</b> · 데이터 불일치 <b>−92%</b>',
+      questions:[
+        { q:'데이터 불일치 −92%는 어떻게 정의하고 측정했나요?', intent:'지표 정의·측정 신뢰성',
+          defense:'불일치의 조작적 정의(무슨 데이터·기준)·측정 기간·집계 방법. 멱등/DLQ 설계와 연결.',
+          probes:['나머지 8%는 왜 남았나?'] },
+        { q:'Kafka 스트리밍 전환의 트레이드오프는 무엇이었나요?', intent:'설계 판단·대안 비교',
+          defense:'대안(배치 유지·다른 큐)과 비교, 선택 근거(정확성·지연). "우아한 실패" 관점.',
+          probes:['운영 복잡도는 어떻게 감당했나?'] },
+        { q:'이 경험에서 얻은 재현 가능한 원칙은?', intent:'Doer→Thinker(인사이트)',
+          defense:'"정확성은 사후 검증이 아니라 설계 단계에서 보장" — 이후 프로젝트 적용 사례로 증명.',
+          probes:['그 원칙이 안 통한 경우는?'] },
+      ]},
+    { title:'관측성 · 모니터링 플랫폼 구축', meta:'스타트업 D · 2016–2019', tier:'T2',
+      summary:'MTTR <b>−65%</b> · 온콜 알림 노이즈 <b>−70%</b> <span style="color:var(--mid)">(⚑ 팀 성과 — 내 기여 프레이밍 필요)</span>',
+      questions:[
+        { q:'MTTR −65% 개선에서 본인의 구체적 기여는?', intent:'팀 성과의 개인 지분(공격면)',
+          defense:'⚑ [T2] 공격 예상 — 내가 주도한 부분(표준 수립·SLO 정의)과 팀 기여를 정직히 분리. 기여도% 준비.',
+          probes:['플랫폼팀 전체 성과 아닌가? 당신 없이도 됐을 일 아닌가?'] },
+        { q:'지표 정의를 팀이 합의하게 만든 과정은?', intent:'협업·이해관계자 정렬',
+          defense:'갈등·조율 에피소드(자발적 기여+협력 유도). 관계 역량 증거.',
+          probes:['반대한 사람은 어떻게 설득했나?'] },
+        { q:'0→1 구축과 기존 시스템 개선 중 무엇이 더 어려웠나요?', intent:'경험 깊이·판단',
+          defense:'구체 근거로 비교, 표면적 답 금지.',
+          probes:[] },
+      ]},
+  ];
+
+  let filter='all';
+  function tierBadge(t){ return t?`<span class="tier ${t}">${t}</span>`:''; }
+  function qaHTML(qa,i){
+    const probes = (qa.probes&&qa.probes.length)
+      ? `<details><summary>꼬리질문 ${qa.probes.length}개 펼치기</summary><ul>${qa.probes.map(p=>`<li>${escHtml(p)}</li>`).join('')}</ul></details>` : '';
+    return `<div class="qa">
+      <div class="qh"><span class="qn">Q${i+1}</span><span class="q">${escHtml(qa.q)}</span><span class="kind">${KIND[i]||''}</span></div>
+      <div class="row intent"><span class="lb">평가 의도</span>${escHtml(qa.intent)}</div>
+      <div class="row defense"><span class="lb">방어 포인트</span>${escHtml(qa.defense)}</div>
+      ${probes}
+    </div>`;
+  }
+  function itemHTML(it){
+    return `<div class="item">
+      <div class="item-top"><span class="t">${escHtml(it.title)}</span><span class="m">${escHtml(it.meta)}</span>${tierBadge(it.tier)}</div>
+      <div class="sum">${it.summary||''}</div>
+      <div class="qs">${it.questions.slice(0,3).map(qaHTML).join('')}</div>
+    </div>`;
+  }
+  function render(){
+    let rows = filter==='all'?ITEMS : ITEMS.filter(it=>it.tier===filter);
+    document.getElementById('list').innerHTML = rows.length ? rows.map(itemHTML).join('')
+      : `<div class="note">해당 조건의 항목이 없습니다.</div>`;
+    const nq = ITEMS.reduce((s,it)=>s+Math.min(3,it.questions.length),0);
+    document.getElementById('count').textContent = `항목 ${ITEMS.length} · 예상질문 ${nq}`;
+  }
+  function renderFilters(){
+    const opts=[['all','전체'],['T1','T1'],['T2','T2 공격면'],['T3','T3 공격면']];
+    document.getElementById('filters').innerHTML = opts.map(([k,l])=>
+      `<button class="${k===filter?'on':''}" onclick="setFilter('${k}')">${l}</button>`).join('');
+  }
+  function setFilter(k){ filter=k; renderFilters(); render(); }
+
+  function copyAll(){
+    const L=['=== 면접 대비 (포트폴리오 항목별 예상질문) ==='];
+    ITEMS.forEach(it=>{
+      L.push(`\n[${it.title}] ${it.meta} (${it.tier||''})`);
+      it.questions.slice(0,3).forEach((qa,i)=>{
+        L.push(`  Q${i+1}(${KIND[i]||''}) ${qa.q}`);
+        L.push(`    의도: ${qa.intent}`);
+        L.push(`    방어: ${qa.defense}`);
+        if(qa.probes&&qa.probes.length) L.push(`    꼬리: ${qa.probes.join(' / ')}`);
+      });
+    });
+    L.push('\n=== END ===');
+    const txt=L.join('\n');
+    const showOut=(m)=>{ const o=document.getElementById('out'); o.textContent=txt; o.style.display='block'; setStatus(m); };
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(()=>setStatus('복사됨 — 연습에 사용하세요'), ()=>showOut('클립보드 차단 — 아래 직접 복사'));
+        return;
+      }
+    }catch(e){}
+    showOut('클립보드 미지원 — 아래 직접 복사');
+  }
+  function setStatus(s){ const e=document.getElementById('status'); const o=e.textContent; e.textContent=s; setTimeout(()=>e.textContent=o,4000); }
+
+  renderFilters(); render();
+</script>
+</body>
+</html>
