@@ -113,12 +113,14 @@ description: Personalized job-search and career-change manager. In one conversat
 6. **액션 플랜** — 7일 / 14일 / 30일 (node-edge 다이어그램)
 7. **참조 출처** — insane-search 사용 시 (티어·조회일)
 
-### ② 문서 작성/첨삭 → 분석은 report.html, 최종 문서는 a4-doc.html
-> **기초 job = 포트폴리오 빌더.** ②의 모든 문서는 **마스터 경험 뱅크**(`.private/experience-bank.md`)에서 파생한다. 뱅크가 없으면 먼저 구축: [`templates/intake-form.html`](templates/intake-form.html) 표준 폼으로 입력받아 → **P0–P8**([`reference/portfolio-builder.md`](reference/portfolio-builder.md))로 경험 분류(필/빌/밉살기·해시태그)·포트폴리오화(C·R·A·R·I·KPI 5버킷·NCS)·방어 시뮬 → 뱅크 저장. 이미 있으면 재입력 없이 파생. **작업용/제출용** 토글로 증빙·메모 노출을 가르고, 모든 문장은 **문체 게이트**([`reference/writing-voice.md`](reference/writing-voice.md), AI-tell 제거·진지문서 이모지 금지)를 통과시킨다.
+### ② 문서 작성/첨삭 → 분석 report.html · 문서 a4-doc.html(사람·포폴) / ATS-세이프(기계 제출)
+> **기초 job = 포트폴리오 빌더.** 모든 문서는 뱅크에서 파생(§6.0 #1; 없으면 [`intake-form.html`](templates/intake-form.html)→**P0–P8** [`portfolio-builder.md`](reference/portfolio-builder.md) 구축). **§6.0 공통 계약 상속**(뱅크 I/O·2단평가+확신도·공유 증거테이블·6다이얼·Truth Tier·문체 게이트). 아래는 ②-고유 절차. 방법론 상세는 [`methodology.md`](reference/methodology.md)(cover-letter·resume-en).
 
-공통 입력: `문서유형(자소서·이력서KR·resume EN·cover letter EN·포트폴리오) | 회사/직무 | 문항·분량 | 포함 키워드`.
-- **작성(write):** ① 뱅크 로드(없으면 intake-form→P1–P3) → ② 경험 채굴/보완(STAR-L·C·R·A·R·I: Crisis·역할 vs 팀·정확한 수치, 정량 부족 시 대화로 채움) → ③ 초안 v1(요청 언어, 문체 게이트) → ④ 검증 체크(키워드·수치·면접 방어·수치 무결성) → ⑤ **A4 문서 산출**(a4-doc.html, 작업용/제출용).
-- **첨삭(edit):** ① 면접 꼬리표 위험 진단(공격 포인트·근거 취약·과장 금지 구간) → ② 구조 점수표(두괄식·STAR·직무적합·수치화·회사맞춤, 0–10, Stage 1 보수) → ③ 핵심 감점 사유 → ④ 문장 수술 Top 10(Before/After/Why, 문체 게이트) → ⑤ 리라이트 v1(Stage 2, 진실하되 강한, PR강도 Lv1–3) → ⑥ 선발 관점 판정(서류·면접방어·확신도). *(진단=report.html, 최종 리라이트 문서=a4-doc.html)*
+공통 입력: `문서유형(자소서·이력서KR·resume EN·cover EN·포트폴리오) | 회사/직무 | 문항·분량(글자수 상한) | 포함 키워드`.
+- **A. 타깃 해독(경량, 드래프팅 전):** JD 있으면 5-D Prism에서 **Intent(회사 속마음)·Attack Point·Culture만** 추출(전체 매칭 매트릭스·7-Lens는 ①; 있으면 ①→② 체이닝으로 로드). 자소서는 **문항 의도 역산**+소재 필터(cover-letter §4), 지원동기는 **3C=회사 페인포인트** 선행. → 어떤 EXP를 어떤 앵글로 배치할지 결정.
+- **B. 작성(write):** ① 뱅크 로드 → ② 경험 선별·채굴(**Strategic Selection**: 어떤 EXP-ID를 왜 선택/제외했는지 작업용 표기; STAR-L·C·R·A·R·I, 정량 부족 시 대화로 채우고 **뱅크 write-back**) → ③ **문항 아키타입 스위치**(지원동기[주장→근거→맺음말]·성격 장단점[동시제시→근거→극복]·성장과정[단일 이벤트], cover-letter §3) + **Tech-to-Biz 변환**(기술활동→$·%·수율·용어 재정의) → ④ 초안 v1(요청 언어·문체 게이트·학생마인드→비즈니스마인드 교정) → ⑤ 검증(키워드·수치 무결성·**분량 예산 트림**·면접 방어·Stage 1 냉정 셀프오딧+Score Caps) → ⑥ 산출(§6.0 #5 작업/제출).
+- **C. resume EN / cover EN 서브파이프:** CV vs Resume 판별(resume-en §1) → Value Proposition Summary 3–4문장 훅(§8) → X-Y-Z 불릿·액션동사 dedup(§4·§5) → **ATS 포맷 점검**(§6: 표·다단·색 의존·비표준 헤딩 검출) → 벤치마킹(동일 연차 현직자 표현, §11). **산출: resume EN 기본 = ATS-세이프 단일컬럼**(기계 파싱), 포트폴리오·국문 자소서 = 에디토리얼 a4-doc(**이중 export**).
+- **D. 첨삭(edit):** ① 면접 꼬리표 위험 진단(공격 포인트·근거 취약·과장 구간) → ② **채점 = evaluation.md 정렬**(문서 축[두괄식·STAR·직무적합·수치화·회사맞춤] 유지 + **§2 Score Caps·§3 Mandatory Deductions·§4 Calibration·§0 타깃 유무 분기** 상속; 마스터본=타깃 없음이면 직무적합·회사맞춤 빼고 내적 품질로) → ③ 핵심 감점 사유 → ④ 문장 수술 Top 10(Before/After/Why·문체 게이트) → ⑤ 리라이트 v1(Stage 2, 진실하되 강한, PR강도 Lv1–3) → ⑥ 선발 관점 판정 + 확신도(§6.0 #2) → ⑦ 뱅크 write-back·`.private/applications/` 회사×EXP×앵글 기록(복붙 방지).
 
 ### ③ 면접 준비 → report.html
 1. **세팅** — `라운드 | 면접관(실무/임원/HR) | 강도`
