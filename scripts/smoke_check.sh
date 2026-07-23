@@ -13,7 +13,7 @@ for f in SKILL.md BUILD_SPEC.md GOAL_CONDITION.txt README.md .gitignore \
          reference/methodology.md reference/evaluation.md reference/gems/techniques.md \
          reference/portfolio-builder.md reference/writing-voice.md reference/jd-browsing.md \
          templates/report.html templates/a4-doc.html \
-         templates/intake-form.html templates/application-tracker.html templates/resume-ats.html; do
+         templates/intake-form.html templates/application-tracker.html templates/resume-ats.html templates/jd-discovery.html; do
   [ -f "$f" ] && ok "exists: $f" || no "missing: $f"
 done
 
@@ -53,7 +53,7 @@ else
 fi
 
 echo "== self-contained HTML (no external network) =="
-for h in templates/report.html templates/a4-doc.html templates/intake-form.html templates/application-tracker.html templates/resume-ats.html; do
+for h in templates/report.html templates/a4-doc.html templates/intake-form.html templates/application-tracker.html templates/resume-ats.html templates/jd-discovery.html; do
   if grep -qiE 'https?://|src=|<link|@import|integrity=' "$h"; then no "external ref in $h"; else ok "self-contained: $h"; fi
 done
 
@@ -68,6 +68,7 @@ grep -qiE 'AI-tell|AI 티' reference/writing-voice.md && grep -qiE '이모지' r
 # intake form + tracker have the required affordances
 grep -qF "데이터 복사" templates/intake-form.html && ok "intake-form: 데이터 복사 button" || no "intake-form copy button"
 grep -qiE '전형|D-day|dday' templates/application-tracker.html && ok "application-tracker: 전형/D-day" || no "application-tracker content"
+grep -qiE '위시리스트|적합도|한줄|발전' templates/jd-discovery.html && grep -qiE '공고|link|href' templates/jd-discovery.html && ok "jd-discovery: 순위·점수·위시리스트·링크" || no "jd-discovery content"
 
 echo "== A4 print fidelity =="
 if python3 scripts/check_a4.py samples/sample-resume.html /tmp/_smoke_a4.pdf >/tmp/_smoke_a4.log 2>&1 && grep -q 'RESULT: PASS' /tmp/_smoke_a4.log; then

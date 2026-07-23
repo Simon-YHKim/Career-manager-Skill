@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<!--
+  career skill — 공고 발굴 보드 (① JD Discovery / jd-browsing.md §2)
+  최대 발굴(직무·전공 유사 + 커리어 발전 가능성) → 점수화·순위화 → 한줄 요약·공고 링크 ·
+  위시리스트 체크박스 → 일정관리(application-tracker '관심' 연동). 자체완결, 외부 네트워크 0.
+  ★ 스킬은 JD Browsing 실검색 결과로 아래 JOBS 배열을 치환한다. 공고는 실제 결과만·날조 금지,
+    각 항목에 출처·조회일·Truth Tier. 게이트된 상세는 추론 + [직접 확인] 플래그.
+  ★ 커밋되는 이 파일은 GENERIC 샘플만(실 공고·PII 금지).
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>career — 공고 발굴</title>
+<style>
+  :root{
+    --accent:#9a3b2e; --ink:#1b1a17; --muted:#6c675e; --faint:#9b958a;
+    --line:#e7e3da; --line-2:#d4cec3; --wash:#f7efec; --paper:#fff;
+    --hi:#2f7d5b; --mid:#b8823a; --lo:#9a3b2e; --bar:#e7e3da;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',Roboto,sans-serif;
+  }
+  *{ box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  html,body{ margin:0; padding:0; background:#eceae4; color:var(--ink); font-family:var(--sans);
+    font-size:14px; line-height:1.5; letter-spacing:-0.002em; }
+  .wrap{ max-width:960px; margin:0 auto; padding:26px 16px 90px; }
+  .bar-accent{ height:3px; width:60px; background:var(--accent); margin-bottom:14px; }
+  h1{ margin:0; font-size:25px; font-weight:800; letter-spacing:-0.02em; }
+  .lead{ margin:8px 0 0; color:var(--muted); font-size:13px; }
+  .prof{ margin-top:12px; padding:11px 14px; background:var(--paper); border:1px solid var(--line);
+    border-radius:9px; font-size:12.5px; color:var(--muted); }
+  .prof b{ color:var(--ink); }
+  .gated{ margin-top:8px; font-size:11.5px; color:var(--lo); }
+
+  /* 컨트롤 */
+  .controls{ position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+    padding:10px 0; margin-top:14px; background:#eceae4; }
+  .controls select,.controls button{ font-family:var(--sans); font-size:12.5px; }
+  .controls select{ border:1px solid var(--line-2); background:#fff; border-radius:7px; padding:6px 9px; color:var(--ink); }
+  .seg{ display:flex; gap:4px; }
+  .seg button{ border:1px solid var(--line-2); background:#fff; color:var(--muted); border-radius:20px;
+    padding:6px 13px; font-weight:600; cursor:pointer; }
+  .seg button.on{ background:var(--ink); color:#efe9df; border-color:var(--ink); }
+  .controls .count{ margin-left:auto; font-size:12px; color:var(--faint); }
+
+  /* 카드 */
+  .job{ background:var(--paper); border:1px solid var(--line); border-radius:11px; padding:15px 17px;
+    margin-top:12px; display:grid; grid-template-columns:26px 40px 1fr auto; gap:0 12px; align-items:start; }
+  .job.wished{ border-color:var(--accent); box-shadow:0 0 0 1px var(--wash); }
+  .chk{ margin-top:3px; }
+  .chk input{ width:17px; height:17px; accent-color:var(--accent); cursor:pointer; }
+  .rank{ font-family:var(--serif); font-size:20px; color:var(--faint); text-align:center; line-height:1.2; }
+  .body{ min-width:0; }
+  .co{ font-size:12px; color:var(--muted); font-weight:600; }
+  .title{ font-size:15.5px; font-weight:700; color:var(--ink); margin:1px 0 0; }
+  .sum{ font-size:12.5px; color:var(--muted); margin:5px 0 0; line-height:1.45; }
+  .reqs{ margin:8px 0 0; display:flex; flex-wrap:wrap; gap:5px; }
+  .reqs span{ font-size:10.5px; color:var(--muted); background:var(--wash); border-radius:12px; padding:2px 9px; }
+  .reqs span.flag{ background:#f7eede; color:var(--mid); }
+  .meta{ margin:8px 0 0; font-size:11.5px; color:var(--faint); display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+  .meta a{ color:var(--accent); text-decoration:none; font-weight:600; }
+  .dday{ font-weight:700; color:var(--accent); }
+  .dday.past{ color:var(--faint); font-weight:400; }
+  .src{ text-transform:uppercase; letter-spacing:.04em; }
+
+  /* 점수 */
+  .score{ text-align:right; min-width:150px; }
+  .score .num{ font-family:var(--serif); font-size:30px; line-height:1; color:var(--ink); }
+  .score .num small{ font-size:13px; color:var(--faint); }
+  .grade{ display:inline-block; margin-top:5px; font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:20px; }
+  .g-상{ color:#fff; background:var(--hi); } .g-중상{ color:var(--hi); background:#e7f1eb; }
+  .g-중{ color:var(--mid); background:#f7eede; } .g-하{ color:var(--lo); background:var(--wash); }
+  .conf{ font-size:10px; color:var(--faint); margin-top:4px; }
+  .subs{ margin-top:9px; display:grid; gap:4px; }
+  .subrow{ display:grid; grid-template-columns:58px 1fr 26px; gap:7px; align-items:center; font-size:9.5px; color:var(--muted); }
+  .track{ display:block; height:5px; background:var(--bar); border-radius:3px; overflow:hidden; }
+  .fill{ display:block; height:5px; background:var(--accent); border-radius:3px; }
+
+  @media(max-width:640px){
+    .job{ grid-template-columns:24px 1fr; }
+    .rank{ display:none; } .score{ grid-column:1/-1; text-align:left; margin-top:8px; }
+    .subs{ max-width:280px; }
+  }
+
+  .actionbar{ position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; justify-content:center;
+    gap:10px; padding:12px; background:rgba(27,26,23,.96); }
+  .actionbar button{ border:none; border-radius:7px; padding:9px 16px; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:var(--sans); }
+  .actionbar .primary{ background:#efe9df; color:#1b1a17; }
+  .actionbar .status{ color:#8a857c; font-size:12px; align-self:center; }
+  #out{ display:none; white-space:pre-wrap; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px;
+    background:#1b1a17; color:#e9e4d8; border-radius:8px; padding:14px; margin-top:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar-accent"></div>
+  <h1>공고 발굴</h1>
+  <p class="lead">직무·전공 유사 + <b>커리어 발전 가능성</b>까지 넓게 발굴 → 적합도 점수로 순위화. 체크 → 위시리스트(일정관리 연동).</p>
+  <div class="prof" id="prof"></div>
+  <div class="gated" id="gated"></div>
+
+  <div class="controls">
+    <select id="sort" onchange="render()">
+      <option value="score">정렬: 적합도순</option>
+      <option value="deadline">정렬: 마감 임박순</option>
+      <option value="growth">정렬: 발전 가능성순</option>
+    </select>
+    <div class="seg" id="filters"></div>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div id="list"></div>
+  <pre id="out"></pre>
+</div>
+
+<div class="actionbar">
+  <button class="primary" onclick="copyWishlist()">📌 선택 위시리스트 담기</button>
+  <span class="status" id="status">체크한 공고를 복사 → 스킬에 붙여넣으면 일정관리(관심 단계)로 저장</span>
+</div>
+
+<script>
+  const TODAY = '2026-07-23';   // 스킬이 렌더 시 실제 KST로 치환
+  // 탐색 프로파일 (스킬이 뱅크·프로필로 자동 생성)
+  const PROFILE = { role:'제조 오퍼레이션/생산혁신', langs:'국문 + 영어', region:'국내 우선 + 글로벌', level:'미드~시니어' };
+  // 게이트되어 상세 미확보된 보드 (정직 표기)
+  const GATED = [];
+
+  // JD Browsing 실검색 결과 (샘플 — 스킬이 실제 공고로 치환). 점수 = 적합도(0–100), sub 4축.
+  const JOBS = [
+    { co:'제조 A', mono:'A', title:'생산혁신 리더 (Operational Excellence)', region:'국내',
+      summary:'대규모 제조 라인의 CapEx·OpEx 최적화를 데이터로 주도하는 생산혁신 리더 포지션.',
+      score:86, grade:'상', confidence:'높음', sub:{role:90, major:88, growth:82, weight:84},
+      reqs:['생산기술 8년+','IE·데이터 분석','리더십'], deadline:'2026-08-05', link:'#' },
+    { co:'컨설팅 B', mono:'B', title:'Operations Excellence Consultant', region:'글로벌',
+      summary:'제조·공급망 오퍼레이션을 진단·개선하는 전략 컨설팅 실행 트랙(학사 가능).',
+      score:71, grade:'중상', confidence:'중간', sub:{role:78, major:74, growth:88, weight:52},
+      reqs:['Lean/Six Sigma','분석','영어',{t:'상세 미확인',flag:true}], deadline:'2026-07-30', link:'#' },
+    { co:'반도체 C', mono:'C', title:'공정기술 · 수율 혁신 엔지니어', region:'국내',
+      summary:'반도체 기판 공정의 수율·생산성 혁신 — 현재 도메인과 직접 인접.',
+      score:79, grade:'중상', confidence:'높음', sub:{role:84, major:80, growth:76, weight:78},
+      reqs:['공정기술','수율 RCA','통계'], deadline:'2026-08-20', link:'#' },
+    { co:'PE D', mono:'D', title:'Operating Partner — 제조 실사/개선', region:'글로벌',
+      summary:'PE 포트폴리오사의 제조 오퍼레이션 실사·개선을 이끄는 operating partner(성장 트랙).',
+      score:64, grade:'중', confidence:'낮음', sub:{role:66, major:70, growth:92, weight:40},
+      reqs:['제조 전문성','실사 경험 우대','영어',{t:'상세 미확인',flag:true}], deadline:'2026-09-01', link:'#' },
+    { co:'스마트팩토리 E', mono:'E', title:'제조 DX · 데이터 기반 공정 개선', region:'국내',
+      summary:'제조 데이터·자동화로 공정을 개선하는 DX 포지션 — 디지털 피벗 발전 경로.',
+      score:73, grade:'중상', confidence:'중간', sub:{role:72, major:76, growth:85, weight:60},
+      reqs:['제조+데이터','Python 우대','자동화'], deadline:'2026-08-12', link:'#' },
+  ];
+
+  const SUBLABEL = { role:'직무유사', major:'전공유사', growth:'발전가능', weight:'무게중심' };
+  let filter='all';
+  const wish = new Set();
+
+  function daysTo(d){ return Math.round((Date.parse(d)-Date.parse(TODAY))/86400000); }
+  function dday(d){ const n=daysTo(d); if(n>0)return {t:'D-'+n,past:false}; if(n===0)return {t:'D-DAY',past:false}; return {t:'마감('+(-n)+'일 경과)',past:true}; }
+
+  function profHTML(){
+    document.getElementById('prof').innerHTML =
+      `탐색 프로파일 · <b>${PROFILE.role}</b> · 언어 ${PROFILE.langs} · 지역 ${PROFILE.region} · 연차 ${PROFILE.level} · 조회 ${TODAY}`;
+    document.getElementById('gated').innerHTML = GATED.length
+      ? `⚠ 게이트되어 상세 미확보(직접 확인 필요): ${GATED.join(' · ')}` : '';
+  }
+
+  function barsHTML(j){
+    return `<div class="subs">`+Object.keys(SUBLABEL).map(k=>
+      `<div class="subrow"><span>${SUBLABEL[k]}</span><span class="track"><span class="fill" style="width:${j.sub[k]}%"></span></span><span>${j.sub[k]}</span></div>`
+    ).join('')+`</div>`;
+  }
+  function reqHTML(j){
+    return `<div class="reqs">`+j.reqs.map(r=>{
+      if(typeof r==='object') return `<span class="flag">⚑ ${r.t}</span>`;
+      return `<span>${r}</span>`;
+    }).join('')+`</div>`;
+  }
+  function cardHTML(j,i){
+    const d=dday(j.deadline), on=wish.has(j.title);
+    return `<div class="job ${on?'wished':''}">
+      <label class="chk"><input type="checkbox" ${on?'checked':''} onchange="toggleWish('${j.title.replace(/'/g,"\\'")}')"></label>
+      <div class="rank">${i+1}</div>
+      <div class="body">
+        <div class="co">${j.co} · ${j.region}</div>
+        <div class="title">${j.title}</div>
+        <div class="sum">${j.summary}</div>
+        ${reqHTML(j)}
+        <div class="meta">
+          <span class="dday ${d.past?'past':''}">${d.t}</span>
+          <span class="src">출처·조회 ${TODAY} · 확신 ${j.confidence}</span>
+          <a href="${j.link}" target="_blank">공고 ↗</a>
+        </div>
+      </div>
+      <div class="score">
+        <div class="num">${j.score}<small>/100</small></div>
+        <div class="grade g-${j.grade}">${j.grade}</div>
+        <div class="conf">확신도 ${j.confidence}</div>
+        ${barsHTML(j)}
+      </div>
+    </div>`;
+  }
+
+  function renderFilters(){
+    const opts=[['all','전체'],['국내','국내'],['글로벌','글로벌'],['wish','위시리스트']];
+    document.getElementById('filters').innerHTML = opts.map(([k,l])=>
+      `<button class="${k===filter?'on':''}" onclick="setFilter('${k}')">${l}</button>`).join('');
+  }
+  function setFilter(k){ filter=k; renderFilters(); render(); }
+  function toggleWish(t){ if(wish.has(t))wish.delete(t); else wish.add(t); render(); }
+
+  function render(){
+    profHTML(); renderFilters();
+    const sort=document.getElementById('sort').value;
+    let rows=JOBS.slice();
+    rows.sort((a,b)=> sort==='deadline' ? Date.parse(a.deadline)-Date.parse(b.deadline)
+                    : sort==='growth' ? b.sub.growth-a.sub.growth : b.score-a.score);
+    let shown = filter==='all'?rows : filter==='wish'?rows.filter(j=>wish.has(j.title)) : rows.filter(j=>j.region===filter);
+    document.getElementById('list').innerHTML = shown.length ? shown.map(cardHTML).join('')
+      : `<div class="prof">해당 조건의 공고가 없습니다.</div>`;
+    document.getElementById('count').textContent = `발굴 ${JOBS.length} · 위시리스트 ${wish.size}`;
+  }
+
+  function copyWishlist(){
+    const picked = JOBS.filter(j=>wish.has(j.title));
+    if(!picked.length){ setStatus('체크된 공고가 없습니다.'); return; }
+    const lines = ['=== 위시리스트 (관심 단계로 저장) ==='];
+    picked.forEach(j=> lines.push(`- ${j.co} | ${j.title} | 적합도 ${j.score}(${j.grade}) | 마감 ${j.deadline} | ${j.link}`));
+    lines.push('=== END ===');
+    const txt = lines.join('\n');
+    navigator.clipboard.writeText(txt).then(
+      ()=>setStatus(`${picked.length}개 복사됨 — 스킬에 붙여넣으면 일정관리로 저장`),
+      ()=>{ const o=document.getElementById('out'); o.textContent=txt; o.style.display='block'; setStatus('클립보드 차단 — 아래 내용 직접 복사'); }
+    );
+  }
+  function setStatus(s){ const e=document.getElementById('status'); const o=e.textContent; e.textContent=s; setTimeout(()=>e.textContent=o,4000); }
+
+  render();
+</script>
+</body>
+</html>
