@@ -91,6 +91,7 @@ reference/
   linkedin.md            LinkedIn 필드 카탈로그 + 반영 2모드(복사 / computer-use 자동입력·게이트)
   handoff.md             세션 핸드오프(simon-handoff 최적화·PII는 .private/로 라우팅)
   glossary.md            초보 용어집(무게중심·Truth Tier·필살기… 한 줄 풀이)
+  hub-backend.md         개인 허브 BYO 백엔드(계약·무료 서버 레시피·보안, 사용자 소유)
   gems/techniques.md     엔진 체리픽 기법 + 포팅 금지 목록
   gems/*  [gitignore]    젬 시스템프롬프트 원본(로컬)
   private/  [gitignore]  포폴·이력서·타깃·소스 PDF (PRIVATE)
@@ -105,6 +106,7 @@ templates/
   roadmap.html           다중 경로 로드맵 보드 (⑦ 경로 추천·적합도·연차별 목표·선택)
   interview-prep.html    면접 대비 포트폴리오 버전 (항목별 예상질문 3개·의도·방어)
   application-tracker.html 지원 현황 대시보드 (P8, 일정관리)
+  hub.html               개인 관리 허브 (로컬-우선·인라인 편집·localStorage·JSON 왕복·BYO 백엔드)
 samples/sample-resume.html   A4 렌더 샘플(제네릭·PII 없음)
 scripts/
   check_a4.py            A4 인쇄 검증 (chromium print→PDF + PyMuPDF)
