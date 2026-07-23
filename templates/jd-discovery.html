@@ -152,7 +152,10 @@
 
   const SUBLABEL = { role:'직무유사', major:'전공유사', growth:'발전가능', weight:'무게중심' };
   let filter='all';
-  const wish = new Set();
+  const wish = new Set();                 // 안정 키(회사␟직무)로 저장 — 동명 공고 오선택·따옴표 깨짐 방지
+  function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
+  function jkey(j){ return (j.co||'')+'␟'+(j.title||''); }
 
   function daysTo(d){ return Math.round((Date.parse(d)-Date.parse(TODAY))/86400000); }
   function dday(d){ const n=daysTo(d); if(n>0)return {t:'D-'+n,past:false}; if(n===0)return {t:'D-DAY',past:false}; return {t:'마감('+(-n)+'일 경과)',past:true}; }
@@ -171,24 +174,24 @@
   }
   function reqHTML(j){
     return `<div class="reqs">`+j.reqs.map(r=>{
-      if(typeof r==='object') return `<span class="flag">⚑ ${r.t}</span>`;
-      return `<span>${r}</span>`;
+      if(typeof r==='object') return `<span class="flag">⚑ ${escHtml(r.t)}</span>`;
+      return `<span>${escHtml(r)}</span>`;
     }).join('')+`</div>`;
   }
   function cardHTML(j,i){
-    const d=dday(j.deadline), on=wish.has(j.title);
+    const d=dday(j.deadline), on=wish.has(jkey(j));
     return `<div class="job ${on?'wished':''}">
-      <label class="chk"><input type="checkbox" ${on?'checked':''} onchange="toggleWish('${j.title.replace(/'/g,"\\'")}')"></label>
+      <label class="chk"><input type="checkbox" data-k="${escAttr(jkey(j))}" ${on?'checked':''}></label>
       <div class="rank">${i+1}</div>
       <div class="body">
-        <div class="co">${j.co} · ${j.region}</div>
-        <div class="title">${j.title}</div>
-        <div class="sum">${j.summary}</div>
+        <div class="co">${escHtml(j.co)} · ${escHtml(j.region)}</div>
+        <div class="title">${escHtml(j.title)}</div>
+        <div class="sum">${escHtml(j.summary)}</div>
         ${reqHTML(j)}
         <div class="meta">
           <span class="dday ${d.past?'past':''}">${d.t}</span>
-          <span class="src">출처·조회 ${TODAY} · 확신 ${j.confidence}</span>
-          <a href="${j.link}" target="_blank">공고 ↗</a>
+          <span class="src">출처·조회 ${TODAY} · 확신 ${escHtml(j.confidence)}</span>
+          <a href="${escAttr(j.link)}" target="_blank" rel="noopener">공고 ↗</a>
         </div>
       </div>
       <div class="score">
@@ -206,7 +209,7 @@
       `<button class="${k===filter?'on':''}" onclick="setFilter('${k}')">${l}</button>`).join('');
   }
   function setFilter(k){ filter=k; renderFilters(); render(); }
-  function toggleWish(t){ if(wish.has(t))wish.delete(t); else wish.add(t); render(); }
+  function toggleWish(k){ if(wish.has(k))wish.delete(k); else wish.add(k); render(); }
 
   function render(){
     profHTML(); renderFilters();
@@ -214,26 +217,36 @@
     let rows=JOBS.slice();
     rows.sort((a,b)=> sort==='deadline' ? Date.parse(a.deadline)-Date.parse(b.deadline)
                     : sort==='growth' ? b.sub.growth-a.sub.growth : b.score-a.score);
-    let shown = filter==='all'?rows : filter==='wish'?rows.filter(j=>wish.has(j.title)) : rows.filter(j=>j.region===filter);
+    let shown = filter==='all'?rows : filter==='wish'?rows.filter(j=>wish.has(jkey(j))) : rows.filter(j=>j.region===filter);
     document.getElementById('list').innerHTML = shown.length ? shown.map(cardHTML).join('')
       : `<div class="prof">해당 조건의 공고가 없습니다.</div>`;
     document.getElementById('count').textContent = `발굴 ${JOBS.length} · 위시리스트 ${wish.size}`;
   }
 
   function copyWishlist(){
-    const picked = JOBS.filter(j=>wish.has(j.title));
+    const picked = JOBS.filter(j=>wish.has(jkey(j)));
     if(!picked.length){ setStatus('체크된 공고가 없습니다.'); return; }
     const lines = ['=== 위시리스트 (관심 단계로 저장) ==='];
     picked.forEach(j=> lines.push(`- ${j.co} | ${j.title} | 적합도 ${j.score}(${j.grade}) | 마감 ${j.deadline} | ${j.link}`));
     lines.push('=== END ===');
     const txt = lines.join('\n');
-    navigator.clipboard.writeText(txt).then(
-      ()=>setStatus(`${picked.length}개 복사됨 — 스킬에 붙여넣으면 일정관리로 저장`),
-      ()=>{ const o=document.getElementById('out'); o.textContent=txt; o.style.display='block'; setStatus('클립보드 차단 — 아래 내용 직접 복사'); }
-    );
+    const showOut=(msg)=>{ const o=document.getElementById('out'); o.textContent=txt; o.style.display='block'; setStatus(msg); };
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(
+          ()=>setStatus(`${picked.length}개 복사됨 — 스킬에 붙여넣으면 일정관리로 저장`),
+          ()=>showOut('클립보드 차단 — 아래 내용 직접 복사'));
+        return;
+      }
+    }catch(e){}
+    showOut('클립보드 미지원 — 아래 내용 직접 복사');
   }
   function setStatus(s){ const e=document.getElementById('status'); const o=e.textContent; e.textContent=s; setTimeout(()=>e.textContent=o,4000); }
 
+  // 체크박스: 이벤트 위임(인라인 onclick 문자열 보간 제거 — 따옴표·특수문자 안전)
+  document.getElementById('list').addEventListener('change', function(e){
+    const cb = e.target.closest('input[type=checkbox]'); if(cb && cb.dataset.k) toggleWish(cb.dataset.k);
+  });
   render();
 </script>
 </body>

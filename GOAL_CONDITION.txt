@@ -8,4 +8,5 @@
 7. 분석 산출물은 HTML 보고 표준(KR/EN·easy/expert·인라인 SVG·점진공개·node-edge·색 3색·라이트/다크·실제 KST); 문서 산출물(이력서·resume·cover letter·자소서·포트폴리오)은 A4 인쇄용 HTML — 샘플 1건이 A4 인쇄 시 밀림·잘림 없이 앉고 화면 전용 UI 숨김 — 샘플과 인쇄 점검 결과 표시.
 8. 페르소나(Loti/Ailey&Bailey/Ailey Debate)·멀티엔진·라우터·M/E 메뉴·Command Center·표현 안정성 프로토콜 없음 — 확인 표시.
 9. README 사용법 문서화; 스킬 스모크 체크 통과·결과 표시; Conventional Commits 커밋 후 origin(github.com/Simon-YHKim/Career-manager-Skill) 푸시, tracked 파일에 시크릿·개인정보 없음 — git log --oneline -5 와 푸시 확인 표시.
+10. 미션 대상 스펙트럼(취린이~경력자) — 초보 콜드스타트 오리엔테이션·전문용어 즉시 풀이·easy 기본 렌더·"빠른 첫 결과" 경로 + 경력자 문서→뱅크 인제스트·verdict-first가 스킬에 명시(BUILD_SPEC D-0 미션과 정합) — 표시.
 제약: 단일 목적·간결 유지; git/보안/커밋은 내 전역 Claude Code 지침 준수; force-push·파괴적 작업 전 확인. 30턴 내 미충족 시 중단하고 격차 보고.

@@ -36,6 +36,8 @@
   body{margin:0;background:var(--bg);color:var(--text);line-height:1.6;font-size:15px;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif}
   .wrap{max-width:880px;margin:0 auto;padding:20px 16px 64px}
+  /* 언어 토글: 모든 .ko 노드는 대응 .en 노드를 함께 제공(스킬 렌더 규칙) — EN 토글 시 빈 섹션 방지.
+     언어중립(수치·코드·URL 등)은 .ko/.en 없이 두면 양쪽 모드에서 모두 보인다. */
   .en{display:none} body.lang-en .ko{display:none} body.lang-en .en{display:revert}
   body.mode-easy .expert{display:none} .easy{display:none} body.mode-easy .easy{display:revert}
   header{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
@@ -81,6 +83,7 @@
       <button class="tg" onclick="tl()" id="langBtn">EN</button>
       <button class="tg" onclick="tm()" id="modeBtn">easy</button>
       <button class="tg" onclick="tt()" id="themeBtn">◐</button>
+      <button class="tg" onclick="window.print()" id="printBtn">🖨 인쇄</button>
     </div>
   </header>
 
@@ -105,7 +108,9 @@
       <tr><td>{{req}}</td><td>{{evidence}}</td><td><span class="pill t3">T3</span></td><td>{{gap}}</td><td>{{action}}</td></tr>
     </table></div>
     <p class="expert src ko">Tier: <span class="pill t1">T1</span> 입증·정량 · <span class="pill t2">T2</span> 프레이밍 필요 · <span class="pill t3">T3</span> 미검증(대외 미사용)</p>
+    <p class="expert src en">Tier: <span class="pill t1">T1</span> evidenced · <span class="pill t2">T2</span> needs framing · <span class="pill t3">T3</span> unverified (not for external use)</p>
     <p class="easy ko">쉽게: 표는 <b>JD가 원하는 것</b> ↔ <b>내 증거</b>를 한 줄씩 맞춘 것. T3(초록/보라 아닌 주황)는 아직 근거가 약해 이력서엔 쓰지 않아요.</p>
+    <p class="easy en">In plain terms: each row lines up <b>what the JD wants</b> ↔ <b>your evidence</b>. T3 (orange) is weakly supported — keep it off your résumé.</p>
   </section>
 
   <section>
@@ -121,6 +126,7 @@
     </svg>
     <details><summary><span class="ko">세부 근거·계산 펼치기</span><span class="en">Details</span></summary>
       <p class="ko">{{details}}</p>
+      <p class="en">{{details_en}}</p>
     </details>
   </section>
 
@@ -128,6 +134,7 @@
     <h2><span class="tag">S</span><span class="ko">참조 출처</span><span class="en">Sources</span></h2>
     <!-- SKILL: JD Browsing 사용 시만. Tier 라벨 + 조회일. 미사용 시 이 섹션 생략 -->
     <p class="src ko">{{sources}} <span class="expert">— 예: 공식 채용공고(S)·통계(A)·커뮤니티(B), 조회 2026-07-22.</span></p>
+    <p class="src en">{{sources_en}} <span class="expert">— e.g., official posting (S) · stats (A) · community (B), retrieved 2026-07-22.</span></p>
   </section>
 
 </div>
