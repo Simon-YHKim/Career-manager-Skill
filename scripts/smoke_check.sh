@@ -11,7 +11,9 @@ no(){ echo "  [FAIL] $1"; fail=$((fail+1)); }
 echo "== files =="
 for f in SKILL.md BUILD_SPEC.md GOAL_CONDITION.txt README.md .gitignore \
          reference/methodology.md reference/evaluation.md reference/gems/techniques.md \
-         templates/report.html templates/a4-doc.html; do
+         reference/portfolio-builder.md reference/writing-voice.md reference/jd-browsing.md \
+         templates/report.html templates/a4-doc.html \
+         templates/intake-form.html templates/application-tracker.html templates/resume-ats.html; do
   [ -f "$f" ] && ok "exists: $f" || no "missing: $f"
 done
 
@@ -31,8 +33,10 @@ echo "== 2-stage evaluation + runtime strength =="
 grep -qF "Stage 1" SKILL.md && grep -qF "Stage 2" SKILL.md && ok "2-stage eval present" || no "2-stage eval"
 grep -qF "강도" SKILL.md && grep -qiE "런타임|실행 중|선택" SKILL.md && ok "runtime strength select" || no "runtime strength"
 
-echo "== hybrid knowledge + insane-search =="
-grep -qF "insane-search" SKILL.md && grep -qiE "로그인/페이월|인증 필요" SKILL.md && ok "insane-search + login/paywall stop" || no "insane-search"
+echo "== hybrid knowledge + JD Browsing =="
+grep -qF "JD Browsing" SKILL.md && grep -qiE "로그인/페이월|인증 필요" SKILL.md && ok "JD Browsing + login/paywall stop" || no "JD Browsing"
+[ -f reference/jd-browsing.md ] && grep -qiE "게이트|추론|직접 확인" reference/jd-browsing.md && ok "jd-browsing.md: embedded module + gated-inference" || no "jd-browsing.md module"
+if git ls-files 2>/dev/null | grep -qF "insane-search" || grep -rqF "insane-search" SKILL.md reference/methodology.md reference/portfolio-builder.md 2>/dev/null; then no "stale 'insane-search' token remains in operational files"; else ok "renamed insane-search → JD Browsing (no stale token)"; fi
 
 echo "== personal context privacy (D-6) =="
 grep -qE '^\.private/' .gitignore && grep -qE '^reference/private/' .gitignore && grep -qE '^\.env' .gitignore && ok ".gitignore excludes .private/ reference/private/ .env" || no ".gitignore privacy"
@@ -49,13 +53,27 @@ else
 fi
 
 echo "== self-contained HTML (no external network) =="
-for h in templates/report.html templates/a4-doc.html; do
+for h in templates/report.html templates/a4-doc.html templates/intake-form.html templates/application-tracker.html templates/resume-ats.html; do
   if grep -qiE 'https?://|src=|<link|@import|integrity=' "$h"; then no "external ref in $h"; else ok "self-contained: $h"; fi
 done
 
+echo "== portfolio builder (P0-P8) + wiring =="
+if grep -qE 'P0' reference/portfolio-builder.md && grep -qE 'P8' reference/portfolio-builder.md \
+   && grep -qF "experience-bank" reference/portfolio-builder.md; then
+  ok "portfolio-builder covers P0-P8 + master bank"; else no "portfolio-builder P0-P8/bank"; fi
+grep -qF "portfolio-builder.md" SKILL.md && grep -qF "experience-bank" SKILL.md \
+  && ok "SKILL ② wired to portfolio builder + bank" || no "SKILL not wired to portfolio builder"
+grep -qiE 'AI-tell|AI 티' reference/writing-voice.md && grep -qiE '이모지' reference/writing-voice.md \
+  && ok "writing-voice: AI-tell blacklist + 진지문서 규칙" || no "writing-voice content"
+# intake form + tracker have the required affordances
+grep -qF "데이터 복사" templates/intake-form.html && ok "intake-form: 데이터 복사 button" || no "intake-form copy button"
+grep -qiE '전형|D-day|dday' templates/application-tracker.html && ok "application-tracker: 전형/D-day" || no "application-tracker content"
+
 echo "== A4 print fidelity =="
 if python3 scripts/check_a4.py samples/sample-resume.html /tmp/_smoke_a4.pdf >/tmp/_smoke_a4.log 2>&1 && grep -q 'RESULT: PASS' /tmp/_smoke_a4.log; then
-  ok "A4 sample prints clean (A4, no overflow)"; else no "A4 print check"; fi
+  ok "A4 sample prints clean (A4, no overflow)"; else no "A4 print check (sample)"; fi
+if python3 scripts/check_a4.py templates/a4-doc.html /tmp/_smoke_a4b.pdf >/tmp/_smoke_a4b.log 2>&1 && grep -q 'RESULT: PASS' /tmp/_smoke_a4b.log; then
+  ok "A4 editorial template prints clean (A4, no overflow)"; else no "A4 print check (a4-doc)"; fi
 
 echo "== plugin packaging =="
 for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json; do

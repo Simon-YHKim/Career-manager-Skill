@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<!--
+  career skill — ATS-세이프 resume EN 템플릿 (②-C 결정 / D-7b 이중 export)
+  기계(ATS) 파싱 우선: 단일 컬럼·표/다단/색 의존 없음·표준 섹션 헤딩·일관 날짜(MM/YYYY)·
+  본문 내 연락처(헤더/푸터 금지)·심플 폰트·검정 텍스트. resume-en §6 철칙 준수.
+  ※ 사람이 보는 포트폴리오·국문 자소서는 에디토리얼 a4-doc.html 사용. 이건 제출용 기계 파싱본.
+  ★ 커밋되는 이 파일은 GENERIC 샘플만(PII 금지). 스킬이 실제 내용으로 치환해 .private/에 렌더.
+  [플레인 텍스트 복사] → ATS 지원 폼에 붙여넣기 용이.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resume — ATS</title>
+<style>
+  @page { size: A4; margin: 18mm; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#f0f0f0; }
+  /* 화면 전용 툴바 */
+  .toolbar{ position:sticky; top:0; display:flex; gap:8px; justify-content:center; align-items:center;
+    padding:10px; background:#222; }
+  .toolbar button{ border:1px solid #444; background:#eee; color:#111; border-radius:5px;
+    padding:7px 14px; font-size:12px; font-weight:600; cursor:pointer; font-family:Arial,sans-serif; }
+  .toolbar .hint{ color:#999; font-size:11px; }
+  /* ATS 시트 — 단일 컬럼, 심플 */
+  .sheet{ width:210mm; min-height:297mm; margin:14px auto; padding:18mm; background:#fff; color:#000;
+    font-family:'Calibri','Arial','Helvetica Neue',sans-serif; font-size:10.8pt; line-height:1.4; }
+  .name{ font-size:19pt; font-weight:700; margin:0 0 2pt; letter-spacing:.2pt; }
+  .headline{ font-size:11pt; font-weight:600; margin:0 0 4pt; }
+  .contact{ font-size:10pt; margin:0 0 12pt; }         /* 연락처: 본문 내(헤더/푸터 금지) */
+  h2{ font-size:11pt; font-weight:700; text-transform:uppercase; letter-spacing:.5pt;
+    border-bottom:1px solid #000; padding-bottom:2pt; margin:14pt 0 6pt; }
+  .job{ margin:0 0 9pt; }
+  .job .line1{ font-weight:700; }                        /* Title — Company */
+  .job .line2{ font-size:10pt; }                         /* Location · MM/YYYY – MM/YYYY */
+  ul{ margin:3pt 0 0; padding-left:16pt; }
+  li{ margin:2pt 0; }
+  p{ margin:0 0 4pt; }
+  .edu-line{ margin:0 0 4pt; }
+  @media print{
+    html,body{ background:#fff; }
+    .toolbar{ display:none; }
+    .sheet{ width:auto; min-height:0; margin:0; padding:0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button onclick="copyPlain()">📋 Copy plain text</button>
+  <button onclick="window.print()">🖨 Print / PDF</button>
+  <span class="hint" id="hint">Single-column, ATS-parse-safe (no tables/columns/graphics)</span>
+</div>
+
+<!-- ===== ATS resume (single column, standard headings) ===== -->
+<div class="sheet" id="sheet">
+
+  <p class="name">{{FULL NAME}}</p>
+  <p class="headline">{{Target Title — e.g., Manufacturing Operations Engineer}}</p>
+  <p class="contact">{{City, Country}} | {{+00 00-0000-0000}} | {{name@email.com}} | {{linkedin.com/in/username}}</p>
+
+  <h2>Summary</h2>
+  <p>{{3–4 sentence value proposition. Lead with role identity + top quantified outcomes. Plain sentences, no graphics. e.g., Manufacturing engineer with 6+ years defending CapEx and driving operational excellence across automotive, mobile, and semiconductor.}}</p>
+
+  <h2>Skills</h2>
+  <p>{{Comma-separated, ATS-keyword aligned to the JD: e.g., CapEx Defense, Cost Optimization, DOE, Industrial Engineering, MTBF/OEE, Python, CATIA, PLC}}</p>
+
+  <h2>Professional Experience</h2>
+  <div class="job">
+    <p class="line1">{{Title}} — {{Company}}</p>
+    <p class="line2">{{City, Country}} · {{MM/YYYY}} – {{MM/YYYY or Present}}</p>
+    <ul>
+      <li>{{Action verb + what + quantified result (X-Y-Z). e.g., Defended $8.8M in CapEx by uncovering hidden capacity via DOE, raising productivity 12.8%.}}</li>
+      <li>{{Bullet — end with a number (%/$/count).}}</li>
+      <li>{{Bullet.}}</li>
+    </ul>
+  </div>
+  <div class="job">
+    <p class="line1">{{Title}} — {{Company}}</p>
+    <p class="line2">{{City, Country}} · {{MM/YYYY}} – {{MM/YYYY}}</p>
+    <ul>
+      <li>{{Bullet.}}</li>
+      <li>{{Bullet.}}</li>
+    </ul>
+  </div>
+
+  <h2>Education</h2>
+  <p class="edu-line">{{Degree, Major}} — {{University}} · {{City, Country}} · {{MM/YYYY}} – {{MM/YYYY}}{{ · GPA x.x/4.5}}</p>
+
+  <h2>Certifications</h2>
+  <ul>
+    <li>{{Certification}} — {{Issuer}}, {{YYYY}}</li>
+    <li>{{Certification}} — {{Issuer}}, {{YYYY}}</li>
+  </ul>
+
+</div>
+
+<script>
+  // ATS 지원 폼 붙여넣기용 플레인 텍스트 추출(레이아웃 제거, 순수 텍스트만)
+  function copyPlain(){
+    var t = document.getElementById('sheet').innerText.replace(/\n{3,}/g,'\n\n').trim();
+    navigator.clipboard.writeText(t).then(
+      function(){ setHint('Copied plain text — paste into the ATS form.'); },
+      function(){ setHint('Clipboard blocked — select the text manually.'); }
+    );
+  }
+  function setHint(s){ var h=document.getElementById('hint'); var o=h.textContent; h.textContent=s; setTimeout(function(){h.textContent=o;},4000); }
+</script>
+</body>
+</html>

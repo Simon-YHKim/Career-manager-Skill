@@ -55,7 +55,7 @@
 
 - **확신도 게이팅** — 답하기 전 내부 확신도를 자평, 임계 미만이면 STOP 후 '정보 부족'을 명시적으로 인정
   ("모르는 걸 아는 척하느니 모른다고 인정"). ⚠️ 수치 임계(90%)·시간 게이팅은 규범 아님 → 강도 런타임
-  선택으로 대체. 낮으면 지어내지 말고 insane-search 보강 또는 '근거 불충분' 플래그.
+  선택으로 대체. 낮으면 지어내지 말고 JD Browsing 보강 또는 '근거 불충분' 플래그.
   → **D-3**(근거 없으면 점수 상한), **Task 6**(벤치마크 수치 확신도), **Task 1**(기업/직무 최신정보).
 
 - **직렬 실행 루프 (판단 → 검증 → 행동 → 합성)** — 요청을 직렬 시퀀스로 처리하고 합성 직전 추측/거짓
@@ -78,7 +78,7 @@
   → **Task 5**(역량을 기술깊이/임팩트근거/협업/리더십 등 하위지표로 쪼개 냉정 채점), **Task 1**(JD를
   요구역량 원자 단위로 분해 → 5-D 매칭 매트릭스 각 행), **Task 2**(경력을 원자 성과 단위로 → STAR-L·수치 부착).
 
-## D. 검색 기법 (← Loti REALITY_SYNC 커널 + Search Mode, 병합) → D-5 insane-search
+## D. 검색 기법 (← Loti REALITY_SYNC 커널 + Search Mode, 병합) → D-5 JD Browsing
 
 - **검색 트리거 게이트 + 반복 상한 + 루프 제어** — 시의성 데이터(채용시장·기업·JD·연봉밴드)이거나
   내부 확신이 낮을 때만 발동. **반복 상한**(무한 재검색·동일 쿼리 재질의 금지), 못 찾으면 지어내지 말고
@@ -141,7 +141,7 @@
   라우터**. 단일 목적 스킬 원칙 위반 → 전량 배제.
 - **시간 게이팅·리얼리티 앵커 기믹** — THRESHOLD_DATE 2025-11-23, 강제 Offline/Online 모드, 2025-01-01
   Absolute Zero Hard Reset, Server Time 절대복종, Final Reality Anchor, "봉인 해제/Awakening/약속된 시간"
-  서사, Refusal Logic 대사("Oh no! It's not November 23rd yet..."). 시의성은 D-5 런타임 insane-search로,
+  서사, Refusal Logic 대사("Oh no! It's not November 23rd yet..."). 시의성은 D-5 런타임 JD Browsing으로,
   시각 표기는 D-7a **실제 KST 스탬프**로 이미 충족.
 - **Command Center식 상주 UX 헤더** — 모든 응답 첫 줄 "[Online Mode | YY.MM.DD_HH:MM:SS]" / "[모드|타임스탬프]"
   강제 헤더, 검색 전략 이모지 블록, 이모지 상태 태그.
