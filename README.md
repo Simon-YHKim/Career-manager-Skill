@@ -87,7 +87,8 @@ templates/
   a4-doc.html            A4 인쇄용 문서 (D-7b, 에디토리얼·사람/포폴)
   resume-ats.html        ATS-세이프 단일컬럼 resume EN (기계 제출용)
   intake-form.html       표준 입력 폼 (D-7d, 데이터 복사)
-  application-tracker.html 지원 현황 대시보드 (P8)
+  jd-discovery.html      공고 발굴 보드 (순위·적합도 점수·한줄요약·링크·위시리스트)
+  application-tracker.html 지원 현황 대시보드 (P8, 일정관리)
 samples/sample-resume.html   A4 렌더 샘플(제네릭·PII 없음)
 scripts/
   check_a4.py            A4 인쇄 검증 (chromium print→PDF + PyMuPDF)

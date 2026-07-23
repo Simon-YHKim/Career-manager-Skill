@@ -97,6 +97,7 @@
     a4-doc.html            ← A4 인쇄용 문서 템플릿(에디토리얼)
     resume-ats.html        ← ATS-세이프 단일컬럼 resume EN(기계 제출)
     intake-form.html       ← 표준 입력 폼 (데이터 복사)
+    jd-discovery.html      ← 공고 발굴 보드 (순위·점수·위시리스트·일정)
     application-tracker.html ← 지원 현황 대시보드 (P8)
   .private/                ← [gitignore] 개인 컨텍스트
     profile.md             ←   보정 프로필

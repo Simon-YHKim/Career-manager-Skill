@@ -7,7 +7,7 @@ description: Personalized job-search and career-change manager. In one conversat
 
 취업·이직을 개인화 지원하는 단일 스킬. **하나의 커맨드가 대화로 의도를 파악해 7개 태스크 중 하나를 자동 판별**하고, 태스크별 **고정 출력 템플릿 1벌**로 산출물을 만든다. 메뉴·페르소나·엔진 전환·라우터·상주 UX **없음**.
 
-> 근거·규칙의 원천: [`BUILD_SPEC.md`](BUILD_SPEC.md)(SSOT) · 방법론 [`reference/methodology.md`](reference/methodology.md) · **포트폴리오 빌더(마스터 경험 뱅크·P0–P8)** [`reference/portfolio-builder.md`](reference/portfolio-builder.md) · 문체 [`reference/writing-voice.md`](reference/writing-voice.md) · 웹 리서치 [`reference/jd-browsing.md`](reference/jd-browsing.md) · 평가 루브릭 [`reference/evaluation.md`](reference/evaluation.md) · 엔진 체리픽 [`reference/gems/techniques.md`](reference/gems/techniques.md) · 출력 [`templates/report.html`](templates/report.html)·[`templates/a4-doc.html`](templates/a4-doc.html)·ATS [`templates/resume-ats.html`](templates/resume-ats.html)·입력폼 [`templates/intake-form.html`](templates/intake-form.html)·지원현황 [`templates/application-tracker.html`](templates/application-tracker.html).
+> 근거·규칙의 원천: [`BUILD_SPEC.md`](BUILD_SPEC.md)(SSOT) · 방법론 [`reference/methodology.md`](reference/methodology.md) · **포트폴리오 빌더(마스터 경험 뱅크·P0–P8)** [`reference/portfolio-builder.md`](reference/portfolio-builder.md) · 문체 [`reference/writing-voice.md`](reference/writing-voice.md) · 웹 리서치 [`reference/jd-browsing.md`](reference/jd-browsing.md) · 평가 루브릭 [`reference/evaluation.md`](reference/evaluation.md) · 엔진 체리픽 [`reference/gems/techniques.md`](reference/gems/techniques.md) · 출력 [`templates/report.html`](templates/report.html)·[`templates/a4-doc.html`](templates/a4-doc.html)·ATS [`templates/resume-ats.html`](templates/resume-ats.html)·입력폼 [`templates/intake-form.html`](templates/intake-form.html)·공고발굴 [`templates/jd-discovery.html`](templates/jd-discovery.html)·지원현황 [`templates/application-tracker.html`](templates/application-tracker.html).
 
 ---
 
@@ -112,7 +112,7 @@ description: Personalized job-search and career-change manager. In one conversat
 ### ① JD ↔ 포트폴리오 매칭 → report.html
 > **§6.0 공통 계약 상속**(뱅크 I/O·2단평가+확신도·공유 증거테이블·6다이얼·Truth Tier). 타깃 JD가 없으면 **0. 발굴 모드** 먼저.
 
-0. **(JD 없음/"공고 찾아줘") 공고 발굴 모드** — [`jd-browsing.md`](reference/jd-browsing.md) §2: 뱅크·프로필로 **탐색 프로파일**(역량·타깃 방향·연차·지역 + **언어 능력→공고 언어 범위**) → 국내/해외 공개 검색(요청일 기준; 게이트된 상세는 공개 신호로 추론 + `[직접 확인]` 플래그) → **적합도 포트폴리오 매트릭스**(`공고 | 회사 | 출처·조회일·Tier | 요구 핵심 | 적합도 등급 | Winning Angle | 추천도 | 지원현실`) → 사용자 선택 → 아래 심층. 관심 공고는 `.private/applications/` '관심'으로 저장.
+0. **(JD 없음/"공고 찾아줘") 공고 발굴 모드** — [`jd-browsing.md`](reference/jd-browsing.md) §2: 뱅크·프로필로 **탐색 프로파일**(역량·타깃 방향·연차·지역 + **언어 능력→공고 언어 범위**) → 국내/해외 **최대 발굴**(직무·전공 유사 + 발전 가능성) 공개 검색(요청일 기준; 게이트 상세는 추론 + `[직접 확인]` 플래그) → **공고 발굴 보드**([`templates/jd-discovery.html`](templates/jd-discovery.html): 적합도 점수(0–100)+4축 근거로 **순위화**, 직무 **한줄 요약**, **공고 링크**, D-day, **위시리스트 체크박스**) → 선택 공고 → 아래 심층. 위시리스트 → `.private/applications/` '관심' 저장(→ 지원현황 일정관리).
 1. **입력 요약** — 표: `목표 회사/직무 | 전형·진행현황 | JD 핵심 키워드 | 사용자 핵심 자산`. (JD 2개+면 발굴 모드의 적합도 포트폴리오로 우선순위화 후 1차 타깃만 심층.)
 2. **무게중심 선탐색 (§6.0 #4)** — 세그먼트 판정 + **채용 장벽 매트릭스**(직무군별 축 자동 선정, 각 1–5 → 최고점=무게중심) + **히든배리어**(현직자 후기·JD 행간, JD Browsing) + 근무현실(3교대·출장·램프업) 확인. *(작업용: **커뮤니티 시그널**[블라인드·잡플래닛·Reddit 등]을 저신뢰 B/C 별도 블록으로 병기 — jd-browsing §5, 제출용 미포함)*
 3. **JD 원자 분해 (5-D Prism)** — Competency / Intent(회사 속마음) / KPI / Attack Point / Culture. *(무게중심 축에 가중)*
