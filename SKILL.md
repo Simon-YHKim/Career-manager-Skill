@@ -7,7 +7,7 @@ description: Personalized job-search and career-change manager. In one conversat
 
 취업·이직을 개인화 지원하는 단일 스킬. **하나의 커맨드가 대화로 의도를 파악해 7개 태스크 중 하나를 자동 판별**하고, 태스크별 **고정 출력 템플릿 1벌**로 산출물을 만든다. 메뉴·페르소나·엔진 전환·라우터·상주 UX **없음**.
 
-> 근거·규칙의 원천: [`BUILD_SPEC.md`](BUILD_SPEC.md)(SSOT) · 방법론 [`reference/methodology.md`](reference/methodology.md) · **포트폴리오 빌더(마스터 경험 뱅크·P0–P8)** [`reference/portfolio-builder.md`](reference/portfolio-builder.md) · 문체 [`reference/writing-voice.md`](reference/writing-voice.md) · 웹 리서치 [`reference/jd-browsing.md`](reference/jd-browsing.md) · 평가 루브릭 [`reference/evaluation.md`](reference/evaluation.md) · 엔진 체리픽 [`reference/gems/techniques.md`](reference/gems/techniques.md) · 출력 [`templates/report.html`](templates/report.html)·[`templates/a4-doc.html`](templates/a4-doc.html)·입력폼 [`templates/intake-form.html`](templates/intake-form.html)·지원현황 [`templates/application-tracker.html`](templates/application-tracker.html).
+> 근거·규칙의 원천: [`BUILD_SPEC.md`](BUILD_SPEC.md)(SSOT) · 방법론 [`reference/methodology.md`](reference/methodology.md) · **포트폴리오 빌더(마스터 경험 뱅크·P0–P8)** [`reference/portfolio-builder.md`](reference/portfolio-builder.md) · 문체 [`reference/writing-voice.md`](reference/writing-voice.md) · 웹 리서치 [`reference/jd-browsing.md`](reference/jd-browsing.md) · 평가 루브릭 [`reference/evaluation.md`](reference/evaluation.md) · 엔진 체리픽 [`reference/gems/techniques.md`](reference/gems/techniques.md) · 출력 [`templates/report.html`](templates/report.html)·[`templates/a4-doc.html`](templates/a4-doc.html)·ATS [`templates/resume-ats.html`](templates/resume-ats.html)·입력폼 [`templates/intake-form.html`](templates/intake-form.html)·지원현황 [`templates/application-tracker.html`](templates/application-tracker.html).
 
 ---
 
@@ -32,6 +32,11 @@ description: Personalized job-search and career-change manager. In one conversat
 | 3/5/10년·커리어 방향·전환·로드맵 | ⑦ 커리어 로드맵 |
 
 우선순위: (1) 사용자 명시 요청 → (2) 진행 중 태스크 계속 → (3) 자동 판별 → (4) 애매 시 1질문.
+
+**두 트랙 (목적이 다름):**
+- **취업 실행 트랙** (특정 지원 건 하나) — `① JD 매칭 → ② 문서 작성 → ③ 면접 준비 → ④ 모의면접 → ⑥ 연봉협상`.
+- **커리어 성장 트랙** (장기 방향, 특정 지원과 무관) — `⑤ 자가진단 ↔ ⑦ 로드맵`.
+- **⑦ 로드맵은 면접의 하위 단계가 아니다**(발전용). 산출물만 ②(자소서 "입사 후 포부")·④(임원 비전 답변)로 재활용된다. 두 트랙은 **마스터 경험 뱅크**를 공유한다(성장 트랙의 결과 = 실행 트랙의 근거로 축적).
 
 ---
 
@@ -124,7 +129,7 @@ description: Personalized job-search and career-change manager. In one conversat
 공통 입력: `문서유형(자소서·이력서KR·resume EN·cover EN·포트폴리오) | 회사/직무 | 문항·분량(글자수 상한) | 포함 키워드`.
 - **A. 타깃 해독(경량, 드래프팅 전):** JD 있으면 5-D Prism에서 **Intent(회사 속마음)·Attack Point·Culture만** 추출(전체 매칭 매트릭스·7-Lens는 ①; 있으면 ①→② 체이닝으로 로드). 자소서는 **문항 의도 역산**+소재 필터(cover-letter §4), 지원동기는 **3C=회사 페인포인트** 선행. → 어떤 EXP를 어떤 앵글로 배치할지 결정.
 - **B. 작성(write):** ① 뱅크 로드 → ② 경험 선별·채굴(**Strategic Selection**: 어떤 EXP-ID를 왜 선택/제외했는지 작업용 표기; STAR-L·C·R·A·R·I, 정량 부족 시 대화로 채우고 **뱅크 write-back**) → ③ **문항 아키타입 스위치**(지원동기[주장→근거→맺음말]·성격 장단점[동시제시→근거→극복]·성장과정[단일 이벤트], cover-letter §3) + **Tech-to-Biz 변환**(기술활동→$·%·수율·용어 재정의) → ④ 초안 v1(요청 언어·문체 게이트·학생마인드→비즈니스마인드 교정) → ⑤ 검증(키워드·수치 무결성·**분량 예산 트림**·면접 방어·Stage 1 냉정 셀프오딧+Score Caps) → ⑥ 산출(§6.0 #5 작업/제출).
-- **C. resume EN / cover EN 서브파이프:** CV vs Resume 판별(resume-en §1) → Value Proposition Summary 3–4문장 훅(§8) → X-Y-Z 불릿·액션동사 dedup(§4·§5) → **ATS 포맷 점검**(§6: 표·다단·색 의존·비표준 헤딩 검출) → 벤치마킹(동일 연차 현직자 표현, §11). **산출: resume EN 기본 = ATS-세이프 단일컬럼**(기계 파싱), 포트폴리오·국문 자소서 = 에디토리얼 a4-doc(**이중 export**).
+- **C. resume EN / cover EN 서브파이프:** CV vs Resume 판별(resume-en §1) → Value Proposition Summary 3–4문장 훅(§8) → X-Y-Z 불릿·액션동사 dedup(§4·§5) → **ATS 포맷 점검**(§6: 표·다단·색 의존·비표준 헤딩 검출) → 벤치마킹(동일 연차 현직자 표현, §11). **산출: resume EN 기본 = ATS-세이프 단일컬럼**([`templates/resume-ats.html`](templates/resume-ats.html), 기계 파싱), 포트폴리오·국문 자소서 = 에디토리얼 a4-doc(**이중 export**).
 - **D. 첨삭(edit):** ① 면접 꼬리표 위험 진단(공격 포인트·근거 취약·과장 구간) → ② **채점 = evaluation.md 정렬**(문서 축[두괄식·STAR·직무적합·수치화·회사맞춤] 유지 + **§2 Score Caps·§3 Mandatory Deductions·§4 Calibration·§0 타깃 유무 분기** 상속; 마스터본=타깃 없음이면 직무적합·회사맞춤 빼고 내적 품질로) → ③ 핵심 감점 사유 → ④ 문장 수술 Top 10(Before/After/Why·문체 게이트) → ⑤ 리라이트 v1(Stage 2, 진실하되 강한, PR강도 Lv1–3) → ⑥ 선발 관점 판정 + 확신도(§6.0 #2) → ⑦ 뱅크 write-back·`.private/applications/` 회사×EXP×앵글 기록(복붙 방지).
 
 ### ③ 면접 준비 → report.html (제출용 = @media print 치트시트)

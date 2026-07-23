@@ -13,16 +13,18 @@
 > 수치는 인용 금지(런타임 재수집). 마지막 추출: 2026-07 (소스 PDF 작성 2025-12~2026-03).
 
 ## 스킬이 이 모듈을 쓰는 법 (태스크 → 섹션 매핑)
+> 3단계 파인튜닝 반영(SKILL §6.0 공통 계약 + 태스크별). durable 방법론은 여기, 시의성은 `jd-browsing.md`, 채점은 `evaluation.md`.
+
 | D-2 태스크 | 주 참조 섹션 |
 |---|---|
-| ① JD↔포트폴리오 매칭 | §0 5-D Prism · §1 jd-matching · §Tech-to-Biz |
-| ② 문서 작성/첨삭 (자소서·이력서·resume·cover) | §2 cover-letter · §3 resume-en · §STAR-L |
-| ③ 면접 준비 | §4 interview · §STAR-L |
-| ④ 모의면접 (실무/임원/HR) | §4 interview(§8 채점 루브릭) · gems A(스파링) |
-| ⑤ 메타인지 자가진단 | §6 roadmap(§2) · §5 market-trend(§4 역량언어) · §Truth Tier |
-| ⑥ 연봉협상 | §5 market-trend(§10 총보상·BATNA·스크립트) |
-| ⑦ 커리어 로드맵 | §6 roadmap |
-| (전 태스크) 2단 평가 D-3 | §0 Truth Tier · gems C(진실성 규율) |
+| ① JD↔포트폴리오 매칭 | §0 5-D Prism · §1 jd-matching(무게중심·히든배리어) · Tech-to-Biz · jd-browsing(공고 발굴) · evaluation(적합도 2단) |
+| ② 문서 작성/첨삭 | §0 5-D Prism(Intent)·Tech-to-Biz · §2 cover-letter(문항 아키타입) · §3 resume-en(ATS·X-Y-Z) · STAR-L · writing-voice · evaluation §2·§3·§4(첨삭) |
+| ③ 면접 준비 | §4 interview(§1 의도·§4 5카테고리·§6 프레임·§7 방어) · STAR-L · jd-browsing(기업 특화 질문) |
+| ④ 모의면접 (실무→임원→연봉) | §4 interview · evaluation §5·§6(재도전 프롬프트) · gems A(스파링) |
+| ⑤ 메타인지 자가진단 | evaluation §5.5(내적 품질 루브릭)·§0 프레임 · §5 market-trend(§4 역량언어) · Truth Tier |
+| ⑥ 연봉협상 | §5 market-trend(§10 총보상·5단계·스크립트) · Tech-to-Biz(가치 논증) · evaluation(2단·Score Caps) · P6 롤플레이 |
+| ⑦ 커리어 로드맵 | §6 roadmap(§1 거시·§2 CORE4·§5 Phase·§7 전환) · evaluation(⑤ 재사용) · Job Crafting |
+| (전 태스크) 공통 계약 §6.0 | 뱅크 I/O · 2단 평가(§0 Truth Tier·gems C 진실성) · 6다이얼 · jd-browsing |
 
 ---
 

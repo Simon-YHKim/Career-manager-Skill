@@ -13,7 +13,7 @@ for f in SKILL.md BUILD_SPEC.md GOAL_CONDITION.txt README.md .gitignore \
          reference/methodology.md reference/evaluation.md reference/gems/techniques.md \
          reference/portfolio-builder.md reference/writing-voice.md reference/jd-browsing.md \
          templates/report.html templates/a4-doc.html \
-         templates/intake-form.html templates/application-tracker.html; do
+         templates/intake-form.html templates/application-tracker.html templates/resume-ats.html; do
   [ -f "$f" ] && ok "exists: $f" || no "missing: $f"
 done
 
@@ -53,7 +53,7 @@ else
 fi
 
 echo "== self-contained HTML (no external network) =="
-for h in templates/report.html templates/a4-doc.html templates/intake-form.html templates/application-tracker.html; do
+for h in templates/report.html templates/a4-doc.html templates/intake-form.html templates/application-tracker.html templates/resume-ats.html; do
   if grep -qiE 'https?://|src=|<link|@import|integrity=' "$h"; then no "external ref in $h"; else ok "self-contained: $h"; fi
 done
 
