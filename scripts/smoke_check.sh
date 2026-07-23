@@ -81,8 +81,10 @@ grep -qiE 'computer-use|자동 입력|Fill Plan' reference/linkedin.md && grep -
   && ok "linkedin.md: 필드 카탈로그 + A/B 모드 + 안전 프로토콜" || no "linkedin.md content"
 # roadmap: multi-path recommender board (다중 경로·적합도·연차별 목표·선택)
 grep -qiE '다중 경로|경로 추천|적합도' templates/roadmap.html && grep -qiE '연차|측정지표|타임라인' templates/roadmap.html \
-  && ok "roadmap: 다중 경로·적합도 점수·연차별 목표 보드" || no "roadmap content"
-grep -qiE '다중 경로 추천|Path Recommender' reference/methodology.md && ok "methodology: roadmap §4.5 다중 경로 추천 엔진" || no "methodology recommender"
+  && grep -qiE '직급|승진|라더|인터뷰' templates/roadmap.html \
+  && ok "roadmap: 직무 경로 + 직급 승진(라더·인터뷰) 두 축 보드" || no "roadmap content"
+grep -qiE '다중 경로 추천|Path Recommender' reference/methodology.md && grep -qiE '직급 로드맵|Rank Ladder|직급 라더' reference/methodology.md \
+  && ok "methodology: roadmap §4.5 직무 경로 + §4.6 직급 라더" || no "methodology recommender"
 grep -qiE 'Path Recommender|다중 경로' SKILL.md && grep -qF "roadmap.html" SKILL.md && ok "SKILL ⑦ wired to Path Recommender + roadmap.html" || no "SKILL ⑦ recommender wiring"
 # handoff.md: session-state PII routing + prepend discipline
 grep -qF "session-state" reference/handoff.md && grep -qiE 'prepend|덮어쓰지' reference/handoff.md && grep -qF ".private" reference/handoff.md \
