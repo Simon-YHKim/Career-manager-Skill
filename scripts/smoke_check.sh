@@ -13,6 +13,7 @@ for f in SKILL.md BUILD_SPEC.md GOAL_CONDITION.txt README.md .gitignore \
          reference/methodology.md reference/evaluation.md reference/gems/techniques.md \
          reference/portfolio-builder.md reference/writing-voice.md reference/jd-browsing.md \
          reference/handoff.md reference/linkedin.md reference/glossary.md reference/hub-backend.md \
+         worker/src/index.js worker/wrangler.toml worker/README.md \
          templates/report.html templates/a4-doc.html \
          templates/intake-form.html templates/application-tracker.html templates/resume-ats.html templates/jd-discovery.html \
          templates/cover-letter.html templates/linkedin-export.html templates/roadmap.html templates/interview-prep.html templates/hub.html; do
@@ -80,6 +81,12 @@ grep -qF "interview-prep.html" SKILL.md && ok "SKILL ③ wired to interview-prep
 grep -qiE 'localStorage' templates/hub.html && grep -qiE '백엔드|동기화' templates/hub.html && grep -qiE '내보내기|가져오기' templates/hub.html && ok "hub: 로컬-우선 관리(localStorage·JSON 왕복·BYO 동기화)" || no "hub content"
 grep -qiE 'BYO|사용자 소유|무료 백엔드' reference/hub-backend.md && grep -qiE 'Cloudflare|Supabase' reference/hub-backend.md && grep -qiE '계약|opt-in|service-role' reference/hub-backend.md && ok "hub-backend: 계약 + 무료 백엔드 레시피 + 보안" || no "hub-backend content"
 grep -qF "hub.html" SKILL.md && grep -qF "hub-backend.md" SKILL.md && ok "SKILL wired to hub + hub-backend" || no "SKILL hub wiring"
+# BYO 워커(데이터+AI 프록시) + 인브라우저 AI(opt-in)
+grep -qiE 'CAREER|/doc' worker/src/index.js && grep -qiE '/ai|anthropic|openai' worker/src/index.js && grep -qiE 'TOKEN|AI_KEY' worker/src/index.js && ok "worker: 데이터 KV + AI 프록시(토큰·키 시크릿)" || no "worker content"
+grep -qiE 'AI 다듬기|aiPolish|aiUrl' templates/hub.html && grep -qiE '프록시|AI_KEY|Worker' templates/hub.html && ok "hub: 인브라우저 AI(프록시·다듬기·opt-in)" || no "hub AI content"
+grep -qiE '인브라우저 AI|AI 프록시|경로 A' reference/hub-backend.md && ok "hub-backend: AI 프록시 + 두 UX 경로" || no "hub-backend AI"
+# 워커 파일에 하드코딩 자격증명 없음(시크릿만)
+if grep -qiE 'sk-ant-|sk-[A-Za-z0-9]{20}|api[_-]?key\s*[:=]\s*["'"'"'][A-Za-z0-9]' worker/src/index.js worker/wrangler.toml 2>/dev/null; then no "worker has hardcoded credential"; else ok "worker: no hardcoded credentials (secrets only)"; fi
 # linkedin-export: all fields + user-selectable activation + copy + Fill Plan(computer-use) + ToS/API + credential guard
 grep -qiE '복사|copy' templates/linkedin-export.html && grep -qiE 'ToS|API' templates/linkedin-export.html \
   && grep -qiE 'Fill Plan|computer-use' templates/linkedin-export.html && grep -qiE '활성화|섹션 선택' templates/linkedin-export.html \

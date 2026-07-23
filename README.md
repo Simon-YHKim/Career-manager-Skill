@@ -106,7 +106,11 @@ templates/
   roadmap.html           다중 경로 로드맵 보드 (⑦ 경로 추천·적합도·연차별 목표·선택)
   interview-prep.html    면접 대비 포트폴리오 버전 (항목별 예상질문 3개·의도·방어)
   application-tracker.html 지원 현황 대시보드 (P8, 일정관리)
-  hub.html               개인 관리 허브 (로컬-우선·인라인 편집·localStorage·JSON 왕복·BYO 백엔드)
+  hub.html               개인 관리 허브 (로컬-우선·인라인 편집·JSON 왕복·BYO 백엔드·인브라우저 AI)
+worker/                  BYO 무료 Cloudflare Worker (데이터 저장 + AI 프록시, 사용자 소유·배포용)
+  src/index.js           Worker 코드 (/doc 저장 · /ai AI 프록시 · 토큰 인증 · CORS)
+  wrangler.toml          배포 설정 (KV·시크릿; 자격증명 미포함)
+  README.md              배포 안내 (Deploy 원클릭 + 수동 + 시크릿·연결)
 samples/sample-resume.html   A4 렌더 샘플(제네릭·PII 없음)
 scripts/
   check_a4.py            A4 인쇄 검증 (chromium print→PDF + PyMuPDF)

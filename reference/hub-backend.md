@@ -23,32 +23,12 @@
 
 ## 2. 무료 백엔드 레시피 (사용자가 자기 것 하나 선택)
 
-### (a) Cloudflare Worker + KV — 권장(무료·최소·사용자 소유)
-1. Cloudflare 무료 계정 → Workers & Pages → KV 네임스페이스 1개 생성(예: `CAREER`).
-2. Worker 1개 배포(아래 코드). KV 바인딩 `CAREER`, 시크릿 `TOKEN`(임의 문자열) 설정.
-3. 허브 설정에 `URL = https://<worker>.workers.dev/doc`, 헤더 `Authorization: Bearer <TOKEN>`.
-```js
-// Cloudflare Worker (free) — 사용자 본인 소유. GET=불러오기 / PUT=저장. 단일 문서.
-export default {
-  async fetch(req, env) {
-    const cors = { 'Access-Control-Allow-Origin':'*', 'Access-Control-Allow-Methods':'GET,PUT,OPTIONS',
-      'Access-Control-Allow-Headers':'authorization,content-type' };
-    if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
-    if ((req.headers.get('authorization')||'') !== 'Bearer ' + env.TOKEN)
-      return new Response('unauthorized', { status: 401, headers: cors });
-    if (req.method === 'GET') {
-      const v = await env.CAREER.get('doc');
-      return new Response(v || '{}', { headers: { ...cors, 'content-type':'application/json' } });
-    }
-    if (req.method === 'PUT') {
-      await env.CAREER.put('doc', await req.text());
-      return new Response('{"ok":true}', { headers: { ...cors, 'content-type':'application/json' } });
-    }
-    return new Response('method', { status: 405, headers: cors });
-  }
-}
-```
-> TOKEN은 사용자가 정한 비밀값(자기 브라우저에만 입력). 유출돼도 **본인 문서 1개** 범위.
+### (a) Cloudflare Worker + KV — 권장(무료·사용자 소유·데이터+AI 겸용)
+배포용 소스·설정은 리포지토리 **`worker/`**에 준비돼 있다(`worker/src/index.js`·`worker/wrangler.toml`·`worker/README.md`). 이 Worker는 **데이터 저장(`/doc`) + AI 프록시(`/ai`)**를 겸한다.
+1. **로그인만 하면 나머지 자동:** `worker/README.md`의 **"Deploy to Cloudflare" 버튼** → 로그인/인가 → KV·Worker **자동 생성·바인딩**.
+2. **시크릿만 설정**(대시보드 또는 `wrangler secret put`): `TOKEN`(필수, 임의 랜덤) · `AI_KEY`(선택, 본인 AI 키) · `AI_PROVIDER`(선택, anthropic/openai).
+3. 허브 **설정·동기화·AI** 탭 → "내 백엔드(Worker) 연결": **Worker 주소 + TOKEN**을 한 번 붙여넣으면 동기화가 켜지고, `AI_KEY`가 있으면 **AI 연결도 자동**.
+> `TOKEN`은 접근 문지기(유출 시 본인 문서 1개+본인 AI 프록시 범위 → 토큰 교체로 회수). **AI 키는 허브/브라우저에 넣지 않는다 — Worker 시크릿에만.** (수동 배포 5클릭 경로도 `worker/README.md`에 있음.)
 
 ### (b) Supabase — 무료 Postgres + REST + 행 수준 보안(RLS)
 1. Supabase 무료 프로젝트 → 테이블 `career_doc(id text primary key, data jsonb)` 생성.
@@ -73,4 +53,10 @@ JSONBin·Deta·Fly.io 초소형 서버·본인 홈서버 등 §1 계약(GET/PUT 
 - 허브는 **structured 데이터 관리**(뱅크 원자·지원 건·프로필), 문서 산출물(자소서·이력서·로드맵…)은 기존 템플릿이 그 데이터로 렌더.
 - **보안 승계:** [T3]·미검증은 대외 렌더 배제(§6.0 #7), PII는 사용자 소유 저장소에만.
 
-> 요약: **로컬-우선 + 사용자 소유 무료 백엔드(선택).** 우리는 아무 데이터도 보관·중계하지 않는다. 네트워크는 사용자가 자기 서버를 붙이고 동기화할 때만.
+## 5. 인브라우저 AI (선택 · Worker 프록시) — 두 UX 경로
+사용자가 **웹에서 직접 AI를 붙여 HTML로 쓰고 싶다면** 그렇게, **아니면** 정보 디벨롭은 **Claude/Codex 스킬**로 — 둘 다 지원.
+- **경로 A (인브라우저 AI):** 본인 AI 키를 **Worker 시크릿 `AI_KEY`**에 넣는다 → 허브의 `✨ AI 다듬기`·`AI 테스트`가 Worker `/ai`를 호출한다. **키는 브라우저에 없음**(Worker가 프록시 = CORS·키 노출 동시 해결). 제공자·모델은 허브에서 선택(anthropic/openai). 사용량·비용은 **본인 계정**.
+- **경로 B (스킬):** AI를 안 붙이면 허브는 로컬-우선 관리 도구로 쓰고, 다듬기·문서 생성 같은 **정보 디벨롭은 Claude/Codex에서 이 스킬로**(더 강력·전 방법론 적용). 허브 데이터는 JSON 왕복으로 스킬과 연동.
+- **안전:** AI 호출도 **사용자 버튼 클릭 시에만**(자동 호출 없음). 프록시는 `/ai`만 노출, `TOKEN`으로 보호. 날조 금지 프롬프트(사실·수치만) 내장.
+
+> 요약: **로컬-우선 + 사용자 소유 무료 백엔드(데이터+AI, 선택).** 우리는 아무 데이터·키도 보관·중계하지 않는다. 백엔드 배포는 **로그인/인가만 사용자가 하고 나머지는 자동**, 네트워크·AI는 **사용자가 버튼을 누를 때만**. 안 붙이면 완전 오프라인 로컬 도구 + 스킬(Claude/Codex) 경로.

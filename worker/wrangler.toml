@@ -1,0 +1,19 @@
+# career-hub — 사용자 소유 Cloudflare Worker 배포 설정
+# 배포하면 KV(데이터 저장)가 생성/바인딩되고, 시크릿(TOKEN·AI_KEY)은 대시보드/CLI에서 설정한다.
+# 자격증명은 이 파일에 두지 않는다(전부 시크릿).
+
+name = "career-hub"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# 데이터 저장용 KV. "Deploy to Cloudflare" 버튼은 배포 중 새 네임스페이스를 만들어 채운다.
+# 수동 배포 시: `wrangler kv namespace create CAREER` 후 출력된 id를 아래에 넣는다.
+kv_namespaces = [
+  { binding = "CAREER", id = "" }
+]
+
+# 시크릿(값은 여기 두지 않음 — 대시보드 Settings→Variables→Secrets 또는 `wrangler secret put`):
+#   TOKEN       (필수) 접근 토큰. 허브 '연결'에 같은 값을 넣는다.
+#   AI_KEY      (선택) 본인 AI API 키. 넣으면 인브라우저 AI 활성.
+#   AI_PROVIDER (선택) anthropic | openai  (기본 anthropic)
+#   AI_MODEL    (선택) 모델 ID (기본 claude-haiku-4-5-20251001 / openai면 gpt-4o-mini)

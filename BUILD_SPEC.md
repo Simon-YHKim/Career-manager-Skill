@@ -111,7 +111,10 @@
     roadmap.html           ← 다중 경로 로드맵 보드 (⑦ 경로 추천·연차별 목표)
     interview-prep.html    ← 면접 대비 포트폴리오 버전 (항목별 예상질문 3개)
     application-tracker.html ← 지원 현황 대시보드 (P8)
-    hub.html               ← 개인 관리 허브 (로컬-우선·localStorage·JSON 왕복·BYO 백엔드)
+    hub.html               ← 개인 관리 허브 (로컬-우선·JSON 왕복·BYO 백엔드·인브라우저 AI)
+  worker/                ← BYO 무료 Cloudflare Worker (데이터 저장 + AI 프록시, 사용자 소유)
+    src/index.js         ←   /doc 데이터 · /ai AI 프록시 · 토큰 인증 (자격증명 미포함)
+    wrangler.toml        ←   배포 설정  ·  README.md ← 배포 안내(Deploy 원클릭)
   .private/                ← [gitignore] 개인 컨텍스트
     profile.md             ←   보정 프로필
     experience-bank.md     ←   마스터 경험 뱅크 (SSOT)
