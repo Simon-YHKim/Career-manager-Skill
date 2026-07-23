@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<!--
+  career skill — 다중 경로 로드맵 비교 보드 (⑦ Path Recommender / methodology.md roadmap §4.5)
+  커리어 히스토리(뱅크)에서 여러 발전 경로를 생성 → 4축 점수화·순위화 → 경로별 연차별 목표
+  (목표·실행·측정지표) → 비교·선택. 점수는 배제가 아니라 정렬용(고위험·고성장도 목록 유지 =
+  자유도 보존). 선택 → §5 상세 로드맵 전개, 미선택은 '검토 후보'로 뱅크 보존. 자체완결·외부 네트워크 0.
+  ★ 스킬은 뱅크·JD Browsing으로 아래 PATHS 배열을 치환한다. 미검증 목표·수치는 ⚠️/[확인 필요],
+    시장성장은 출처·조회일·Truth Tier. 커밋되는 이 파일은 GENERIC 샘플만(PII 금지).
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>career — 다중 경로 로드맵</title>
+<style>
+  :root{
+    --accent:#9a3b2e; --ink:#1b1a17; --muted:#6c675e; --faint:#9b958a;
+    --line:#e7e3da; --line-2:#d4cec3; --wash:#f7efec; --paper:#fff;
+    --hi:#2f7d5b; --mid:#b8823a; --lo:#9a3b2e; --bar:#e7e3da;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',Roboto,sans-serif;
+  }
+  *{ box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  html,body{ margin:0; padding:0; background:#eceae4; color:var(--ink); font-family:var(--sans);
+    font-size:14px; line-height:1.5; letter-spacing:-0.002em; }
+  .wrap{ max-width:1000px; margin:0 auto; padding:26px 16px 90px; }
+  .bar-accent{ height:3px; width:60px; background:var(--accent); margin-bottom:14px; }
+  h1{ margin:0; font-size:25px; font-weight:800; letter-spacing:-0.02em; }
+  .lead{ margin:8px 0 0; color:var(--muted); font-size:13px; }
+  .prof{ margin-top:12px; padding:11px 14px; background:var(--paper); border:1px solid var(--line);
+    border-radius:9px; font-size:12.5px; color:var(--muted); }
+  .prof b{ color:var(--ink); }
+  .disc{ margin-top:8px; font-size:11.5px; color:var(--muted); }
+
+  /* 컨트롤 */
+  .controls{ position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+    padding:10px 0; margin-top:14px; background:#eceae4; }
+  .controls select{ font-family:var(--sans); font-size:12.5px; border:1px solid var(--line-2); background:#fff;
+    border-radius:7px; padding:6px 9px; color:var(--ink); }
+  .seg{ display:flex; gap:4px; flex-wrap:wrap; }
+  .seg button{ font-family:var(--sans); font-size:12px; border:1px solid var(--line-2); background:#fff;
+    color:var(--muted); border-radius:20px; padding:6px 12px; font-weight:600; cursor:pointer; }
+  .seg button.on{ background:var(--ink); color:#efe9df; border-color:var(--ink); }
+  .controls .count{ margin-left:auto; font-size:12px; color:var(--faint); }
+
+  /* 경로 카드 */
+  .path{ background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:15px 17px;
+    margin-top:12px; }
+  .path.picked{ border-color:var(--accent); box-shadow:0 0 0 1px var(--wash); }
+  .top{ display:grid; grid-template-columns:26px 34px 1fr auto; gap:0 12px; align-items:start; }
+  .chk{ margin-top:3px; } .chk input{ width:17px; height:17px; accent-color:var(--accent); cursor:pointer; }
+  .rank{ font-family:var(--serif); font-size:20px; color:var(--faint); text-align:center; line-height:1.2; }
+  .body{ min-width:0; }
+  .badge{ display:inline-block; font-size:10px; font-weight:700; letter-spacing:.03em; padding:2px 9px;
+    border-radius:12px; background:var(--wash); color:var(--accent); }
+  .title{ font-size:16px; font-weight:700; color:var(--ink); margin:5px 0 0; }
+  .why{ font-size:12.5px; color:var(--muted); margin:5px 0 0; line-height:1.45; }
+  .tags{ margin:8px 0 0; display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+  .tags span{ font-size:10.5px; color:var(--muted); background:var(--wash); border-radius:12px; padding:2px 9px; }
+  .risk{ font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:12px; }
+  .r-낮음{ color:var(--hi); background:#e7f1eb; } .r-중간{ color:var(--mid); background:#f7eede; }
+  .r-높음{ color:var(--lo); background:var(--wash); }
+  .warn{ color:var(--lo); }
+
+  /* 점수 */
+  .score{ text-align:right; min-width:150px; }
+  .score .num{ font-family:var(--serif); font-size:30px; line-height:1; color:var(--ink); }
+  .score .num small{ font-size:13px; color:var(--faint); }
+  .grade{ display:inline-block; margin-top:5px; font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:20px; }
+  .g-유력{ color:#fff; background:var(--hi); } .g-유망{ color:var(--hi); background:#e7f1eb; }
+  .g-검토{ color:var(--mid); background:#f7eede; } .g-도전{ color:var(--lo); background:var(--wash); }
+  .conf{ font-size:10px; color:var(--faint); margin-top:4px; }
+  .subs{ margin-top:9px; display:grid; gap:4px; }
+  .subrow{ display:grid; grid-template-columns:62px 1fr 26px; gap:7px; align-items:center; font-size:9.5px; color:var(--muted); }
+  .track{ display:block; height:5px; background:var(--bar); border-radius:3px; overflow:hidden; }
+  .fill{ display:block; height:5px; background:var(--accent); border-radius:3px; }
+
+  /* 연차별 타임라인 */
+  .timeline{ margin-top:13px; border-top:1px dashed var(--line-2); padding-top:12px; }
+  .tl-head{ font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--faint); margin-bottom:8px; }
+  .steps{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; }
+  .step{ background:#fcfbf9; border:1px solid var(--line); border-radius:9px; padding:10px 12px; position:relative; }
+  .step .when{ font-family:var(--serif); font-style:italic; font-size:13px; color:var(--accent); }
+  .step .goal{ font-size:12.5px; font-weight:700; color:var(--ink); margin:3px 0 0; }
+  .step .act{ font-size:11.5px; color:var(--muted); margin:5px 0 0; line-height:1.4; }
+  .step .metric{ font-size:10.5px; color:var(--mid); margin:6px 0 0; }
+  .step .metric b{ color:var(--mid); }
+
+  @media(max-width:640px){
+    .top{ grid-template-columns:24px 1fr; }
+    .rank{ display:none; } .score{ grid-column:1/-1; text-align:left; margin-top:8px; }
+    .subs{ max-width:280px; }
+  }
+
+  .actionbar{ position:fixed; left:0; right:0; bottom:0; z-index:30; display:flex; justify-content:center;
+    gap:10px; padding:12px; background:rgba(27,26,23,.96); }
+  .actionbar button{ border:none; border-radius:7px; padding:9px 16px; font-size:13px; font-weight:700;
+    cursor:pointer; font-family:var(--sans); }
+  .actionbar .primary{ background:#efe9df; color:#1b1a17; }
+  .actionbar .status{ color:#8a857c; font-size:12px; align-self:center; }
+  #out{ display:none; white-space:pre-wrap; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px;
+    background:#1b1a17; color:#e9e4d8; border-radius:8px; padding:14px; margin-top:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar-accent"></div>
+  <h1>다중 경로 로드맵</h1>
+  <p class="lead">커리어 히스토리에서 <b>여러 발전 경로</b>를 생성 → 적합도 점수로 순위화 → 경로별 <b>연차별 목표</b>. 하나로 좁히지 않고 비교해 고르세요.</p>
+  <div class="prof" id="prof"></div>
+  <div class="disc" id="disc">점수는 <b>배제가 아니라 정렬용</b>입니다 — 고위험·고성장 경로도 목록에 남습니다(자유도 보존). 체크한 경로만 상세 로드맵으로 전개하고, 나머지는 '검토 후보'로 보존합니다.</div>
+
+  <div class="controls">
+    <select id="sort" onchange="render()">
+      <option value="score">정렬: 적합도순</option>
+      <option value="growth">정렬: 시장성장순</option>
+      <option value="feasible">정렬: 실현성순</option>
+    </select>
+    <div class="seg" id="filters"></div>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div id="list"></div>
+  <pre id="out"></pre>
+</div>
+
+<div class="actionbar">
+  <button class="primary" onclick="copyPicked()">🧭 선택 경로 상세 전개</button>
+  <span class="status" id="status">고를 경로를 체크 → 복사 → 스킬에 붙여넣으면 그 경로만 §5 상세 로드맵으로 전개</span>
+</div>
+
+<script>
+  const TODAY = '2026-07-23';   // 스킬이 렌더 시 실제 KST로 치환
+  // 탐색 프로파일 (스킬이 뱅크·프로필로 자동 생성)
+  const PROFILE = { role:'제조 오퍼레이션/생산혁신', anchor:'미드~시니어', years:'8년+', seed:'생산기술·IE·데이터·원가' };
+
+  // Path Recommender 결과 (샘플 — 스킬이 뱅크로 치환). score=경로 적합도(0–100),
+  // sub 4축(근거적합·갭실현성·시장성장·지향부합), track=연차별 [목표·실행·측정지표].
+  const PATHS = [
+    { arch:'도메인 심화', title:'Operational Excellence 리더 (IC 전문가)', risk:'낮음',
+      why:'현 생산혁신 필살기·정량 성과가 직접 뒷받침 — 갭이 가장 작고 즉시 확장 가능.',
+      score:85, grade:'유력', confidence:'높음', sub:{fit:92, feasible:88, growth:74, intent:82},
+      tags:['CapEx/OpEx','IE·데이터','Zero-Defect'],
+      track:[
+        {when:'1년', goal:'전사 개선 프로젝트 오너십', act:'대형 라인 혁신 1건 주도 + 방법론 표준화', metric:'절감 $ · 수율 %p'},
+        {when:'3년', goal:'OpEx 표준 아키텍트', act:'다공장 롤아웃 + 후배 멘토링 체계', metric:'적용 공장 수 · 누적 절감'},
+        {when:'5년', goal:'제조혁신 총괄(Principal)', act:'전략 로드맵·투자 의사결정 관여', metric:'담당 CapEx 규모 · 조직 KPI'},
+      ]},
+    { arch:'데이터 피벗', title:'제조 DX · 데이터 기반 공정 엔지니어', risk:'중간',
+      why:'도메인 위에 데이터/AI를 얹는 하이브리드 — 시장 수요 성장, 기존 강점 유지(Expansion).',
+      score:78, grade:'유망', confidence:'중간', sub:{fit:74, feasible:70, growth:88, intent:80},
+      tags:['Python','MES/센서','ML 기초'],
+      track:[
+        {when:'1년', goal:'데이터 무장 + 현장 PoC', act:'Python·SQL 실무 + 공정 데이터 분석 1건', metric:'PoC 산출물 · 개선 %'},
+        {when:'3년', goal:'제조 DX 리드', act:'예지보전·수율 모델 운영화', metric:'모델 적용 라인 · 다운타임 ↓%'},
+        {when:'5년', goal:'스마트팩토리 아키텍트', act:'데이터 파이프라인·거버넌스 설계', metric:'플랫폼 커버리지 · ROI'},
+      ]},
+    { arch:'인접 확장', title:'Operations Excellence 컨설턴트', risk:'중간',
+      why:'제조 진단·개선 역량을 컨설팅 실행 트랙으로 재포지셔닝 — 1역량→N직무 매핑.',
+      score:71, grade:'유망', confidence:'중간', sub:{fit:70, feasible:66, growth:85, intent:60},
+      tags:['Lean/Six Sigma','진단·설득','영어'],
+      track:[
+        {when:'1년', goal:'방법론·영어 커뮤니케이션', act:'구조화 문제해결 + 영어 발표 훈련', metric:'케이스 완료 · 영어 레벨'},
+        {when:'3년', goal:'실행 컨설턴트', act:'고객사 오퍼레이션 개선 프로젝트 리드', metric:'프로젝트 수 · 고객 절감'},
+        {when:'5년', goal:'Engagement 매니저', act:'팀 리딩·제안(RFP) 주도', metric:'수주 규모 · 팀 성과'},
+      ]},
+    { arch:'산업 환승', title:'2차전지 공정기술 엔지니어 (성장 산업)', risk:'높음',
+      why:'⚠️ 갭 큼(고위험) — 정체→성장 산업 스킬 1:1 번역. 점수는 낮아도 성장성은 최상, 선택지로 남김.',
+      score:63, grade:'도전', confidence:'낮음', sub:{fit:58, feasible:48, growth:92, intent:64},
+      tags:['전극·코팅','신산업 도메인','리스킬'],
+      track:[
+        {when:'1년', goal:'목표 공정 기초체력', act:'전지 공정 원리 학습 + 스킬 번역 지도 작성', metric:'수료·자격 · 번역 맵'},
+        {when:'3년', goal:'즉시전력 전환', act:'유사 공정 경력으로 경력 이직 성사', metric:'이직 성사 · 담당 공정'},
+        {when:'5년', goal:'성장 산업 코어 인력', act:'신규 라인 셋업·수율 안정화 주도', metric:'라인 수율 · 램프업 기간'},
+      ]},
+    { arch:'융합·희소성', title:'제조 × 원가 × 데이터 = Cost Engineering 스페셜리스트', risk:'중간',
+      why:'Base(제조)+Plus(원가·데이터) 슬래시 결합으로 대체불가 포지션 창출.',
+      score:69, grade:'유망', confidence:'중간', sub:{fit:72, feasible:62, growth:80, intent:70},
+      tags:['Should-costing','BOM','데이터'],
+      track:[
+        {when:'1년', goal:'원가·데이터 결합 실적', act:'Should-costing + 데이터 분석 결합 사례 1건', metric:'절감액 · 재현 가능 모델'},
+        {when:'3년', goal:'Cost Engineering 리드', act:'구매·설계 연계 원가 최적화 주도', metric:'BOM 절감 % · 적용 제품'},
+        {when:'5년', goal:'원가혁신 총괄', act:'전사 원가 거버넌스 설계', metric:'담당 원가 규모 · 연 절감'},
+      ]},
+  ];
+
+  const SUBLABEL = { fit:'근거적합', feasible:'실현성', growth:'시장성장', intent:'지향부합' };
+  let filter='all';
+  const picked = new Set();
+
+  function profHTML(){
+    document.getElementById('prof').innerHTML =
+      `히스토리 씨앗 · <b>${PROFILE.role}</b> · 연차 ${PROFILE.anchor}(${PROFILE.years}) · 핵심 ${PROFILE.seed} · 조회 ${TODAY}`;
+  }
+  function barsHTML(p){
+    return `<div class="subs">`+Object.keys(SUBLABEL).map(k=>
+      `<div class="subrow"><span>${SUBLABEL[k]}</span><span class="track"><span class="fill" style="width:${p.sub[k]}%"></span></span><span>${p.sub[k]}</span></div>`
+    ).join('')+`</div>`;
+  }
+  function stepsHTML(p){
+    return `<div class="timeline"><div class="tl-head">연차별 목표 — 목표 · 실행 · 측정지표</div><div class="steps">`+
+      p.track.map(s=>`<div class="step"><div class="when">${s.when}</div><div class="goal">${s.goal}</div>`+
+        `<div class="act">${s.act}</div><div class="metric">📏 지표: <b>${s.metric}</b></div></div>`).join('')+
+      `</div></div>`;
+  }
+  function cardHTML(p,i){
+    const on=picked.has(p.title);
+    const whyCls = p.why.indexOf('⚠️')>=0 ? 'why warn' : 'why';
+    return `<div class="path ${on?'picked':''}">
+      <div class="top">
+        <label class="chk"><input type="checkbox" ${on?'checked':''} onchange="togglePick('${p.title.replace(/'/g,"\\'")}')"></label>
+        <div class="rank">${i+1}</div>
+        <div class="body">
+          <span class="badge">${p.arch}</span>
+          <div class="title">${p.title}</div>
+          <div class="${whyCls}">${p.why}</div>
+          <div class="tags">${p.tags.map(t=>`<span>${t}</span>`).join('')}<span class="risk r-${p.risk}">리스크 ${p.risk}</span></div>
+        </div>
+        <div class="score">
+          <div class="num">${p.score}<small>/100</small></div>
+          <div class="grade g-${p.grade}">${p.grade}</div>
+          <div class="conf">확신도 ${p.confidence}</div>
+          ${barsHTML(p)}
+        </div>
+      </div>
+      ${stepsHTML(p)}
+    </div>`;
+  }
+
+  function renderFilters(){
+    const archs=[...new Set(PATHS.map(p=>p.arch))];
+    const opts=[['all','전체'],...archs.map(a=>[a,a]),['pick','선택']];
+    document.getElementById('filters').innerHTML = opts.map(([k,l])=>
+      `<button class="${k===filter?'on':''}" onclick="setFilter('${k}')">${l}</button>`).join('');
+  }
+  function setFilter(k){ filter=k; renderFilters(); render(); }
+  function togglePick(t){ if(picked.has(t))picked.delete(t); else picked.add(t); render(); }
+
+  function render(){
+    profHTML(); renderFilters();
+    const sort=document.getElementById('sort').value;
+    let rows=PATHS.slice();
+    rows.sort((a,b)=> sort==='growth' ? b.sub.growth-a.sub.growth
+                    : sort==='feasible' ? b.sub.feasible-a.sub.feasible : b.score-a.score);
+    let shown = filter==='all'?rows : filter==='pick'?rows.filter(p=>picked.has(p.title)) : rows.filter(p=>p.arch===filter);
+    document.getElementById('list').innerHTML = shown.length ? shown.map(cardHTML).join('')
+      : `<div class="prof">해당 조건의 경로가 없습니다.</div>`;
+    document.getElementById('count').textContent = `경로 ${PATHS.length} · 선택 ${picked.size}`;
+  }
+
+  function copyPicked(){
+    const sel = PATHS.filter(p=>picked.has(p.title));
+    if(!sel.length){ setStatus('체크된 경로가 없습니다.'); return; }
+    const lines = ['=== 선택 경로 (상세 로드맵 전개 대상) ==='];
+    sel.forEach(p=>{
+      lines.push(`\n[${p.arch}] ${p.title} | 적합도 ${p.score}(${p.grade}) | 리스크 ${p.risk} | 확신 ${p.confidence}`);
+      lines.push(`  이유: ${p.why}`);
+      p.track.forEach(s=> lines.push(`  · ${s.when}: ${s.goal} — 실행 ${s.act} — 지표 ${s.metric}`));
+    });
+    lines.push('\n(미선택 경로는 검토 후보로 뱅크 보존)');
+    lines.push('=== END ===');
+    const txt = lines.join('\n');
+    navigator.clipboard.writeText(txt).then(
+      ()=>setStatus(`${sel.length}개 경로 복사됨 — 스킬에 붙여넣으면 상세 로드맵으로 전개`),
+      ()=>{ const o=document.getElementById('out'); o.textContent=txt; o.style.display='block'; setStatus('클립보드 차단 — 아래 내용 직접 복사'); }
+    );
+  }
+  function setStatus(s){ const e=document.getElementById('status'); const o=e.textContent; e.textContent=s; setTimeout(()=>e.textContent=o,4000); }
+
+  render();
+</script>
+</body>
+</html>

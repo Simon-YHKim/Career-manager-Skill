@@ -7,7 +7,7 @@ description: Personalized job-search and career-change manager. In one conversat
 
 취업·이직을 개인화 지원하는 단일 스킬. **하나의 커맨드가 대화로 의도를 파악해 7개 태스크 중 하나를 자동 판별**하고, 태스크별 **고정 출력 템플릿 1벌**로 산출물을 만든다. 메뉴·페르소나·엔진 전환·라우터·상주 UX **없음**.
 
-> 근거·규칙의 원천: [`BUILD_SPEC.md`](BUILD_SPEC.md)(SSOT) · 방법론 [`reference/methodology.md`](reference/methodology.md) · **포트폴리오 빌더(마스터 경험 뱅크·P0–P8)** [`reference/portfolio-builder.md`](reference/portfolio-builder.md) · 문체 [`reference/writing-voice.md`](reference/writing-voice.md) · 웹 리서치 [`reference/jd-browsing.md`](reference/jd-browsing.md) · 평가 루브릭 [`reference/evaluation.md`](reference/evaluation.md) · 엔진 체리픽 [`reference/gems/techniques.md`](reference/gems/techniques.md) · 출력 [`templates/report.html`](templates/report.html)·[`templates/a4-doc.html`](templates/a4-doc.html)·ATS [`templates/resume-ats.html`](templates/resume-ats.html)·자소서 [`templates/cover-letter.html`](templates/cover-letter.html)·LinkedIn [`templates/linkedin-export.html`](templates/linkedin-export.html)·입력폼 [`templates/intake-form.html`](templates/intake-form.html)·공고발굴 [`templates/jd-discovery.html`](templates/jd-discovery.html)·지원현황 [`templates/application-tracker.html`](templates/application-tracker.html).
+> 근거·규칙의 원천: [`BUILD_SPEC.md`](BUILD_SPEC.md)(SSOT) · 방법론 [`reference/methodology.md`](reference/methodology.md) · **포트폴리오 빌더(마스터 경험 뱅크·P0–P8)** [`reference/portfolio-builder.md`](reference/portfolio-builder.md) · 문체 [`reference/writing-voice.md`](reference/writing-voice.md) · 웹 리서치 [`reference/jd-browsing.md`](reference/jd-browsing.md) · 평가 루브릭 [`reference/evaluation.md`](reference/evaluation.md) · 엔진 체리픽 [`reference/gems/techniques.md`](reference/gems/techniques.md) · 출력 [`templates/report.html`](templates/report.html)·[`templates/a4-doc.html`](templates/a4-doc.html)·ATS [`templates/resume-ats.html`](templates/resume-ats.html)·자소서 [`templates/cover-letter.html`](templates/cover-letter.html)·LinkedIn [`templates/linkedin-export.html`](templates/linkedin-export.html)·입력폼 [`templates/intake-form.html`](templates/intake-form.html)·공고발굴 [`templates/jd-discovery.html`](templates/jd-discovery.html)·로드맵 [`templates/roadmap.html`](templates/roadmap.html)·지원현황 [`templates/application-tracker.html`](templates/application-tracker.html).
 
 ---
 
@@ -49,7 +49,7 @@ description: Personalized job-search and career-change manager. In one conversat
 - 스킬은 이 컨텍스트를 **read/write**하며 세션마다 개선(새 정량 성과·전형 현황·[T3] 근거 확보 시 반영).
 - **마스터 경험 뱅크(SSOT) = `.private/experience-bank.md`** — 모든 경험 원자(C·R·A·R·I·KPI·Truth Tier·해시태그)를 담는 durable 원본. **①–⑦ 전 태스크의 공통 근거 소스**(③ 면접·⑥ 연봉 포함 — 필살기·성과 근거를 소비). 로드·파생·write-back 규율은 §6.0 계약 #1. 구축·갱신 절차는 [`reference/portfolio-builder.md`](reference/portfolio-builder.md)(P0–P8). 세션마다 "새 경험/수치 생겼나요?" 자동 확인 후 증분 갱신, `[T3]→[T1]` 승격 리마인드.
 - **지원 히스토리 = `.private/applications/`** — 지원 건별(회사·직무·마감·전형단계·결과 + 제출 파생본 스냅샷) 누적. "지원 현황 보여줘" → [`templates/application-tracker.html`](templates/application-tracker.html)로 렌더(자소설닷컴식 D-day·단계·결과).
-- **세션 핸드오프 = `.private/session-state.md`** — 뱅크는 durable하지만 **세션 상태**(진행 태스크·진행률·활성 다이얼·작성 중 초안·위시리스트·미결 질문)는 휘발된다. 이걸 스냅샷으로 저장 → 새 세션에서 "이어서" 하면 로드해 **재입력 없이 재개**. **자동 제안 타이밍:** ① 컨텍스트 압박 감지(긴 세션) · ② "나중에/이어서" 발화 · ③ 태스크 경계 · ④ 산출물 완성 직후. (범용 `checkpoint` 스킬이 있으면 병용 가능.)
+- **세션 핸드오프** — [`reference/handoff.md`](reference/handoff.md)(simon-handoff 규율을 career에 최적화·내재화). 뱅크는 durable하지만 **세션 상태**(진행 태스크·다이얼·작성 중 초안·위시리스트·미결 질문)는 휘발 → 스냅샷 저장 후 새 세션에서 "이어서" 재개. **PII 라우팅:** 개인 세션 상태는 **`.private/session-state.md`(gitignore·커밋 금지)**; 스킬 개발(비-PII) 세션만 `docs/HANDOFF.md` main-머지. **자동 제안:** 컨텍스트 압박·"이어서" 발화·태스크 경계·산출 직후.
 - **커밋 금지 가드:** 개인 컨텍스트 경로(`.private/`·`reference/private/`, 뱅크·지원 히스토리 포함)를 git에 add하지 않는다. 산출물에 PII를 넣기 전 사용자 확인. IP·영업비밀 소지 항목은 공개/대외 문서에 **비IP·방어 가능 범위로만** 축약(사용자 프로필 정책 준수).
 
 ---
@@ -125,7 +125,7 @@ description: Personalized job-search and career-change manager. In one conversat
 9. **핸드오프·참조 출처** — **JD-맞춤 뷰 저장**(②가 재입력 없이 소비, §6.0 #6) + 갭·미검증 수치 **뱅크 write-back**. 참조 출처(Tier·조회일).
 
 ### ② 문서 작성/첨삭 → 분석 report.html · 문서 a4-doc.html(사람·포폴) / ATS-세이프(기계 제출)
-> **기초 job = 포트폴리오 빌더.** 모든 문서는 뱅크에서 파생(§6.0 #1; 없으면 [`intake-form.html`](templates/intake-form.html)→**P0–P8** [`portfolio-builder.md`](reference/portfolio-builder.md) 구축). **§6.0 공통 계약 상속**(뱅크 I/O·2단평가+확신도·공유 증거테이블·6다이얼·Truth Tier·문체 게이트). 아래는 ②-고유 절차. 방법론 상세는 [`methodology.md`](reference/methodology.md)(cover-letter·resume-en). **산출 양식**: 이력서·포폴 = a4-doc / resume EN = resume-ats(ATS) / **자소서 = [`cover-letter.html`](templates/cover-letter.html)**(문항별 글자수 카운터) / **LinkedIn = [`linkedin-export.html`](templates/linkedin-export.html)**(섹션별 복사용 — 자동 업데이트 안 함: API 없음·ToS). 모든 산출 전 **claim-audit(§6.0 #7)**.
+> **기초 job = 포트폴리오 빌더.** 모든 문서는 뱅크에서 파생(§6.0 #1; 없으면 [`intake-form.html`](templates/intake-form.html)→**P0–P8** [`portfolio-builder.md`](reference/portfolio-builder.md) 구축). **§6.0 공통 계약 상속**(뱅크 I/O·2단평가+확신도·공유 증거테이블·6다이얼·Truth Tier·문체 게이트). 아래는 ②-고유 절차. 방법론 상세는 [`methodology.md`](reference/methodology.md)(cover-letter·resume-en). **산출 양식**: 이력서·포폴 = a4-doc / resume EN = resume-ats(ATS) / **자소서 = [`cover-letter.html`](templates/cover-letter.html)**(문항별 글자수 카운터) / **LinkedIn = [`linkedin-export.html`](templates/linkedin-export.html)**([`reference/linkedin.md`](reference/linkedin.md) — LinkedIn 전 입력 포맷 커버, **사용자가 섹션 선택·활성화**, 글자수 카운터). **반영 2모드: A. 복사-붙여넣기(기본·안전) / B. computer-use 자동 입력(런타임에 브라우저 제어 도구가 실제 있을 때만 — 자격증명 미취급·사용자 본인 로그인·섹션별 사전 확인·본인 계정만; 없으면 A로 폴백).** 편집 공개 API 없음·무단 자동화=ToS. 모든 산출 전 **claim-audit(§6.0 #7)**.
 
 공통 입력: `문서유형(자소서·이력서KR·resume EN·cover EN·포트폴리오) | 회사/직무 | 문항·분량(글자수 상한) | 포함 키워드`.
 - **A. 타깃 해독(경량, 드래프팅 전):** JD 있으면 5-D Prism에서 **Intent(회사 속마음)·Attack Point·Culture만** 추출(전체 매칭 매트릭스·7-Lens는 ①; 있으면 ①→② 체이닝으로 로드). 자소서는 **문항 의도 역산**+소재 필터(cover-letter §4), 지원동기는 **3C=회사 페인포인트** 선행. → 어떤 EXP를 어떤 앵글로 배치할지 결정.
@@ -184,14 +184,15 @@ description: Personalized job-search and career-change manager. In one conversat
 7. **스크립트(KR/EN)** — 선제 역질문(예산) · 레인지 · 품의 시스템 대응. *(유형 B: 원천 항목 설명·직급/경력 인정 협의)*
 8. **레버 패키지 + 루프백** — 사이닝·RSU·타이틀·시작일·리모트를 "지킬 것/양보할 것" 우선순위 패키지. 타결 시 최종 TC·조건 → `.private/applications/` 기록 + 뱅크 현재연봉/벤치마크 P8 갱신. *(시장 밴드는 JD Browsing, 출처 티어)*
 
-### ⑦ 커리어 로드맵 → report.html
-> **§6.0 상속.** '현재 진단'은 **⑤ 결과 재사용**(⑤→⑦ 체이닝, 재진단 안 함). 단일 템플릿 + '전환' 감지 시 **조건부 섹션**(3) 활성화.
+### ⑦ 커리어 로드맵 → report.html + 다중 경로 비교 [`roadmap.html`](templates/roadmap.html)
+> **§6.0 상속.** '현재 진단'은 **⑤ 결과 재사용**(⑤→⑦ 체이닝, 재진단 안 함). **핵심 = 길을 하나로 좁히지 않는다**: 히스토리에서 **여러 경로를 생성·점수화해 비교 제시**(2)하고 **사용자가 고른** 경로만 상세 전개(3). '전환' 감지 시 **조건부 섹션**(4) 활성화.
 1. **현재 진단** — ⑤ 진단 로드 + 로드맵 고유 축: **거시환경 스캔**(빅블러·인구구조·직무 반감기 + AI/가상/탄소 지능, JD Browsing) + **CORE 4역량 자가진단**(Technical Monopoly·Connective Intelligence·Personal Branding·Agility, 예/아니오). Truth Tier 무기맵 + Score Caps(§6.0 #2).
-2. **로드맵 표** — 상단 **연차 앵커**(신입/주니어/미드/시니어) → 기간 **자동 조정**(신입 0-1-3 / 시니어 3/5/10, 사용자 오버라이드) × **Phase 골격**(P1 디지털무장·틈새 → P2 하이브리드·브랜딩 → P3 슈퍼개인·포트폴리오화). 표: `기간·Phase | 목표 타이틀 | 핵심 스킬 | 증거 | 실행` — 각 단계 [목표·실행·**측정지표**] 필수.
-3. **(전환 감지 시) 리스키링 분기** — 출신→목표 **스킬 1:1 번역** + **As-Is/To-Be 역량 갭**(Hard/Soft) + **직무 내 4방향 전환 매트릭스**(도메인 심화 / 설비·전문가 / 디지털 피벗 / 산업 환승). 갭이 표 2의 입력.
-4. **Job Crafting + 융합·희소성** — 현 직무를 반복·규칙(AI 위임)/예외·전략(인간 핵심)/관계·협업(인간 고유)으로 재분해 → **Base(본캐)+Plus(부캐)** 결합 + 포지셔닝 직함 승격(PR강도 다이얼, 미검증 목표 ⚠️).
-5. **30일 스프린트** — 주 단위(node-edge) + GDR(목표-루틴).
-6. **뱅크 루프·파생** — 마일스톤 달성 = 뱅크 새 경험 원자(P8 write-back) + "역량 완성 시점 = 지원 타이밍" 제안. **제출용 = 자소서 "입사 후 3·5·10년 포부"로 파생**. *(시장·산업·연봉 데이터는 JD Browsing)*
+2. **다중 경로 추천 (Path Recommender · [`methodology.md`](reference/methodology.md) roadmap §4.5)** — 커리어 히스토리(뱅크)를 씨앗으로 **여러 발전 경로를 생성**(7축 아키타입: 도메인 심화·매니지먼트·인접 확장·데이터 피벗·산업 환승·융합·독립 — **넓게, 임의로 좁히지 않음**) → **경로별 4축 점수화**(근거적합 ×0.35·갭실현성 ×0.25·시장성장 ×0.25·지향부합 ×0.15 + 등급·확신도) → **경로별 연차별 목표**(§5 Phase × §4 연차 사다리, 각 [목표·실행·**측정지표**] — "추천에서 끝나지 않고 준비 방법까지 이음") → **다중 경로 비교 보드**([`templates/roadmap.html`](templates/roadmap.html): 경로 카드·적합도 점수·4축 근거 바·한줄 이유·연차 타임라인·리스크·선택 체크). **점수는 배제가 아니라 정렬용**(고위험·고성장 경로도 목록 유지 = 자유도 보존) → **사용자 선택** → 3으로. 미선택 경로는 '검토 후보'로 뱅크 보존(추후 재검토).
+3. **선택 경로 상세 로드맵 표** — (2)에서 **고른 경로만**: 상단 **연차 앵커**(신입/주니어/미드/시니어) → 기간 **자동 조정**(신입 0-1-3 / 시니어 3/5/10, 사용자 오버라이드) × **Phase 골격**(P1 디지털무장·틈새 → P2 하이브리드·브랜딩 → P3 슈퍼개인·포트폴리오화). 표: `기간·Phase | 목표 타이틀 | 핵심 스킬 | 증거 | 실행` — 각 단계 [목표·실행·**측정지표**] 필수.
+4. **(전환 감지 시) 리스키링 분기** — 출신→목표 **스킬 1:1 번역** + **As-Is/To-Be 역량 갭**(Hard/Soft) + **직무 내 4방향 전환 매트릭스**(도메인 심화 / 설비·전문가 / 디지털 피벗 / 산업 환승). 갭이 표 3의 입력.
+5. **Job Crafting + 융합·희소성** — 현 직무를 반복·규칙(AI 위임)/예외·전략(인간 핵심)/관계·협업(인간 고유)으로 재분해 → **Base(본캐)+Plus(부캐)** 결합 + 포지셔닝 직함 승격(PR강도 다이얼, 미검증 목표 ⚠️).
+6. **30일 스프린트** — 주 단위(node-edge) + GDR(목표-루틴). *(선택 경로의 첫 마일스톤 착수분.)*
+7. **뱅크 루프·파생** — 마일스톤 달성 = 뱅크 새 경험 원자(P8 write-back) + "역량 완성 시점 = 지원 타이밍" 제안. **제출용 = 자소서 "입사 후 3·5·10년 포부"로 파생**. *(시장·산업·연봉 데이터는 JD Browsing)*
 
 ---
 
