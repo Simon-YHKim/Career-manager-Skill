@@ -228,4 +228,4 @@ description: Personalized job-search and career-change manager. In one conversat
 - **태스크당 표준 템플릿 1벌 고정** — 같은 태스크는 항상 같은 섹션·순서.
 
 ## 8. 사용법 (요약)
-`/career` 호출 → 하고 싶은 걸 말하면 됨(예: "이 JD에 내 이력 맞나 봐줘", "자소서 첨삭", "임원 모의면접 압박으로", "3년 로드맵"). 개인 자료(프로필/이력서/포폴)는 `.private/`·`reference/private/`에 두면 자동 활용(커밋 안 됨). 자세한 사용법은 [`README.md`](README.md).
+`/career` 호출 → 하고 싶은 걸 말하면 됨(예: "이 JD에 내 이력 맞나 봐줘", "자소서 첨삭", "임원 모의면접 압박으로", "3년 로드맵"). **완전 초보("취업 준비 도와줘"·"뭘 해야 할지 모르겠어") → §1 무방향 콜드스타트로 평문 안내·추천 경로부터** (전문용어 최초 등장 괄호 풀이·easy 렌더·이력서 없어도 OK). 개인 자료(프로필/이력서/포폴)는 `.private/`·`reference/private/`에 두면 자동 활용(커밋 안 됨). 자세한 사용법은 [`README.md`](README.md).
