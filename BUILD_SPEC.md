@@ -99,6 +99,7 @@
     linkedin.md            ← LinkedIn 필드 카탈로그 + 반영 2모드(복사 / computer-use)
     handoff.md             ← 세션 핸드오프(simon-handoff 최적화·PII는 .private/)
     glossary.md            ← 초보 용어집(취린이용 한 줄 풀이)
+    hub-backend.md         ← 개인 허브 BYO 백엔드(계약·무료 서버 레시피·보안)
   templates/
     report.html            ← HTML 보고 표준 템플릿
     a4-doc.html            ← A4 인쇄용 문서 템플릿(에디토리얼)
@@ -110,6 +111,10 @@
     roadmap.html           ← 다중 경로 로드맵 보드 (⑦ 경로 추천·연차별 목표)
     interview-prep.html    ← 면접 대비 포트폴리오 버전 (항목별 예상질문 3개)
     application-tracker.html ← 지원 현황 대시보드 (P8)
+    hub.html               ← 개인 관리 허브 (로컬-우선·JSON 왕복·BYO 백엔드·인브라우저 AI)
+  worker/                ← BYO 무료 Cloudflare Worker (데이터 저장 + AI 프록시, 사용자 소유)
+    src/index.js         ←   /doc 데이터 · /ai AI 프록시 · 토큰 인증 (자격증명 미포함)
+    wrangler.toml        ←   배포 설정  ·  README.md ← 배포 안내(Deploy 원클릭)
   .private/                ← [gitignore] 개인 컨텍스트
     profile.md             ←   보정 프로필
     experience-bank.md     ←   마스터 경험 뱅크 (SSOT)

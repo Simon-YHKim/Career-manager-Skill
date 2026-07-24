@@ -104,26 +104,26 @@
   <!-- 0. 타깃 / 모드 -->
   <section class="card">
     <div class="sec-h"><span class="n">00</span><h2>타깃 · 모드</h2></div>
-    <p class="sec-guide">JD가 있으면 그 기준으로, 없으면 프로필 자체로 진행합니다(외부 타깃을 임의로 가정하지 않음).</p>
+    <p class="sec-guide">지원할 공고(JD=채용공고)가 있으면 그 기준으로, 없으면 내 경험 자체로 진행합니다. <b>모르면 이 칸들은 그대로 두셔도 됩니다.</b></p>
     <div class="row c2">
       <div class="field">
-        <label>목표 <span class="hint">지금 만들 산출물</span></label>
+        <label>목표 <span class="hint">지금 만들 것</span></label>
         <select id="goal">
-          <option value="master">마스터본 — 모든 경험 정리(durable 원본)</option>
-          <option value="tailored">맞춤형 — 특정 JD에 정렬된 제출본</option>
+          <option value="master">기본본 — 내 경험을 한 번 정리해 두고 계속 쓰기</option>
+          <option value="tailored">맞춤본 — 특정 공고(JD)에 맞춘 제출용</option>
         </select>
       </div>
       <div class="field">
-        <label>출력 모드</label>
+        <label>보기 방식 <span class="hint">모르면 '메모 포함'</span></label>
         <select id="mode">
-          <option value="work">작업용 — 평가·근거·메모 포함</option>
-          <option value="submit">제출용 — 본문만</option>
+          <option value="work">메모 포함 — 평가·근거·전략 메모까지 보기</option>
+          <option value="submit">제출용 — 실제 낼 본문만</option>
         </select>
       </div>
     </div>
     <div class="field">
-      <label>타깃 JD <span class="hint">있으면 붙여넣기 · 없으면 비움</span></label>
-      <textarea id="jd" placeholder="채용 공고 전문 또는 링크. 없으면 비워두세요."></textarea>
+      <label>지원할 공고(JD) <span class="hint">있으면 붙여넣기 · 없으면 비움</span></label>
+      <textarea id="jd" placeholder="채용 공고 전문 또는 링크. 없으면 비워두세요 — 대화로 채웁니다."></textarea>
     </div>
   </section>
 

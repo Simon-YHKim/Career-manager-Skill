@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<!--
+  career skill — 개인 관리 허브 (로컬-우선 + BYO 무료 백엔드 + 인브라우저 AI · reference/hub-backend.md)
+  · 로컬-우선: 데이터는 브라우저 localStorage에 자동 저장(전송 0) + JSON 내보내기/가져오기.
+  · 선택 동기화: 사용자가 '자기 소유' 무료 Worker(worker/)를 배포하면 그 서버에만 저장/로드.
+  · 선택 AI: 그 Worker에 본인 AI 키를 시크릿으로 넣으면, 이 HTML이 Worker의 /ai만 호출해 AI를 쓴다
+    (키는 브라우저에 안 남음 = Worker가 프록시). 안 쓰면 정보 디벨롭은 Claude/Codex 스킬로.
+  ★ 하드코딩된 외부 URL·자격증명 0. 네트워크는 사용자가 '동기화/AI' 버튼을 누를 때만 발생.
+  ★ durable SSOT는 여전히 .private/ 뱅크. 커밋 파일은 GENERIC 샘플만(PII 금지).
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>career — 개인 허브</title>
+<style>
+  :root{
+    --accent:#9a3b2e; --ink:#1b1a17; --muted:#6c675e; --faint:#9b958a;
+    --line:#e7e3da; --line-2:#d4cec3; --wash:#f7efec; --paper:#fff;
+    --hi:#2f7d5b; --mid:#b8823a; --lo:#9a3b2e; --wait:#3a6ea5;
+    --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
+    --sans:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',Roboto,sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#eceae4; color:var(--ink); font-family:var(--sans);
+    font-size:14px; line-height:1.5; letter-spacing:-0.002em; }
+  .wrap{ max-width:960px; margin:0 auto; padding:0 16px 90px; }
+  header.top{ max-width:960px; margin:0 auto; padding:24px 16px 6px; }
+  .bar{ height:3px; width:60px; background:var(--accent); margin-bottom:12px; }
+  h1{ margin:0; font-size:24px; font-weight:800; letter-spacing:-0.02em; }
+  .lead{ margin:6px 0 0; color:var(--muted); font-size:12.5px; }
+
+  .onb{ max-width:960px; margin:10px auto 0; padding:12px 16px; background:var(--paper); border:1px solid var(--line);
+    border-radius:11px; }
+  .onb b{ color:var(--ink); } .onb .steps{ display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; font-size:12px; color:var(--muted); }
+  .onb .chip{ background:var(--wash); border-radius:20px; padding:4px 11px; }
+  .onb .x{ float:right; border:none; background:transparent; color:var(--faint); cursor:pointer; font-size:16px; }
+
+  .nav{ position:sticky; top:0; z-index:20; background:#eceae4; padding:10px 0; margin-top:10px;
+    display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .nav button{ font-family:var(--sans); font-size:12.5px; border:1px solid var(--line-2); background:#fff;
+    color:var(--muted); border-radius:20px; padding:7px 14px; font-weight:600; cursor:pointer; }
+  .nav button.on{ background:var(--ink); color:#efe9df; border-color:var(--ink); }
+  .nav .sv{ margin-left:auto; font-size:11.5px; color:var(--faint); }
+
+  section.tab{ display:none; } section.tab.on{ display:block; }
+  .card{ background:var(--paper); border:1px solid var(--line); border-radius:11px; padding:16px 18px; margin-top:13px; }
+  h2{ margin:0 0 4px; font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .guide{ font-size:12px; color:var(--faint); margin:0 0 12px; }
+
+  .grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:0; border-top:1px solid var(--line-2);
+    border-bottom:1px solid var(--line-2); margin:4px 0 6px; }
+  .grid .cell{ padding:14px 16px; border-right:1px solid var(--line); }
+  .grid .cell:last-child{ border-right:none; }
+  .grid .num{ font-family:var(--serif); font-size:28px; line-height:1; color:var(--ink); }
+  .grid .lbl{ margin-top:6px; font-size:10.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--faint); }
+  @media(max-width:620px){ .grid{ grid-template-columns:repeat(2,1fr); } }
+
+  .item{ border:1px solid var(--line); border-left:3px solid var(--line-2); border-radius:9px;
+    padding:13px 14px; margin-bottom:11px; background:#fcfbf9; }
+  .item.wished{ border-left-color:var(--accent); }
+  .item-top{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+  .item-top .t{ font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); }
+  .item-top .ai{ margin-left:auto; border:1px solid var(--line-2); background:#fff; color:var(--accent); border-radius:20px;
+    padding:3px 10px; font-size:11px; font-weight:700; cursor:pointer; font-family:var(--sans); }
+  .item-top .ai[disabled]{ color:var(--faint); cursor:not-allowed; }
+  .item-top .del{ border:none; background:transparent; color:var(--faint); font-size:17px; cursor:pointer; padding:0 4px; }
+  label{ display:block; font-size:10.5px; font-weight:700; letter-spacing:.02em; color:var(--muted);
+    text-transform:uppercase; margin:0 0 4px; }
+  label .h{ font-weight:400; text-transform:none; letter-spacing:0; color:var(--faint); }
+  input,textarea,select{ width:100%; font-family:var(--sans); font-size:13px; color:var(--ink); background:#fff;
+    border:1px solid var(--line-2); border-radius:7px; padding:8px 10px; }
+  input:focus,textarea:focus,select:focus{ outline:2px solid var(--wash); border-color:var(--accent); }
+  textarea{ resize:vertical; min-height:52px; line-height:1.5; }
+  .fld{ margin-bottom:10px; }
+  .row{ display:grid; gap:10px; } .row.c2{ grid-template-columns:1fr 1fr; } .row.c3{ grid-template-columns:1fr 1fr 1fr; }
+  @media(max-width:620px){ .row.c2,.row.c3{ grid-template-columns:1fr; } }
+  .add{ border:1px dashed var(--line-2); background:var(--wash); color:var(--accent); border-radius:8px;
+    padding:9px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:var(--sans); }
+  .ai-out{ margin-top:8px; padding:9px 11px; background:#fff; border:1px solid var(--line-2); border-radius:8px;
+    font-size:12px; color:var(--ink); white-space:pre-wrap; line-height:1.5; display:none; }
+  .ai-out .cp{ margin-top:6px; border:1px solid var(--line-2); background:var(--wash); color:var(--accent); border-radius:6px;
+    padding:3px 10px; font-size:11px; font-weight:700; cursor:pointer; font-family:var(--sans); }
+
+  .btn{ border:1px solid var(--line-2); background:#fff; color:var(--ink); border-radius:7px;
+    padding:8px 14px; font-size:12.5px; font-weight:700; cursor:pointer; font-family:var(--sans); }
+  .btn.pri{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  .btn.dark{ background:var(--ink); color:#efe9df; border-color:var(--ink); }
+  .btnrow{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .launch{ display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  @media(max-width:620px){ .launch{ grid-template-columns:1fr; } }
+  .launch a{ display:block; border:1px solid var(--line); border-radius:9px; padding:12px 14px; text-decoration:none;
+    color:var(--ink); background:#fcfbf9; }
+  .launch a b{ color:var(--accent); } .launch a span{ display:block; font-size:11.5px; color:var(--faint); margin-top:3px; }
+
+  .warn{ font-size:11.5px; color:var(--lo); } .status{ font-size:12px; color:var(--muted); margin-top:8px; min-height:16px; }
+  textarea.io{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px; min-height:120px; }
+  .pill{ font-size:10px; font-weight:700; padding:1px 8px; border-radius:20px; }
+  .pill.local{ color:var(--wait); background:#e8f0f8; } .pill.synced{ color:var(--hi); background:#e7f1eb; }
+  .pill.ai{ color:#fff; background:var(--accent); }
+  .note{ padding:10px 13px; background:var(--wash); border-left:3px solid var(--accent); border-radius:4px;
+    font-size:12px; color:var(--muted); margin-top:10px; }
+  details.adv summary{ cursor:pointer; font-size:12px; color:var(--wait); font-weight:600; margin-top:6px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="bar"></div>
+  <h1>career · 개인 허브</h1>
+  <p class="lead">경험·지원·산출물을 한 곳에서 <b>수정·관리</b>. 데이터 위치: <span id="storemode" class="pill local">로컬</span> <span id="aimode"></span></p>
+</header>
+
+<div class="onb" id="onb">
+  <button class="x" onclick="dismissOnb()">×</button>
+  <b>3가지 방식 — 원하는 만큼만 (더 안 해도 됩니다)</b>
+  <div class="steps">
+    <span class="chip">① <b>로컬</b> — 그냥 쓰면 이 브라우저에 자동 저장(<b>설정 불필요</b>)</span>
+    <span class="chip">② <b>내 백엔드</b> — <i>선택</i>: 무료 Worker 연결 → 기기 간 동기화</span>
+    <span class="chip">③ <b>+AI</b> — <i>선택</i>: Worker에 AI 키 넣으면 여기서 바로 다듬기</span>
+  </div>
+  <div style="margin-top:7px;font-size:11.5px;color:var(--faint);">💡 처음이면 <b>①만으로 충분</b>합니다. ②③은 익숙해진 뒤 원할 때만 — 그리고 정보 디벨롭은 언제든 <b>Claude/Codex 스킬</b>에 말만 하면 됩니다(가장 쉬운 길).</div>
+</div>
+
+<div class="nav">
+  <button data-tab="dash" class="on" onclick="tab('dash')">대시보드</button>
+  <button data-tab="bank" onclick="tab('bank')">경험 뱅크</button>
+  <button data-tab="apps" onclick="tab('apps')">지원 현황</button>
+  <button data-tab="out" onclick="tab('out')">산출물</button>
+  <button data-tab="set" onclick="tab('set')">설정·동기화·AI (선택)</button>
+  <span class="sv" id="sv"></span>
+</div>
+
+<div class="wrap">
+  <!-- 대시보드 -->
+  <section class="tab on" id="tab-dash">
+    <div class="card"><h2>한눈에</h2><div class="grid" id="dash-grid"></div>
+      <div class="note">이 허브는 <b>구조화 데이터(경험·지원·프로필)</b>를 관리합니다. 문서(자소서·이력서·로드맵·면접대비)는 <b>산출물</b> 탭에서 열고, 스킬 또는 연결된 AI가 이 데이터로 채웁니다.</div></div>
+  </section>
+
+  <!-- 경험 뱅크 -->
+  <section class="tab" id="tab-bank">
+    <div class="card"><h2>경험 뱅크 (필살기 후보)</h2>
+      <p class="guide">항목별 C·R·A·R·I. 수정하면 자동 저장. AI 연결 시 <b>✨ AI 다듬기</b>로 성과 문장을 PR 3버전으로.</p>
+      <div id="bank-list"></div>
+      <button class="add" onclick="addBank()">＋ 경험 추가</button></div>
+  </section>
+
+  <!-- 지원 현황 -->
+  <section class="tab" id="tab-apps">
+    <div class="card"><h2>지원 현황</h2>
+      <p class="guide">관심(미지원)부터 지원·전형·결과까지. 마감임박·미지원이 위로 정렬됩니다.</p>
+      <div id="apps-list"></div>
+      <button class="add" onclick="addApp()">＋ 지원/관심 추가</button></div>
+  </section>
+
+  <!-- 산출물 -->
+  <section class="tab" id="tab-out">
+    <div class="card"><h2>산출물</h2>
+      <p class="guide">이 데이터로 만드는 문서·보드. 스킬(Claude/Codex)에 "○○ 만들어줘"라고 하면 뱅크에서 파생해 렌더합니다.</p>
+      <div class="launch">
+        <a href="report.html"><b>분석 리포트</b><span>매칭·진단·로드맵 (report)</span></a>
+        <a href="a4-doc.html"><b>이력서 · 포트폴리오</b><span>A4 인쇄용 (a4-doc)</span></a>
+        <a href="resume-ats.html"><b>영문 이력서</b><span>ATS-세이프 (resume-ats)</span></a>
+        <a href="cover-letter.html"><b>자기소개서</b><span>문항·글자수 (cover-letter)</span></a>
+        <a href="linkedin-export.html"><b>LinkedIn</b><span>전 필드·Fill Plan (linkedin-export)</span></a>
+        <a href="jd-discovery.html"><b>공고 발굴</b><span>적합도·위시리스트 (jd-discovery)</span></a>
+        <a href="roadmap.html"><b>커리어 로드맵</b><span>다중 경로·직급 라더 (roadmap)</span></a>
+        <a href="interview-prep.html"><b>면접 대비</b><span>항목별 예상질문 (interview-prep)</span></a>
+      </div></div>
+  </section>
+
+  <!-- 설정 · 동기화 · AI -->
+  <section class="tab" id="tab-set">
+    <div class="card"><h2>내보내기 / 가져오기 (스킬 왕복)</h2>
+      <p class="guide">스킬과 데이터를 주고받는 durable 경로. 내보낸 JSON을 <b>.private/</b>에 보관하면 안전합니다.</p>
+      <div class="btnrow">
+        <button class="btn dark" onclick="exportJson()">📤 JSON 내보내기</button>
+        <button class="btn" onclick="importJson()">📥 아래 JSON 가져오기</button>
+        <button class="btn" onclick="resetData()">초기화</button></div>
+      <textarea class="io" id="io" style="margin-top:10px;" placeholder="내보내기 → 여기에 JSON. 가져오기: 여기에 JSON 붙여넣고 [가져오기]."></textarea>
+      <div class="status" id="io-status"></div></div>
+
+    <div class="card"><h2>내 백엔드(Worker) 연결 · 선택</h2>
+      <p class="guide"><b>로그인만 하면 나머지는 거의 자동</b>: <code>worker/README.md</code>의 "Deploy to Cloudflare" 버튼으로 무료 Worker를 배포(KV·워커 자동 생성) → 시크릿 <b>TOKEN</b>만 설정 → 아래에 <b>Worker 주소 + 토큰</b>을 한 번 붙여넣으면 끝. 이후 동기화·AI가 켜집니다.</p>
+      <div class="warn">⚠️ 넣는 값은 <b>Worker 주소 + 접근 토큰</b>뿐. AI 키는 <b>여기 넣지 않습니다</b>(Worker 시크릿에만). 설정은 이 브라우저에만 저장.</div>
+      <div class="row c2" style="margin-top:10px;">
+        <div class="fld"><label>Worker 주소 <span class="h">전체 주소(스킴 포함) 붙여넣기</span></label><input id="cfg-base" placeholder="예: career-hub.내계정.workers.dev"></div>
+        <div class="fld"><label>접근 토큰 <span class="h">Worker의 TOKEN</span></label><input id="cfg-token" type="password" placeholder="TOKEN 값"></div>
+      </div>
+      <div class="btnrow">
+        <button class="btn" onclick="saveConn()">연결 저장</button>
+        <button class="btn" onclick="remoteLoad()">⬇ 원격 불러오기</button>
+        <button class="btn pri" onclick="remoteSave()">⬆ 원격 저장</button></div>
+      <div class="status" id="sync-status"></div>
+
+      <details class="adv"><summary>고급: 커스텀 REST 백엔드(데이터만, AI 없음)</summary>
+        <div class="row c3" style="margin-top:8px;">
+          <div class="fld"><label>데이터 URL</label><input id="cfg-curl" placeholder="본인 REST 엔드포인트"></div>
+          <div class="fld"><label>헤더 이름</label><input id="cfg-hname" placeholder="Authorization"></div>
+          <div class="fld"><label>헤더 값</label><input id="cfg-hval" type="password" placeholder="키/토큰"></div></div>
+        <div class="fld"><label>저장 메서드</label><select id="cfg-method"><option>PUT</option><option>POST</option></select></div>
+        <div class="warn">Supabase 등: reference/hub-backend.md 레시피. anon 등 <b>제한 키만</b>(service-role 금지).</div>
+      </details>
+    </div>
+
+    <div class="card"><h2>AI 연결 · 선택 <span id="ai-badge"></span></h2>
+      <p class="guide">Worker에 본인 AI 키(<b>AI_KEY</b> 시크릿)를 넣었다면 여기서 바로 AI를 씁니다 — 키는 <b>브라우저에 안 남고</b> Worker가 프록시합니다. 안 쓰면 정보 디벨롭은 <b>Claude/Codex 스킬</b>로 하세요(그게 더 강력).</p>
+      <div class="row c2">
+        <div class="fld"><label>제공자</label><select id="ai-provider"><option value="anthropic">Anthropic (Claude)</option><option value="openai">OpenAI</option></select></div>
+        <div class="fld"><label>모델 <span class="h">비우면 Worker 기본</span></label><input id="ai-model" placeholder="예: claude-haiku-4-5-20251001 / gpt-4o-mini"></div>
+      </div>
+      <div class="fld"><label>테스트 프롬프트</label><input id="ai-test" placeholder="예: 안녕? 한 줄로 답해줘"></div>
+      <div class="btnrow"><button class="btn pri" onclick="aiTest()">AI 테스트</button><button class="btn" onclick="saveAi()">AI 설정 저장</button></div>
+      <div class="ai-out" id="ai-test-out"></div>
+      <div class="status" id="ai-status"></div>
+    </div>
+  </section>
+</div>
+
+<script>
+  const KEY='career_hub_v1', CFGKEY='career_hub_cfg_v2', ONBKEY='career_hub_onb';
+  function esc(s){ return String(s==null?'':s); }
+  function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+  function stamp(){ const d=new Date(); const p=x=>String(x).padStart(2,'0');
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
+  function trimUrl(u){ return String(u||'').trim().replace(/\/+$/,''); }
+
+  function sampleData(){ return {
+    meta:{ updated:'' }, profile:{ name:'', role:'', headline:'' },
+    bank:[ { title:'라인 레이아웃 재설계', org:'회사 A', period:'2022.03~2022.09', role:'설계 리드', contrib:'70',
+             result:'교체시간 22%↓ (2022 라인 데이터)', insight:'병목은 설비가 아니라 동선', stack:'CATIA, DOE', tier:'T1' } ],
+    applications:[ { co:'제조 C', title:'생산기술', stage:'관심', result:'interest', deadline:'2026-08-05', link:'', score:'82', applied:'' } ]
+  }; }
+  function normalize(j){ const d=sampleData(); if(!j||typeof j!=='object') return d;
+    return { meta:j.meta||{updated:''}, profile:j.profile||d.profile, bank:Array.isArray(j.bank)?j.bank:[], applications:Array.isArray(j.applications)?j.applications:[] }; }
+
+  let DATA; try{ DATA=JSON.parse(localStorage.getItem(KEY)); }catch(e){ DATA=null; }
+  DATA = DATA ? normalize(DATA) : sampleData();
+
+  function persist(){ DATA.meta.updated=stamp();
+    try{ localStorage.setItem(KEY, JSON.stringify(DATA)); document.getElementById('sv').textContent='저장됨 · '+DATA.meta.updated; }
+    catch(e){ document.getElementById('sv').textContent='로컬 저장 불가(브라우저 설정 확인)'; } }
+
+  // ── 설정 ──
+  function cfg(){ try{ return JSON.parse(localStorage.getItem(CFGKEY))||{}; }catch(e){ return {}; } }
+  function setCfg(o){ try{ localStorage.setItem(CFGKEY, JSON.stringify(Object.assign(cfg(),o))); }catch(e){} }
+  function dataUrl(){ const c=cfg(); return c.base ? trimUrl(c.base)+'/doc' : (c.curl||''); }
+  function aiUrl(){ const c=cfg(); return c.base ? trimUrl(c.base)+'/ai' : ''; }
+  function authH(){ const c=cfg(); if(c.base) return { 'Authorization':'Bearer '+(c.token||'') };
+    if(c.hval) { var h={}; h[c.hname||'Authorization']=c.hval; return h; } return {}; }
+  function aiOn(){ return !!aiUrl(); }
+
+  function refreshBadges(){
+    const c=cfg();
+    const sm=document.getElementById('storemode'); sm.className='pill '+(dataUrl()?'synced':'local'); sm.textContent=dataUrl()?'로컬 + 내 백엔드':'로컬';
+    document.getElementById('aimode').innerHTML = aiOn()?'<span class="pill ai">AI 연결</span>':'';
+    document.getElementById('ai-badge').innerHTML = aiOn()?'<span class="pill ai">가능</span>':'';
+  }
+  function loadCfgUI(){ const c=cfg();
+    document.getElementById('cfg-base').value=c.base||''; document.getElementById('cfg-token').value=c.token||'';
+    document.getElementById('cfg-curl').value=c.curl||''; document.getElementById('cfg-hname').value=c.hname||'Authorization';
+    document.getElementById('cfg-hval').value=c.hval||''; if(c.method) document.getElementById('cfg-method').value=c.method;
+    if(c.provider) document.getElementById('ai-provider').value=c.provider; document.getElementById('ai-model').value=c.model||'';
+    refreshBadges();
+  }
+  function saveConn(){ setCfg({ base:document.getElementById('cfg-base').value.trim(), token:document.getElementById('cfg-token').value,
+      curl:document.getElementById('cfg-curl').value.trim(), hname:document.getElementById('cfg-hname').value.trim()||'Authorization',
+      hval:document.getElementById('cfg-hval').value, method:document.getElementById('cfg-method').value });
+    loadCfgUI(); renderBank(); syncStatus('연결 저장됨(이 브라우저에만). '+(aiOn()?'AI 사용 가능 — AI 키가 Worker에 있으면 동작.':'')); }
+  function saveAi(){ setCfg({ provider:document.getElementById('ai-provider').value, model:document.getElementById('ai-model').value.trim() });
+    refreshBadges(); aiStatus('AI 설정 저장됨.'); }
+
+  // ── 탭 ──
+  function tab(name){ document.querySelectorAll('.nav button[data-tab]').forEach(b=>b.classList.toggle('on', b.dataset.tab===name));
+    document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on', s.id==='tab-'+name)); if(name==='dash') renderDash(); }
+  function dismissOnb(){ document.getElementById('onb').style.display='none'; try{ localStorage.setItem(ONBKEY,'1'); }catch(e){} }
+
+  // ── 대시보드 ──
+  function dday(d){ if(!d) return 9999; return Math.round((Date.parse(d)-Date.now())/86400000); }
+  function renderDash(){ const apps=DATA.applications;
+    const active=apps.filter(a=>a.result==='progress').length;
+    const urgent=apps.filter(a=>!a.applied && dday(a.deadline)>=0 && dday(a.deadline)<=3).length;
+    const cells=[['경험 원자',DATA.bank.length],['지원/관심',apps.length],['진행중',active],['마감임박·미지원',urgent]];
+    document.getElementById('dash-grid').innerHTML=cells.map(([l,n])=>`<div class="cell"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join(''); }
+
+  // ── 경험 뱅크 ──
+  function bankItemHTML(x,i){
+    return `<div class="item" data-i="${i}">
+      <div class="item-top"><span class="t">경험 · ${esc(x.tier||'')}</span>
+        <button class="ai" ${aiOn()?'':'disabled'} title="${aiOn()?'AI로 성과 문장 다듬기':'백엔드+AI 연결 시 사용 · 선택 기능'}" onclick="aiPolish(${i})">✨ AI 다듬기${aiOn()?'':' (선택)'}</button>
+        <button class="del" title="삭제" onclick="delBank(${i})">×</button></div>
+      <div class="row c3">
+        <div class="fld"><label>제목</label><input data-k="title" value="${escAttr(x.title)}"></div>
+        <div class="fld"><label>소속</label><input data-k="org" value="${escAttr(x.org)}"></div>
+        <div class="fld"><label>기간</label><input data-k="period" value="${escAttr(x.period)}"></div></div>
+      <div class="row c3">
+        <div class="fld"><label>역할</label><input data-k="role" value="${escAttr(x.role)}"></div>
+        <div class="fld"><label>기여도(%)</label><input data-k="contrib" value="${escAttr(x.contrib)}"></div>
+        <div class="fld"><label>Truth Tier</label><select data-k="tier"><option ${x.tier==='T1'?'selected':''}>T1</option><option ${x.tier==='T2'?'selected':''}>T2</option><option ${x.tier==='T3'?'selected':''}>T3</option></select></div></div>
+      <div class="fld"><label>성과 <span class="h">정량·출처</span></label><textarea data-k="result">${esc(x.result)}</textarea></div>
+      <div class="row c2">
+        <div class="fld"><label>인사이트</label><input data-k="insight" value="${escAttr(x.insight)}"></div>
+        <div class="fld"><label>기술 / 스택</label><input data-k="stack" value="${escAttr(x.stack)}"></div></div>
+      <div class="ai-out" id="aiout-${i}"></div>
+    </div>`;
+  }
+  function renderBank(){ const box=document.getElementById('bank-list');
+    box.innerHTML = DATA.bank.length ? DATA.bank.map(bankItemHTML).join('') : `<div class="guide">아직 경험이 없습니다. 아래로 추가하세요.</div>`;
+    box.querySelectorAll('.item').forEach(it=>{ const i=+it.dataset.i;
+      it.querySelectorAll('[data-k]').forEach(f=> f.addEventListener('input', ()=>{ DATA.bank[i][f.dataset.k]=f.value; persist(); })); }); }
+  function addBank(){ DATA.bank.push({title:'',org:'',period:'',role:'',contrib:'',result:'',insight:'',stack:'',tier:'T2'}); persist(); renderBank(); }
+  function delBank(i){ if(confirm('이 경험을 삭제할까요?')){ DATA.bank.splice(i,1); persist(); renderBank(); } }
+
+  // ── 지원 현황 ──
+  const RESULTS=[['interest','관심(미지원)'],['progress','진행중'],['pass','합격'],['fail','불합격'],['wait','결과 대기']];
+  const STAGES=['관심','서류접수','서류합격','인적성/과제','1차면접','2차면접','최종'];
+  function appItemHTML(a,i){ const urgent=!a.applied && dday(a.deadline)>=0 && dday(a.deadline)<=3;
+    return `<div class="item ${a.result==='interest'?'wished':''}" data-i="${i}">
+      <div class="item-top"><span class="t">${urgent?'⚑ 마감임박 · ':''}지원 · ${esc(a.co||'')}</span><button class="del" title="삭제" onclick="delApp(${i})">×</button></div>
+      <div class="row c2"><div class="fld"><label>회사</label><input data-k="co" value="${escAttr(a.co)}"></div><div class="fld"><label>직무</label><input data-k="title" value="${escAttr(a.title)}"></div></div>
+      <div class="row c3">
+        <div class="fld"><label>단계</label><select data-k="stage">${STAGES.map(s=>`<option ${a.stage===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="fld"><label>결과</label><select data-k="result">${RESULTS.map(([v,l])=>`<option value="${v}" ${a.result===v?'selected':''}>${l}</option>`).join('')}</select></div>
+        <div class="fld"><label>적합도</label><input data-k="score" value="${escAttr(a.score)}"></div></div>
+      <div class="row c3">
+        <div class="fld"><label>마감</label><input data-k="deadline" value="${escAttr(a.deadline)}" placeholder="2026-08-05"></div>
+        <div class="fld"><label>지원일 <span class="h">미지원이면 비움</span></label><input data-k="applied" value="${escAttr(a.applied)}"></div>
+        <div class="fld"><label>공고 링크</label><input data-k="link" value="${escAttr(a.link)}"></div></div>
+    </div>`; }
+  function renderApps(){ const box=document.getElementById('apps-list');
+    let list=DATA.applications.map((a,i)=>({a,i}));
+    list.sort((x,y)=> ((!x.a.applied&&dday(x.a.deadline)>=0&&dday(x.a.deadline)<=3)?0:1)-((!y.a.applied&&dday(y.a.deadline)>=0&&dday(y.a.deadline)<=3)?0:1) || (Date.parse(x.a.deadline||'2999')||0)-(Date.parse(y.a.deadline||'2999')||0));
+    box.innerHTML = DATA.applications.length ? list.map(({a,i})=>appItemHTML(a,i)).join('') : `<div class="guide">아직 지원 건이 없습니다.</div>`;
+    box.querySelectorAll('.item').forEach(it=>{ const i=+it.dataset.i;
+      it.querySelectorAll('[data-k]').forEach(f=> f.addEventListener('input', ()=>{ DATA.applications[i][f.dataset.k]=f.value; persist(); renderDash(); })); }); }
+  function addApp(){ DATA.applications.push({co:'',title:'',stage:'관심',result:'interest',deadline:'',link:'',score:'',applied:''}); persist(); renderApps(); }
+  function delApp(i){ if(confirm('이 지원 건을 삭제할까요?')){ DATA.applications.splice(i,1); persist(); renderApps(); renderDash(); } }
+
+  // ── 내보내기/가져오기 ──
+  function exportJson(){ document.getElementById('io').value=JSON.stringify(DATA,null,2); ioStatus('내보냄 — 복사해 .private/에 보관하거나 스킬에 붙여넣으세요.'); }
+  function importJson(){ try{ DATA=normalize(JSON.parse(document.getElementById('io').value)); persist(); renderAll(); ioStatus('가져오기 완료 — 모든 탭 반영.'); }catch(e){ ioStatus('JSON 파싱 실패: '+e.message); } }
+  function resetData(){ if(confirm('로컬 데이터를 초기화(샘플로)할까요?')){ DATA=sampleData(); persist(); renderAll(); ioStatus('초기화됨.'); } }
+  function ioStatus(s){ document.getElementById('io-status').textContent=s; }
+
+  // ── 동기화 (opt-in) ──
+  async function remoteLoad(){ const u=dataUrl(); if(!u){ syncStatus('먼저 Worker 주소/토큰을 연결하세요.'); return; } syncStatus('원격에서 불러오는 중…');
+    try{ const r=await fetch(u,{headers:authH()}); if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json();
+      if(!j||(!j.bank&&!j.applications)){ syncStatus('원격 문서가 비어있습니다(신규). 로컬 유지.'); return; }
+      if(confirm('원격 데이터로 로컬을 덮어쓸까요? (현재 로컬은 대체)')){ DATA=normalize(j); persist(); renderAll(); syncStatus('원격에서 불러와 적용됨.'); }
+    }catch(e){ syncStatus('불러오기 실패: '+e.message+' — 로컬 유지.'); } }
+  async function remoteSave(){ const u=dataUrl(); if(!u){ syncStatus('먼저 Worker 주소/토큰을 연결하세요.'); return; } syncStatus('원격에 저장하는 중…');
+    try{ const c=cfg(); const method=c.base?'PUT':(c.method||'PUT');
+      const r=await fetch(u,{method,headers:Object.assign({'content-type':'application/json'},authH()),body:JSON.stringify(DATA)});
+      if(!r.ok) throw new Error('HTTP '+r.status); syncStatus('원격에 저장됨 · '+stamp()+' (내 백엔드에만).');
+    }catch(e){ syncStatus('저장 실패: '+e.message+' — 로컬 유지.'); } }
+  function syncStatus(s){ document.getElementById('sync-status').textContent=s; }
+
+  // ── AI (opt-in · Worker 프록시) ──
+  async function aiCall(prompt, system){ const u=aiUrl(); if(!u) throw new Error('AI 미연결(Worker 필요)');
+    const c=cfg();
+    const r=await fetch(u,{ method:'POST', headers:Object.assign({'content-type':'application/json'},authH()),
+      body:JSON.stringify({ prompt, system, provider:c.provider||'anthropic', model:c.model||'' }) });
+    const d=await r.json().catch(()=>({error:'응답 파싱 실패'}));
+    if(!r.ok || d.error) throw new Error(d.error||('HTTP '+r.status));
+    return d.text||''; }
+  async function aiTest(){ const p=document.getElementById('ai-test').value.trim()||'안녕? 한 줄로 답해줘'; const out=document.getElementById('ai-test-out');
+    aiStatus('AI 호출 중…'); out.style.display='none';
+    try{ const t=await aiCall(p,'간결하게 한국어로 답하라.'); out.textContent=t; out.style.display='block'; aiStatus('AI 응답 수신.'); }
+    catch(e){ aiStatus('AI 실패: '+e.message+' (Worker에 AI_KEY 시크릿이 있는지 확인)'); } }
+  async function aiPolish(i){ const x=DATA.bank[i]; const out=document.getElementById('aiout-'+i);
+    out.style.display='block'; out.textContent='AI가 다듬는 중…';
+    const sys='너는 냉정하지만 사실에 충실한 채용 컨설턴트다. 주어진 경험을 성과 중심의 방어 가능한 문장으로 다듬는다. 규칙: 주어진 사실·수치만 사용(없는 수치·경력 날조 절대 금지), 추정은 "약/추정" 라벨, 한국어, 성과 동사, 간결.';
+    const usr='경험: 제목='+esc(x.title)+' / 소속='+esc(x.org)+' / 기간='+esc(x.period)+' / 역할='+esc(x.role)+' / 기여='+esc(x.contrib)+'% / 성과='+esc(x.result)+' / 스택='+esc(x.stack)+
+      '\n\n이 경험의 "성과"를 X-Y-Z(동사+정량+방법)로 다듬어 PR강도 3버전으로 제안: Lv1(사실) / Lv2(균형) / Lv3(최대·방어가능). 각 한 줄.';
+    try{ const t=await aiCall(usr,sys);
+      out.innerHTML=escAttr(t).replace(/\n/g,'<br>')+'<div><button class="cp" onclick="cpText(this)">복사</button></div>';
+    }catch(e){ out.textContent='AI 실패: '+e.message; } }
+  function cpText(btn){ const t=btn.closest('.ai-out'); const txt=t.innerText.replace(/\n?복사$/,'').trim();
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt); btn.textContent='복사됨 ✓'; setTimeout(()=>btn.textContent='복사',1500); } }catch(e){} }
+  function aiStatus(s){ document.getElementById('ai-status').textContent=s; }
+
+  function renderAll(){ renderDash(); renderBank(); renderApps(); }
+  try{ if(localStorage.getItem(ONBKEY)==='1') document.getElementById('onb').style.display='none'; }catch(e){}
+  renderAll(); loadCfgUI(); persist();
+</script>
+</body>
+</html>
