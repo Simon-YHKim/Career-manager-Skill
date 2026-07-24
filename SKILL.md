@@ -219,7 +219,7 @@ description: Personalized job-search and career-change manager. In one conversat
 
 ## 7. 출력 규격 (D-7)
 
-- **분석·진단·리포트·로드맵 → HTML 보고 표준** = [`templates/report.html`](templates/report.html): 자체완결 1파일 · KR/EN 토글 · easy/expert 토글 · 인라인 SVG · 점진 공개(`<details>`) · 워크플로우/알고리즘은 node-edge 다이어그램 · **색 3색 이내** · 라이트/다크 · **실제 KST 스탬프**(생성 시각) · **외부 라이브러리/네트워크 금지**. **초보로 판별되면 `<body>`를 `mode-easy` 기본으로 렌더**(평문 설명이 처음부터 보이게); **경력자는 `mode-expert` 기본 + verdict-first**(핵심 판정을 최상단, 근거는 `<details>`). 모든 `.ko` 텍스트에 `.en` 짝 제공(EN 토글 시 빈 섹션 방지).
+- **분석·진단·리포트·로드맵 → HTML 보고 표준** = [`templates/report.html`](templates/report.html): 자체완결 1파일 · KR/EN 토글 · easy/expert 토글 · 인라인 SVG · 점진 공개(`<details>`) · 워크플로우/알고리즘은 node-edge 다이어그램 · **색 3색 이내** · 라이트/다크 · **실제 KST 스탬프**(생성 시각) · **외부 라이브러리/네트워크 금지**. **템플릿 기본값 = `mode-easy`(안전한 폴백 — 초보가 하향 토글을 못 찾아도 평문이 먼저 보임)**; **경력자로 판별되면 렌더 시 `mode-expert` + verdict-first**(핵심 판정을 최상단, 근거는 `<details>`)로 세팅. 모든 `.ko` 텍스트에 `.en` 짝 제공(EN 토글 시 빈 섹션 방지).
 - **문서(이력서·resume·cover·자소서·포트폴리오) → A4 인쇄용 HTML** = [`templates/a4-doc.html`](templates/a4-doc.html): `@page{size:A4;margin}` + `@media print` · `page-break-inside:avoid`·`break-after:avoid`(고아 제목 방지) · 오버플로·인쇄 잘림 방지 · **인쇄 시 화면 UI `display:none`** · **국/영 병기·작업용/제출용 토글**(제출용은 메모·증빙 자동 숨김) · PDF 인쇄 시 A4에 깔끔히. **샘플 생성 후 인쇄 점검 필수**(`scripts/check_a4.py`).
 - **입력 수집 → 표준 폼 HTML** = [`templates/intake-form.html`](templates/intake-form.html): 사용자가 채울 값은 동일 양식으로 제공(인적사항·타임라인 년/월·경력·C·R·A·R·I·자격) → **[데이터 복사]**로 구조화 텍스트를 뱅크 구축에 사용.
 - **지원 현황 → 대시보드 HTML** = [`templates/application-tracker.html`](templates/application-tracker.html): 전형단계 파이프라인·D-day·결과 뱃지·제출 파생본. `.private/applications/` 히스토리를 렌더.

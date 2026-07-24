@@ -287,7 +287,7 @@
   function bankItemHTML(x,i){
     return `<div class="item" data-i="${i}">
       <div class="item-top"><span class="t">경험 · ${esc(x.tier||'')}</span>
-        <button class="ai" ${aiOn()?'':'disabled title="AI 미연결"'} onclick="aiPolish(${i})">✨ AI 다듬기</button>
+        <button class="ai" ${aiOn()?'':'disabled'} title="${aiOn()?'AI로 성과 문장 다듬기':'백엔드+AI 연결 시 사용 · 선택 기능'}" onclick="aiPolish(${i})">✨ AI 다듬기${aiOn()?'':' (선택)'}</button>
         <button class="del" title="삭제" onclick="delBank(${i})">×</button></div>
       <div class="row c3">
         <div class="fld"><label>제목</label><input data-k="title" value="${escAttr(x.title)}"></div>
