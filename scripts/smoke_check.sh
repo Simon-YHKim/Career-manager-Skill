@@ -12,7 +12,7 @@ echo "== files =="
 for f in SKILL.md BUILD_SPEC.md GOAL_CONDITION.txt README.md .gitignore \
          reference/methodology.md reference/evaluation.md reference/gems/techniques.md \
          reference/portfolio-builder.md reference/writing-voice.md reference/jd-browsing.md \
-         reference/handoff.md reference/linkedin.md reference/glossary.md reference/hub-backend.md \
+         reference/handoff.md reference/linkedin.md reference/glossary.md reference/hub-backend.md reference/job-search-ops.md \
          worker/src/index.js worker/wrangler.toml worker/README.md \
          templates/report.html templates/a4-doc.html \
          templates/intake-form.html templates/application-tracker.html templates/resume-ats.html templates/jd-discovery.html \
@@ -120,6 +120,24 @@ grep -qiE '무데이터|분모가 0|N/A\(자료 없음\)' reference/evaluation.m
 # (g) 무게중심 축이 직무군별로 보편화됐는가(비테크 40% 가중 축 부재 방지)
 grep -qiE '직무군별 축 라이브러리' reference/methodology.md && grep -qiE '영업|디자인|금융' reference/methodology.md \
   && ok "methodology: 직무군별 무게중심 축 라이브러리(비테크 포함)" || no "methodology axis library"
+# 좋은 곳 취업 — 직장 품질 2축 · 적신호 · 점수 정확도 · 퍼널/캘리브레이션
+grep -qiE '직장 품질 루브릭' reference/evaluation.md && grep -qiE '적신호 스크리닝' reference/evaluation.md \
+  && grep -qiE '2축 배치|4분면' reference/evaluation.md \
+  && ok "evaluation §5.8: 직장 품질 5축 + 적신호 + 2축 배치(단일총점 금지)" || no "evaluation 5.8"
+grep -qiE '점수 정확도 규율' reference/evaluation.md && grep -qiE '세분화 금지|허위 정밀도' reference/evaluation.md \
+  && grep -qiE 'What-if|민감도' reference/evaluation.md \
+  && ok "evaluation §5.9: 근거인용·오차/확신도·What-if(세분화 금지)" || no "evaluation 5.9"
+grep -qiE '퍼널 병목 진단' reference/job-search-ops.md && grep -qiE '캘리브레이션' reference/job-search-ops.md \
+  && grep -qiE '채널 믹스' reference/job-search-ops.md && grep -qiE '표본' reference/job-search-ops.md \
+  && ok "job-search-ops: 퍼널 병목·채널믹스·캘리브레이션·표본 규율" || no "job-search-ops content"
+grep -qF "job-search-ops.md" SKILL.md && grep -qiE '5\.8|직장 품질' SKILL.md \
+  && ok "SKILL: 2축 판정 + 구직 운영 배선" || no "SKILL quality/ops wiring"
+grep -qiE '직장 품질' templates/jd-discovery.html && grep -qiE '최우선|4분면|quadrant' templates/jd-discovery.html \
+  && grep -qiE '적신호|flags' templates/jd-discovery.html \
+  && ok "jd-discovery: 2축(적합도×품질)·4분면·적신호 배지" || no "jd-discovery 2-axis"
+grep -qiE '퍼널 진단' templates/application-tracker.html && grep -qiE 'MIN_SAMPLE|표본 부족' templates/application-tracker.html \
+  && grep -qiE '병목' templates/application-tracker.html \
+  && ok "tracker: 퍼널 전환율 + 병목 판정 + 표본 규율" || no "tracker funnel"
 # linkedin-export: all fields + user-selectable activation + copy + Fill Plan(computer-use) + ToS/API + credential guard
 grep -qiE '복사|copy' templates/linkedin-export.html && grep -qiE 'ToS|API' templates/linkedin-export.html \
   && grep -qiE 'Fill Plan|computer-use' templates/linkedin-export.html && grep -qiE '활성화|섹션 선택' templates/linkedin-export.html \

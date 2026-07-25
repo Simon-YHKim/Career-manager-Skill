@@ -64,6 +64,14 @@
   .src{ text-transform:uppercase; letter-spacing:.04em; }
 
   /* 점수 */
+  /* 2축: 적합도(붙을까) × 직장품질(갈 만한가) — 합치지 않고 나란히 */
+  .quad{ display:inline-block; font-size:10px; font-weight:700; padding:2px 9px; border-radius:20px; margin-left:6px; }
+  .q-최우선{ color:#fff; background:var(--hi); } .q-도전{ color:var(--mid); background:#f7eede; }
+  .q-재검토{ color:var(--lo); background:var(--wash); } .q-후순위{ color:var(--faint); background:#f1eee7; }
+  .flags{ margin:7px 0 0; display:flex; flex-wrap:wrap; gap:5px; }
+  .flags span{ font-size:10.5px; font-weight:700; color:#fff; background:var(--lo); border-radius:12px; padding:2px 9px; }
+  .qual{ margin-top:7px; padding-top:7px; border-top:1px dashed var(--line-2); }
+  .qual .qh{ font-size:9.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--faint); margin-bottom:4px; }
   .score{ text-align:right; min-width:150px; }
   .score .num{ font-family:var(--serif); font-size:30px; line-height:1; color:var(--ink); }
   .score .num small{ font-size:13px; color:var(--faint); }
@@ -96,13 +104,14 @@
 <div class="wrap">
   <div class="bar-accent"></div>
   <h1>공고 발굴</h1>
-  <p class="lead">직무·전공 유사 + <b>커리어 발전 가능성</b>까지 넓게 발굴 → 적합도 점수로 순위화. 체크 → 위시리스트(일정관리 연동).</p>
+  <p class="lead"><b>두 점수를 분리해서 봅니다</b> — <b>적합도</b>(내가 붙을까) × <b>직장 품질</b>(갈 만한 곳인가). 합치지 않아야 "붙기 쉬운 나쁜 곳"에 속지 않습니다. ⚠️ 적신호는 점수와 별개로 항상 경고(자동 배제는 하지 않음 — 판단은 본인).</p>
   <div class="prof" id="prof"></div>
   <div class="gated" id="gated"></div>
 
   <div class="controls">
     <select id="sort" onchange="render()">
-      <option value="score">정렬: 적합도순</option>
+      <option value="score">정렬: 적합도순(붙을까)</option>
+      <option value="quality">정렬: 직장 품질순(갈 만한가)</option>
       <option value="deadline">정렬: 마감 임박순</option>
       <option value="growth">정렬: 발전 가능성순</option>
     </select>
@@ -131,6 +140,8 @@
     { co:'제조 A', mono:'A', title:'생산혁신 리더 (Operational Excellence)', region:'국내',
       summary:'대규모 제조 라인의 CapEx·OpEx 최적화를 데이터로 주도하는 생산혁신 리더 포지션.',
       score:86, grade:'상', confidence:'높음', sub:{role:90, major:88, growth:82, weight:84},
+      err:5, quality:78, qsub:{pay:80, grow:75, stable:88, culture:70, personal:75}, qconf:'중간', flags:[],
+      whatif:['PMP 자격 +6','영어 인증 +5'],
       reqs:['생산기술 8년+','IE·데이터 분석','리더십'], deadline:'2026-08-05', link:'#' },
     { co:'컨설팅 B', mono:'B', title:'Operations Excellence Consultant', region:'글로벌',
       summary:'제조·공급망 오퍼레이션을 진단·개선하는 전략 컨설팅 실행 트랙(학사 가능).',
@@ -143,14 +154,29 @@
     { co:'PE D', mono:'D', title:'Operating Partner — 제조 실사/개선', region:'글로벌',
       summary:'PE 포트폴리오사의 제조 오퍼레이션 실사·개선을 이끄는 operating partner(성장 트랙).',
       score:64, grade:'중', confidence:'낮음', sub:{role:66, major:70, growth:92, weight:40},
+      err:15, quality:81, qsub:{pay:92, grow:85, stable:72, culture:65, personal:70}, qconf:'낮음', flags:[],
+      whatif:['실사 경험 +14','영어 인증 +8'],
       reqs:['제조 전문성','실사 경험 우대','영어',{t:'상세 미확인',flag:true}], deadline:'2026-09-01', link:'#' },
     { co:'스마트팩토리 E', mono:'E', title:'제조 DX · 데이터 기반 공정 개선', region:'국내',
       summary:'제조 데이터·자동화로 공정을 개선하는 DX 포지션 — 디지털 피벗 발전 경로.',
       score:73, grade:'중상', confidence:'중간', sub:{role:72, major:76, growth:85, weight:60},
+      err:10, quality:52, qsub:{pay:55, grow:70, stable:38, culture:45, personal:60}, qconf:'중간',
+      flags:['상시 게재(회전문 의심)','재무 지표 약화 — DART [확인 필요]'],
+      whatif:['Python 실적 +9','자동화 사례 +6'],
       reqs:['제조+데이터','Python 우대','자동화'], deadline:'2026-08-12', link:'#' },
   ];
 
   const SUBLABEL = { role:'직무유사', major:'전공유사', growth:'발전가능', weight:'무게중심' };
+  // 직장 품질 5축(evaluation §5.8). 가중치는 사용자가 조절 — 스킬이 렌더 시 반영.
+  const QLABEL = { pay:'보상', grow:'성장', stable:'안정성', culture:'문화', personal:'개인적합' };
+  // 4분면(§5.8-b): 적합도(붙을까) × 품질(갈 만한가) — 합치지 않는다.
+  function quadrant(fit, qual){
+    if(fit==null||qual==null) return null;
+    if(fit>=65 && qual>=65) return '최우선';
+    if(fit< 65 && qual>=65) return '도전';
+    if(fit>=65 && qual< 65) return '재검토';
+    return '후순위';
+  }
   let filter='all';
   const wish = new Set();                 // 안정 키(회사␟직무)로 저장 — 동명 공고 오선택·따옴표 깨짐 방지
   function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -168,9 +194,20 @@
   }
 
   function barsHTML(j){
-    return `<div class="subs">`+Object.keys(SUBLABEL).map(k=>
+    let h = `<div class="subs">`+Object.keys(SUBLABEL).map(k=>
       `<div class="subrow"><span>${SUBLABEL[k]}</span><span class="track"><span class="fill" style="width:${j.sub[k]}%"></span></span><span>${j.sub[k]}</span></div>`
     ).join('')+`</div>`;
+    if(j.qsub){ // 직장 품질 5축 — 적합도와 분리해 표시(합치지 않음)
+      h += `<div class="qual"><div class="qh">직장 품질 ${j.quality!=null?j.quality:'—'}${j.qconf?' · 확신 '+escHtml(j.qconf):''}</div><div class="subs">`+
+        Object.keys(QLABEL).filter(k=>j.qsub[k]!=null).map(k=>
+          `<div class="subrow"><span>${QLABEL[k]}</span><span class="track"><span class="fill" style="width:${j.qsub[k]}%"></span></span><span>${j.qsub[k]}</span></div>`
+        ).join('')+`</div></div>`;
+    }
+    return h;
+  }
+  function flagsHTML(j){
+    if(!j.flags || !j.flags.length) return '';
+    return `<div class="flags">`+j.flags.map(f=>`<span>⚠️ ${escHtml(f)}</span>`).join('')+`</div>`;
   }
   function reqHTML(j){
     return `<div class="reqs">`+j.reqs.map(r=>{
@@ -185,9 +222,11 @@
       <div class="rank">${i+1}</div>
       <div class="body">
         <div class="co">${escHtml(j.co)} · ${escHtml(j.region)}</div>
-        <div class="title">${escHtml(j.title)}</div>
+        <div class="title">${escHtml(j.title)}${(function(q){return q?`<span class="quad q-${q}">${q}</span>`:'';})(quadrant(j.score, j.quality))}</div>
         <div class="sum">${escHtml(j.summary)}</div>
+        ${flagsHTML(j)}
         ${reqHTML(j)}
+        ${j.whatif&&j.whatif.length?`<div class="meta"><span>↗ 올리려면: ${j.whatif.map(escHtml).join(' · ')}</span></div>`:''}
         <div class="meta">
           <span class="dday ${d.past?'past':''}">${d.t}</span>
           <span class="src">출처·조회 ${TODAY} · 확신 ${escHtml(j.confidence)}</span>
@@ -195,16 +234,16 @@
         </div>
       </div>
       <div class="score">
-        <div class="num">${j.score}<small>/100</small></div>
+        <div class="num">${j.score}<small>${j.err?' ±'+j.err:''}/100</small></div>
         <div class="grade g-${j.grade}">${j.grade}</div>
-        <div class="conf">확신도 ${j.confidence}</div>
+        <div class="conf">적합도 · 확신 ${escHtml(j.confidence)}</div>
         ${barsHTML(j)}
       </div>
     </div>`;
   }
 
   function renderFilters(){
-    const opts=[['all','전체'],['국내','국내'],['글로벌','글로벌'],['wish','위시리스트']];
+    const opts=[['all','전체'],['top','최우선'],['flag','⚠️ 적신호'],['국내','국내'],['글로벌','글로벌'],['wish','위시리스트']];
     document.getElementById('filters').innerHTML = opts.map(([k,l])=>
       `<button class="${k===filter?'on':''}" onclick="setFilter('${k}')">${l}</button>`).join('');
   }
@@ -216,8 +255,13 @@
     const sort=document.getElementById('sort').value;
     let rows=JOBS.slice();
     rows.sort((a,b)=> sort==='deadline' ? Date.parse(a.deadline)-Date.parse(b.deadline)
-                    : sort==='growth' ? b.sub.growth-a.sub.growth : b.score-a.score);
-    let shown = filter==='all'?rows : filter==='wish'?rows.filter(j=>wish.has(jkey(j))) : rows.filter(j=>j.region===filter);
+                    : sort==='growth' ? b.sub.growth-a.sub.growth
+                    : sort==='quality' ? (b.quality||0)-(a.quality||0) : b.score-a.score);
+    let shown = filter==='all'?rows
+      : filter==='wish'?rows.filter(j=>wish.has(jkey(j)))
+      : filter==='top'?rows.filter(j=>quadrant(j.score,j.quality)==='최우선')
+      : filter==='flag'?rows.filter(j=>j.flags&&j.flags.length)
+      : rows.filter(j=>j.region===filter);
     document.getElementById('list').innerHTML = shown.length ? shown.map(cardHTML).join('')
       : `<div class="prof">해당 조건의 공고가 없습니다.</div>`;
     document.getElementById('count').textContent = `발굴 ${JOBS.length} · 위시리스트 ${wish.size}`;

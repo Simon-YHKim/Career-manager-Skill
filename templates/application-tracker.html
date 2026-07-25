@@ -37,6 +37,21 @@
   .summary .lbl{ margin-top:7px; font-size:10.5px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--faint); }
   @media(max-width:620px){ .summary{ grid-template-columns:repeat(2,1fr); } }
 
+  /* 퍼널 진단 (job-search-ops.md §1) */
+  .funnel{ margin-top:16px; background:var(--paper); border:1px solid var(--line); border-radius:11px; padding:14px 16px; }
+  .funnel h3{ margin:0 0 3px; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+  .funnel .sub{ font-size:11.5px; color:var(--faint); margin-bottom:10px; }
+  .fsteps{ display:flex; gap:8px; flex-wrap:wrap; align-items:stretch; }
+  .fstep{ flex:1; min-width:96px; border:1px solid var(--line); border-radius:8px; padding:9px 10px; background:#fcfbf9; }
+  .fstep .n{ font-family:var(--serif); font-size:20px; line-height:1; color:var(--ink); }
+  .fstep .l{ font-size:10px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--faint); margin-top:5px; }
+  .fstep .r{ font-size:11px; color:var(--muted); margin-top:3px; }
+  .fstep.bottleneck{ border-color:var(--accent); background:var(--wash); }
+  .verdict{ margin-top:11px; padding:10px 12px; border-left:3px solid var(--accent); background:var(--wash);
+    border-radius:4px; font-size:12.5px; color:var(--ink); }
+  .verdict b{ color:var(--accent); }
+  .verdict .no{ color:var(--muted); font-size:11.5px; display:block; margin-top:4px; }
+
   /* 필터 */
   .filters{ display:flex; gap:6px; margin:18px 0 4px; flex-wrap:wrap; }
   .filters button{ border:1px solid var(--line-2); background:#fff; color:var(--muted); border-radius:20px;
@@ -97,6 +112,7 @@
   <p class="lead">관심 공고부터 지원·전형·결과까지 한눈에. <b>마감임박·미지원</b>을 최상단에 띄우고(놓침 방지), 제출 파생본은 각 카드에서 조회합니다.</p>
 
   <div class="summary" id="summary"></div>
+  <div class="funnel" id="funnel"></div>
   <div class="filters" id="filters"></div>
   <div id="list"></div>
 </div>
@@ -146,6 +162,48 @@
       `<div class="cell"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join('');
   }
 
+  // ── 퍼널 진단 (reference/job-search-ops.md §1) ───────────────────────────────
+  // 병목이 아닌 단계엔 리소스를 쓰지 않는다. 표본 부족(<10)이면 판정하지 않는다(허위 정밀도 금지).
+  const MIN_SAMPLE = 10;
+  function reached(app, idx){ // 이 지원 건이 idx 단계까지 도달했는가
+    const i = STAGES.indexOf(app.stage);
+    return i >= idx;
+  }
+  function renderFunnel(){
+    const applied = APPS.filter(a=>a.applied);           // 실제 지원한 건만 퍼널에 넣는다
+    const iDoc=STAGES.indexOf('서류합격'), i1=STAGES.indexOf('1차면접'), iF=STAGES.indexOf('최종');
+    const n = applied.length;
+    const docPass = applied.filter(a=>reached(a,iDoc)).length;
+    const itv     = applied.filter(a=>reached(a,i1)).length;
+    const fin     = applied.filter(a=>reached(a,iF)).length;
+    const offer   = applied.filter(a=>a.result==='pass').length;
+    const pct=(x,y)=> y>0 ? Math.round(x/y*100)+'%' : '—';
+    const steps=[
+      {l:'지원', n:n,       r:'—'},
+      {l:'서류 통과', n:docPass, r:pct(docPass,n)},
+      {l:'면접 진행', n:itv,  r:pct(itv,docPass)},
+      {l:'최종', n:fin,      r:pct(fin,itv)},
+      {l:'오퍼', n:offer,    r:pct(offer,fin)},
+    ];
+    // 병목 판정(표본 충족 시에만)
+    let bi=-1, verdict='';
+    if(n >= MIN_SAMPLE){
+      const docRate = n>0 ? docPass/n : 0;
+      if(docRate <= 0.05){ bi=1; verdict='<b>병목: 문서·타겟팅</b> — 서류에서 막혔습니다. ② 첨삭·① 무게중심 재검토·타깃 재선정에 집중하세요.<span class="no">지금 면접 준비는 효과가 없습니다.</span>'; }
+      else if(docPass>0 && itv/docPass < 0.5){ bi=2; verdict='<b>병목: 면접 전환</b> — 서류는 통과하는데 면접에서 막힙니다. ③④ 집중·복기·전달력.<span class="no">자소서 추가 수정은 우선순위가 아닙니다.</span>'; }
+      else if(itv>0 && fin/itv < 0.4){ bi=3; verdict='<b>병목: 임원·컬처핏</b> — 지원동기·비전 프레임을 재구성하세요(④ 임원 라운드).<span class="no">실무 기술 준비는 이미 충분합니다.</span>'; }
+      else if(fin>0 && offer===0){ bi=4; verdict='<b>병목: 조건·협상</b> — ⑥ 연봉협상·타깃 조건 재조정.'; }
+      else { verdict='뚜렷한 병목이 보이지 않습니다 — <b>활동량</b>을 늘리는 것이 다음 레버입니다(주간 리듬).'; }
+    } else {
+      verdict = `표본 부족 — 지원 <b>${n}건</b>. 전환율은 <b>${MIN_SAMPLE}건</b> 이상부터 신뢰합니다.<span class="no">지금 판정하면 노이즈입니다. ${Math.max(0,MIN_SAMPLE-n)}건 더 쌓고 다시 보세요.</span>`;
+    }
+    document.getElementById('funnel').innerHTML =
+      `<h3>구직 퍼널 진단</h3><div class="sub">병목이 아닌 단계엔 리소스를 쓰지 않습니다. (지원한 건만 집계 · 표본 ${n}건)</div>
+       <div class="fsteps">`+steps.map((s,i)=>
+         `<div class="fstep ${i===bi?'bottleneck':''}"><div class="n">${s.n}</div><div class="l">${s.l}</div><div class="r">${s.r}</div></div>`).join('')+
+       `</div><div class="verdict">${verdict}</div>`;
+  }
+
   function pipeHTML(app){
     const curIdx=STAGES.indexOf(app.stage);
     return `<div class="pipe">`+STAGES.map((s,i)=>{
@@ -185,7 +243,7 @@
 
   let filter='all';
   function render(){
-    renderSummary(APPS);
+    renderSummary(APPS); renderFunnel();
     let shown = filter==='all'? APPS.slice()
       : filter==='urgent'? APPS.filter(urgent)
       : APPS.filter(a=>a.result===filter);
