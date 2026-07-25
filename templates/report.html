@@ -40,6 +40,10 @@
      언어중립(수치·코드·URL 등)은 .ko/.en 없이 두면 양쪽 모드에서 모두 보인다. */
   .en{display:none} body.lang-en .ko{display:none} body.lang-en .en{display:revert}
   body.mode-easy .expert{display:none} .easy{display:none} body.mode-easy .easy{display:revert}
+  /* 특이도 교정(필수): 위 규칙만으론 body.mode-easy .easy(0,2,1)가 .en(0,1,0)을 이겨
+     한국어 모드에서 .easy.en까지 노출된다(한/영 중복). 동일 이상 특이도로 후행 선언해 승리시킨다. */
+  body:not(.lang-en) .en{display:none} body.lang-en .ko{display:none}
+  body:not(.mode-easy) .easy{display:none} body.mode-easy .expert{display:none}
   header{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
   h1{font-size:20px;margin:0 0 2px;letter-spacing:-.2px}
   .stamp{color:var(--muted);font-size:12px}

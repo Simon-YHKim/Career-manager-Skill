@@ -206,7 +206,7 @@
     <div class="card"><h2>AI 연결 · 선택 <span id="ai-badge"></span></h2>
       <p class="guide">Worker에 본인 AI 키(<b>AI_KEY</b> 시크릿)를 넣었다면 여기서 바로 AI를 씁니다 — 키는 <b>브라우저에 안 남고</b> Worker가 프록시합니다. 안 쓰면 정보 디벨롭은 <b>Claude/Codex 스킬</b>로 하세요(그게 더 강력).</p>
       <div class="row c2">
-        <div class="fld"><label>제공자</label><select id="ai-provider"><option value="anthropic">Anthropic (Claude)</option><option value="openai">OpenAI</option></select></div>
+        <div class="fld"><label>제공자 <span class="h">기본=Worker 설정 따름(권장)</span></label><select id="ai-provider"><option value="">Worker 설정 따름 (권장)</option><option value="anthropic">Anthropic (Claude)</option><option value="openai">OpenAI</option></select></div>
         <div class="fld"><label>모델 <span class="h">비우면 Worker 기본</span></label><input id="ai-model" placeholder="예: claude-haiku-4-5-20251001 / gpt-4o-mini"></div>
       </div>
       <div class="fld"><label>테스트 프롬프트</label><input id="ai-test" placeholder="예: 안녕? 한 줄로 답해줘"></div>
@@ -219,8 +219,9 @@
 
 <script>
   const KEY='career_hub_v1', CFGKEY='career_hub_cfg_v2', ONBKEY='career_hub_onb';
-  function esc(s){ return String(s==null?'':s); }
-  function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+  // XSS 방어: esc/escAttr는 innerHTML 싱크에 들어가는 모든 사용자 값에 적용(가져오기 JSON 포함).
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s){ return esc(s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   function stamp(){ const d=new Date(); const p=x=>String(x).padStart(2,'0');
     return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }
   function trimUrl(u){ return String(u||'').trim().replace(/\/+$/,''); }
@@ -359,7 +360,8 @@
   async function aiCall(prompt, system){ const u=aiUrl(); if(!u) throw new Error('AI 미연결(Worker 필요)');
     const c=cfg();
     const r=await fetch(u,{ method:'POST', headers:Object.assign({'content-type':'application/json'},authH()),
-      body:JSON.stringify({ prompt, system, provider:c.provider||'anthropic', model:c.model||'' }) });
+      // provider/model은 사용자가 명시 선택했을 때만 전송 — 미지정이면 Worker 시크릿 설정을 따른다.
+      body:JSON.stringify(Object.assign({ prompt, system }, c.provider?{provider:c.provider}:{}, c.model?{model:c.model}:{})) });
     const d=await r.json().catch(()=>({error:'응답 파싱 실패'}));
     if(!r.ok || d.error) throw new Error(d.error||('HTTP '+r.status));
     return d.text||''; }

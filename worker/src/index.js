@@ -39,7 +39,11 @@ export default {
     if (path.endsWith('/ai') && req.method === 'POST') {
       if (!env.AI_KEY) return J({ error: 'AI 미설정 — AI_KEY 시크릿을 추가하세요.' }, 400);
       const b = await req.json().catch(() => ({}));
-      const provider = (b.provider || env.AI_PROVIDER || 'anthropic').toLowerCase();
+      // 제공자는 **서버 시크릿이 최우선**. 클라이언트가 provider를 바꿔 다른 벤더로 키가 전송되는 것을 막는다
+      // (예: AI_KEY가 OpenAI 키인데 body.provider='anthropic'이면 OpenAI 키가 Anthropic으로 나감).
+      const provider = (env.AI_PROVIDER || b.provider || 'anthropic').toLowerCase();
+      if (env.AI_PROVIDER && b.provider && b.provider.toLowerCase() !== provider)
+        return J({ error: `provider 불일치 — 이 Worker는 '${provider}'로 설정돼 있습니다.` }, 400);
       const prompt = String(b.prompt || '');
       const system = String(b.system || '');
       const max = Math.min(Number(b.max_tokens) || 1024, 4096);
