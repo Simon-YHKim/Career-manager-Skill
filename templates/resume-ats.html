@@ -99,10 +99,17 @@
   // ATS 지원 폼 붙여넣기용 플레인 텍스트 추출(레이아웃 제거, 순수 텍스트만)
   function copyPlain(){
     var t = document.getElementById('sheet').innerText.replace(/\n{3,}/g,'\n\n').trim();
-    navigator.clipboard.writeText(t).then(
-      function(){ setHint('Copied plain text — paste into the ATS form.'); },
-      function(){ setHint('Clipboard blocked — select the text manually.'); }
-    );
+    // Existence guard: navigator.clipboard is undefined on insecure origins — avoid a hard throw.
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(t).then(
+          function(){ setHint('Copied plain text — paste into the ATS form.'); },
+          function(){ setHint('Clipboard blocked — select the text manually.'); }
+        );
+        return;
+      }
+    }catch(e){}
+    setHint('Clipboard unavailable — select the text manually.');
   }
   function setHint(s){ var h=document.getElementById('hint'); var o=h.textContent; h.textContent=s; setTimeout(function(){h.textContent=o;},4000); }
 </script>

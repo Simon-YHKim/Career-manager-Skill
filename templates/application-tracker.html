@@ -105,8 +105,8 @@
   // 기준일 — 스킬이 렌더 시 실제 KST 날짜로 치환(자체완결·재현성)
   const TODAY = '2026-07-22';
 
-  // 전형 단계 표준 파이프라인
-  const STAGES = ['관심','서류접수','서류합격','인적성/과제','1차면접','2차면접','최종'];
+  // 전형 단계 표준 파이프라인. '아웃리치'=지원 전 접촉(커피챗·리퍼럴 요청, SKILL §6.1 #4).
+  const STAGES = ['관심','아웃리치','서류접수','서류합격','인적성/과제','1차면접','2차면접','최종'];
 
   function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
@@ -125,7 +125,9 @@
   ];
 
   const RESULT_LABEL={ interest:'관심(미지원)', progress:'진행중', pass:'최종 합격', fail:'불합격', wait:'결과 대기' };
-  function urgent(a){ const d=daysBetween(TODAY,a.deadline); return !a.applied && d>=0 && d<=3; }
+  // 마감임박 임계값은 단일 소스 — 요약 카운터·필터·정렬·경고가 모두 이 값을 쓴다(숫자 불일치 방지).
+  const URGENT_DAYS = 7;
+  function urgent(a){ const d=daysBetween(TODAY,a.deadline); return !a.applied && d>=0 && d<=URGENT_DAYS; }
 
   function daysBetween(a,b){ return Math.round((Date.parse(b)-Date.parse(a))/86400000); }
   function ddayText(deadline){
@@ -139,7 +141,7 @@
     const c={total:apps.length, interest:0, progress:0, pass:0, fail:0, wait:0};
     apps.forEach(a=>c[a.result]=(c[a.result]||0)+1);
     const urg=apps.filter(urgent).length;
-    const cells=[['총 지원/관심',c.total],['관심(미지원)',c.interest],['진행중',c.progress],['합격',c.pass],['마감임박',urg]];
+    const cells=[['총 지원/관심',c.total],['관심(미지원)',c.interest],['진행중',c.progress],['합격',c.pass],[`마감임박(${URGENT_DAYS}일)`,urg]];
     document.getElementById('summary').innerHTML=cells.map(([l,n])=>
       `<div class="cell"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join('');
   }
@@ -185,7 +187,7 @@
   function render(){
     renderSummary(APPS);
     let shown = filter==='all'? APPS.slice()
-      : filter==='urgent'? APPS.filter(a=>!a.applied && daysBetween(TODAY,a.deadline)>=0 && daysBetween(TODAY,a.deadline)<=7)
+      : filter==='urgent'? APPS.filter(urgent)
       : APPS.filter(a=>a.result===filter);
     // 정렬: 마감임박·미지원을 최상단, 그다음 마감 임박순
     shown.sort((a,b)=> (urgent(a)?0:1)-(urgent(b)?0:1) || Date.parse(a.deadline)-Date.parse(b.deadline));

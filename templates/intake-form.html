@@ -305,11 +305,16 @@
 
   function copyData(){
     const txt=buildText();
-    navigator.clipboard.writeText(txt).then(()=>{
-      setStatus('복사됨 — 스킬 대화창에 붙여넣으세요');
-    },()=>{ // 클립보드 차단 시 미리보기로 폴백
-      showPreview(txt); setStatus('클립보드 차단 — 아래 내용을 직접 복사하세요');
-    });
+    // 존재 가드: 비보안 오리진에서는 navigator.clipboard가 undefined → 동기 예외로 죽지 않게.
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(()=>{
+          setStatus('복사됨 — 스킬 대화창에 붙여넣으세요');
+        },()=>{ showPreview(txt); setStatus('클립보드 차단 — 아래 내용을 직접 복사하세요'); });
+        return;
+      }
+    }catch(e){}
+    showPreview(txt); setStatus('클립보드 미지원 — 아래 내용을 직접 복사하세요');
   }
   function setStatus(s){ const e=document.getElementById('status'); e.textContent=s; setTimeout(()=>e.textContent='',4000); }
   function showPreview(txt){ const o=document.getElementById('out'); o.textContent=txt||buildText(); o.style.display='block'; }

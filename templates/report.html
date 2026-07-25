@@ -71,6 +71,7 @@
   .edge{stroke:var(--accent);stroke-width:1.5;fill:none}
   .src{font-size:12px;color:var(--muted)}
   code{background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px;font-size:12.5px}
+  @page{ size:A4; margin:15mm; }
   @media print{.controls{display:none}}
 </style>
 </head>
@@ -147,6 +148,11 @@
   function tl(){var e=document.body.classList.toggle('lang-en');document.getElementById('langBtn').textContent=e?'한국어':'EN';document.documentElement.lang=e?'en':'ko';}
   function tm(){var e=document.body.classList.toggle('mode-easy');document.body.classList.toggle('mode-expert',!e);document.getElementById('modeBtn').textContent=e?'expert':'easy';}
   function tt(){var r=document.documentElement,c=r.getAttribute('data-theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;r.setAttribute('data-theme', c==='auto'?(d?'light':'dark'):(c==='dark'?'light':'dark'));}
+  // 토글 라벨을 실제 body 클래스에서 파생(스킬이 mode-expert/lang-en으로 렌더해도 라벨이 반전되지 않게)
+  (function(){var b=document.body;
+    document.getElementById('modeBtn').textContent = b.classList.contains('mode-easy') ? 'expert' : 'easy';
+    document.getElementById('langBtn').textContent = b.classList.contains('lang-en') ? '한국어' : 'EN';
+    document.documentElement.lang = b.classList.contains('lang-en') ? 'en' : 'ko';})();
   // 실제 KST 스탬프 fallback: 스킬이 [data-kst]를 생성시각으로 치환하지 않았다면 현재 KST 표시
   (function(){var el=document.querySelector('[data-kst]');if(el&&/00:00 KST/.test(el.textContent)){var n=new Date(),k=new Date(n.getTime()+ (9*60 - (-n.getTimezoneOffset()))*60000);var p=x=>String(x).padStart(2,'0');el.textContent='생성: '+k.getUTCFullYear()+'-'+p(k.getUTCMonth()+1)+'-'+p(k.getUTCDate())+' '+p(k.getUTCHours())+':'+p(k.getUTCMinutes())+' KST';}})();
 </script>

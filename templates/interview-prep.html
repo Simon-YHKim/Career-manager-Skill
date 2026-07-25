@@ -71,7 +71,8 @@
   .actionbar .status{ color:#8a857c; font-size:12px; align-self:center; }
   #out{ display:none; white-space:pre-wrap; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:11.5px;
     background:#1b1a17; color:#e9e4d8; border-radius:8px; padding:14px; margin-top:14px; }
-  @media print{ .controls,.actionbar{ display:none } }
+  @page{ size:A4; margin:15mm; }
+  @media print{ .controls,.actionbar{ display:none } .item{ break-inside:avoid; } }
 </style>
 </head>
 <body>

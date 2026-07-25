@@ -273,12 +273,16 @@
   }
   function flash(btn){ const o=btn.textContent; btn.textContent='복사됨 ✓'; btn.classList.add('done');
     setTimeout(()=>{ btn.textContent=o; btn.classList.remove('done'); },1800); }
+  // 반환값: true=클립보드 복사 시도됨 / false=폴백(직접 복사 필요). 허위 '복사됨' 피드백 방지.
   function write(txt, btn){
+    const fallback=()=>{ const p=document.getElementById('plan'); if(p){ p.textContent=txt; p.style.display='block'; }
+      if(btn){ const o=btn.textContent; btn.textContent='아래에서 복사'; setTimeout(()=>btn.textContent=o,2500); } };
     try{
-      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(()=>btn&&flash(btn), ()=>{}); return; }
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(()=>btn&&flash(btn), fallback); return true;
+      }
     }catch(e){}
-    // 폴백(클립보드 불가 — 비보안 컨텍스트 등): Fill Plan 영역에 노출해 직접 복사
-    const p=document.getElementById('plan'); if(p){ p.textContent=txt; p.style.display='block'; } if(btn) flash(btn);
+    fallback(); return false;
   }
   function copyField(id, btn){ const el=document.getElementById(id); if(el) write(el.value.trim(), btn); }
   function fieldsText(s){
@@ -290,8 +294,9 @@
   function activeText(){
     return SECTIONS.filter(s=>active[s.key]).map(s=>`[${s.name}]${s.repeat?' (반복)':''}\n`+fieldsText(s)).join('\n\n');
   }
-  function copyAllActive(){ write(activeText(), null); const p=document.getElementById('plan');
-    p.textContent='활성 섹션 전체 텍스트를 클립보드에 복사했습니다.\n\n'+activeText(); p.style.display='block'; }
+  function copyAllActive(){ const t=activeText(); const okc=write(t, null); const p=document.getElementById('plan');
+    p.textContent=(okc?'활성 섹션 전체 텍스트를 클립보드에 복사했습니다.':'클립보드 미지원 — 아래 내용을 직접 복사하세요.')+'\n\n'+t;
+    p.style.display='block'; }
   function exportPlan(){
     const body = SECTIONS.filter(s=>active[s.key]).map(s=>{
       const t=fieldsText(s); return t?`### ${s.name}${s.repeat?' (항목마다 반복)':''}\n${t}`:null;

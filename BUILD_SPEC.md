@@ -115,6 +115,15 @@
   worker/                ← BYO 무료 Cloudflare Worker (데이터 저장 + AI 프록시, 사용자 소유)
     src/index.js         ←   /doc 데이터 · /ai AI 프록시 · 토큰 인증 (자격증명 미포함)
     wrangler.toml        ←   배포 설정  ·  README.md ← 배포 안내(Deploy 원클릭)
+  scripts/
+    smoke_check.sh         ← 구조·수용기준 + 동작 회귀 게이트
+    check_a4.py            ← A4 인쇄 검증(chromium print→PDF + PyMuPDF)
+  samples/
+    sample-resume.html     ← A4 렌더 샘플(제네릭·PII 없음)
+  .claude-plugin/
+    plugin.json            ← 플러그인 매니페스트 (name: career)
+    marketplace.json       ← 마켓플레이스 등록
+    ※ 단일 스킬 shortcut: 루트 SKILL.md가 곧 스킬 정의
   .private/                ← [gitignore] 개인 컨텍스트
     profile.md             ←   보정 프로필
     experience-bank.md     ←   마스터 경험 뱅크 (SSOT)

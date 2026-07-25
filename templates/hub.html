@@ -314,7 +314,7 @@
 
   // ── 지원 현황 ──
   const RESULTS=[['interest','관심(미지원)'],['progress','진행중'],['pass','합격'],['fail','불합격'],['wait','결과 대기']];
-  const STAGES=['관심','서류접수','서류합격','인적성/과제','1차면접','2차면접','최종'];
+  const STAGES=['관심','아웃리치','서류접수','서류합격','인적성/과제','1차면접','2차면접','최종'];
   function appItemHTML(a,i){ const urgent=!a.applied && dday(a.deadline)>=0 && dday(a.deadline)<=3;
     return `<div class="item ${a.result==='interest'?'wished':''}" data-i="${i}">
       <div class="item-top"><span class="t">${urgent?'⚑ 마감임박 · ':''}지원 · ${esc(a.co||'')}</span><button class="del" title="삭제" onclick="delApp(${i})">×</button></div>

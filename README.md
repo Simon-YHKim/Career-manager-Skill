@@ -20,6 +20,10 @@ A4 인쇄용 문서)을 만든다. 메뉴·페르소나·엔진 전환·라우�
 /plugin install career@career-manager
 /career
 ```
+> ⚠️ **Claude Code 최신 버전 권장.** 이 플러그인은 루트 `SKILL.md`를 쓰는 **단일 스킬 shortcut** 방식이라,
+> 구버전에서는 설치가 "성공"해도 스킬이 0개로 조용히 로드돼 `/career`가 안 나타날 수 있습니다.
+> `/career`가 보이지 않으면 Claude Code를 업데이트한 뒤 재설치하거나, 아래 **B) 스킬로 직접 사용**을 쓰세요.
+>
 > 단일 스킬 shortcut으로 `SKILL.md`가 플러그인 루트에 있습니다. 개인 컨텍스트(`.private/`,
 > `reference/private/`)와 젬 원본은 gitignore되어 **플러그인에 번들되지 않습니다**.
 
