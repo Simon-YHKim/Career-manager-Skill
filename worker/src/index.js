@@ -17,8 +17,15 @@ export default {
 
     if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
 
-    // 인증 — TOKEN 시크릿 필수(미설정이면 전부 거부: 실수로 공개되는 것 방지)
-    if (!env.TOKEN || (req.headers.get('authorization') || '') !== 'Bearer ' + env.TOKEN)
+    // 인증 — TOKEN 시크릿 필수(미설정이면 전부 거부: 실수로 공개되는 것 방지).
+    // 상수 시간 비교(위생): 길이 확인 후 XOR 누적 — 조기 반환으로 인한 정보 노출 제거.
+    const eq = (a, b) => {
+      if (a.length !== b.length) return false;
+      let d = 0;
+      for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+      return d === 0;
+    };
+    if (!env.TOKEN || !eq(req.headers.get('authorization') || '', 'Bearer ' + env.TOKEN))
       return J({ error: 'unauthorized' }, 401);
 
     const path = new URL(req.url).pathname;

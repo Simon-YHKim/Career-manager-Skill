@@ -56,7 +56,8 @@ else
 fi
 
 echo "== self-contained HTML (no external network) =="
-for h in templates/report.html templates/a4-doc.html templates/intake-form.html templates/application-tracker.html templates/resume-ats.html templates/jd-discovery.html templates/cover-letter.html templates/linkedin-export.html templates/roadmap.html templates/interview-prep.html templates/hub.html; do
+# 추적되는 모든 HTML을 자동 대상화(하드코딩 목록이 새 파일을 놓치는 문제 제거 — samples/ 포함)
+for h in $(git ls-files '*.html' 2>/dev/null || ls templates/*.html); do
   if grep -qiE 'https?://|src=|<link|@import|integrity=' "$h"; then no "external ref in $h"; else ok "self-contained: $h"; fi
 done
 
@@ -87,6 +88,10 @@ grep -qiE 'AI 다듬기|aiPolish|aiUrl' templates/hub.html && grep -qiE '프록�
 grep -qiE '인브라우저 AI|AI 프록시|경로 A' reference/hub-backend.md && ok "hub-backend: AI 프록시 + 두 UX 경로" || no "hub-backend AI"
 # 워커 파일에 하드코딩 자격증명 없음(시크릿만)
 if grep -qiE 'sk-ant-|sk-[A-Za-z0-9]{20}|api[_-]?key\s*[:=]\s*["'"'"'][A-Za-z0-9]' worker/src/index.js worker/wrangler.toml 2>/dev/null; then no "worker has hardcoded credential"; else ok "worker: no hardcoded credentials (secrets only)"; fi
+# 시크릿 스캔을 추적 파일 전체로 확대 + 패턴 보강(자기 자신은 탐지 정규식을 포함하므로 제외)
+SECRET_RE='sk-ant-[A-Za-z0-9]|sk-proj-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY-----'
+hits=$(git ls-files -z | grep -zv '^scripts/smoke_check\.sh$' | xargs -0 grep -lE "$SECRET_RE" 2>/dev/null || true)
+[ -z "$hits" ] && ok "추적 파일 전체 시크릿 스캔 0건" || no "secret-like string in: $hits"
 # --- 동작 회귀 게이트 (문자열 존재가 아니라 '실제로 동작하는가' — 최종검증에서 발견된 결함 재발 방지) ---
 # (a) hub esc()가 진짜 이스케이프하는가 (no-op이면 저장형 XSS → 워커 토큰 유출)
 if node -e "
@@ -156,6 +161,27 @@ if python3 scripts/check_a4.py samples/sample-resume.html /tmp/_smoke_a4.pdf >/t
   ok "A4 sample prints clean (A4, no overflow)"; else no "A4 print check (sample)"; fi
 if python3 scripts/check_a4.py templates/a4-doc.html /tmp/_smoke_a4b.pdf >/tmp/_smoke_a4b.log 2>&1 && grep -q 'RESULT: PASS' /tmp/_smoke_a4b.log; then
   ok "A4 editorial template prints clean (A4, no overflow)"; else no "A4 print check (a4-doc)"; fi
+# 인쇄 버튼을 노출하는 나머지 템플릿도 A4 규격인지(US Letter로 나가지 않게)
+for pt in templates/report.html templates/interview-prep.html templates/resume-ats.html templates/cover-letter.html; do
+  if python3 scripts/check_a4.py "$pt" "/tmp/_smoke_$(basename "$pt" .html).pdf" >"/tmp/_smoke_$(basename "$pt" .html).log" 2>&1 \
+     && grep -q 'RESULT: PASS' "/tmp/_smoke_$(basename "$pt" .html).log"; then
+    ok "A4 print: $(basename "$pt")"; else no "A4 print: $(basename "$pt")"; fi
+done
+# 제출-안전 회귀: a4-doc을 work-mode 강제 ON으로 인쇄해도 작업용 메모가 PDF에 없어야 함
+if command -v python3 >/dev/null && ls /opt/pw-browsers/chromium-*/chrome-linux/chrome >/dev/null 2>&1; then
+  python3 - <<'PY' >/tmp/_smoke_safe.log 2>&1 && ok "제출 안전 회귀: work-mode 인쇄에도 작업메모 미노출" || no "제출 안전 회귀 실패(작업메모 유출)"
+import glob,subprocess,tempfile,pathlib,sys
+try: import fitz
+except ImportError: sys.exit(0)   # PyMuPDF 없으면 스킵(다른 게이트가 커버)
+ch=glob.glob('/opt/pw-browsers/chromium-*/chrome-linux/chrome')[0]
+d=tempfile.mkdtemp(); s=pathlib.Path('templates/a4-doc.html').read_text()
+h=pathlib.Path(d+'/w.html'); h.write_text(s.replace('</body>','<script>document.body.classList.add("work-mode")</script></body>'))
+subprocess.run([ch,'--headless','--disable-gpu','--no-sandbox','--no-pdf-header-footer',
+  f'--print-to-pdf={d}/w.pdf', f'file://{h}'], check=True, capture_output=True)
+t=''.join(p.get_text() for p in fitz.open(d+'/w.pdf'))
+sys.exit(1 if ('자기평가' in t or '평가 메모' in t or '면접 근거 메모' in t) else 0)
+PY
+fi
 
 echo "== plugin packaging =="
 for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json; do
@@ -167,6 +193,16 @@ python3 -c "import json; d=json.load(open('.claude-plugin/marketplace.json')); a
   && ok "marketplace.json valid JSON (lists plugin career)" || no "marketplace.json invalid"
 extra=$(ls .claude-plugin | grep -vE '^(plugin|marketplace)\.json$' || true)
 [ -z "$extra" ] && ok ".claude-plugin holds only manifests" || no ".claude-plugin has extra files: $extra"
+# 로드 가능성 실질 검증: marketplace의 source가 실제 스킬 정의(루트 SKILL.md 또는 skills/)를 가리키는가
+python3 - <<'PY' 2>/dev/null && ok "plugin loadable: marketplace source → 실제 스킬 정의 존재" || no "plugin source가 스킬 정의를 못 가리킴"
+import json, os, sys
+mk=json.load(open('.claude-plugin/marketplace.json'))
+p=[x for x in mk['plugins'] if x.get('name')=='career'][0]
+src=p.get('source', './')
+base=src if isinstance(src,str) else src.get('path','./')
+base=os.path.normpath(os.path.join('.', base.lstrip('./') or '.'))
+sys.exit(0 if (os.path.isfile(os.path.join(base,'SKILL.md')) or os.path.isdir(os.path.join(base,'skills'))) else 1)
+PY
 # single-skill shortcut: SKILL.md at plugin root
 [ -f SKILL.md ] && ok "single-skill shortcut: SKILL.md at plugin root" || no "SKILL.md not at root"
 
