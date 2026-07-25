@@ -15,6 +15,10 @@ Gems_Input.zip
 _extract/
 *.tmp
 
+# === 검증 산출물 (check_a4.py가 입력 옆에 PDF를 생성 — 저장소 오염 방지) ===
+samples/*.pdf
+templates/*.pdf
+
 # === OS / editor noise ===
 .DS_Store
 Thumbs.db

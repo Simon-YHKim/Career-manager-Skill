@@ -28,7 +28,13 @@ def main():
     if len(sys.argv) < 2:
         sys.exit(__doc__)
     html = os.path.abspath(sys.argv[1])
-    pdf = os.path.abspath(sys.argv[2]) if len(sys.argv) > 2 else html.rsplit(".", 1)[0] + ".pdf"
+    # 출력 미지정 시 임시 디렉터리에 생성한다(입력 옆에 PDF를 떨궈 저장소를 오염시키지 않기 위해).
+    if len(sys.argv) > 2:
+        pdf = os.path.abspath(sys.argv[2])
+    else:
+        import tempfile
+        pdf = os.path.join(tempfile.mkdtemp(prefix="career_a4_"),
+                           os.path.basename(html).rsplit(".", 1)[0] + ".pdf")
     chrome = find_chrome()
     subprocess.run([chrome, "--headless", "--disable-gpu", "--no-sandbox",
                     "--no-pdf-header-footer", f"--print-to-pdf={pdf}", f"file://{html}"],

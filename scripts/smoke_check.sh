@@ -87,6 +87,34 @@ grep -qiE 'AI 다듬기|aiPolish|aiUrl' templates/hub.html && grep -qiE '프록�
 grep -qiE '인브라우저 AI|AI 프록시|경로 A' reference/hub-backend.md && ok "hub-backend: AI 프록시 + 두 UX 경로" || no "hub-backend AI"
 # 워커 파일에 하드코딩 자격증명 없음(시크릿만)
 if grep -qiE 'sk-ant-|sk-[A-Za-z0-9]{20}|api[_-]?key\s*[:=]\s*["'"'"'][A-Za-z0-9]' worker/src/index.js worker/wrangler.toml 2>/dev/null; then no "worker has hardcoded credential"; else ok "worker: no hardcoded credentials (secrets only)"; fi
+# --- 동작 회귀 게이트 (문자열 존재가 아니라 '실제로 동작하는가' — 최종검증에서 발견된 결함 재발 방지) ---
+# (a) hub esc()가 진짜 이스케이프하는가 (no-op이면 저장형 XSS → 워커 토큰 유출)
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/hub.html','utf8');
+const m=s.match(/function esc\(s\)\{[\s\S]*?\}/); if(!m){process.exit(2);}
+const esc=new Function('return ('+m[0].replace('function esc','function')+')')();
+process.exit(esc('<img src=x>').includes('&lt;') ? 0 : 1);
+" 2>/dev/null; then ok "hub esc(): 실제 이스케이프(XSS 회귀 게이트)"; else no "hub esc() is a no-op → XSS 위험"; fi
+# (b) worker provider: 서버 시크릿(env.AI_PROVIDER)이 클라이언트 body보다 우선하는가 (키 오전송 방지)
+grep -qE 'env\.AI_PROVIDER\s*\|\|\s*b\.provider' worker/src/index.js \
+  && ok "worker: provider 서버 시크릿 우선(키 오전송 방지)" || no "worker: client provider가 서버 시크릿을 이김"
+# (c) report.html 토글 특이도 교정(한/영 중복 노출 방지)
+grep -qE 'body:not\(\.lang-en\) \.en\{display:none\}' templates/report.html \
+  && grep -qE 'body:not\(\.mode-easy\) \.easy\{display:none\}' templates/report.html \
+  && ok "report.html: 언어·난이도 토글 특이도 교정(4상태 배타)" || no "report.html toggle specificity"
+# (d) a4-doc 제출 안전: 인쇄 시 작업용 메모 은닉 이중 방어선 유지
+grep -qE '\.work-only\{ *display:none *!important' templates/a4-doc.html \
+  && grep -qi 'beforeprint' templates/a4-doc.html \
+  && ok "a4-doc: 제출 인쇄 안전 이중 방어선(print CSS + beforeprint)" || no "a4-doc submission-safety guard"
+# (e) 개인정보 커밋 방지가 '선언'이 아니라 '절차'로 존재하는가
+grep -qiE 'is-inside-work-tree|워크트리' SKILL.md && grep -qF ".gitignore" SKILL.md \
+  && ok "SKILL: .private/ gitignore 등록 절차(선언 아닌 이행)" || no "SKILL privacy procedure"
+# (f) ⑤ 무데이터 가드(0/0 방지, 초보 낙담 방지)
+grep -qiE '무데이터|분모가 0|N/A\(자료 없음\)' reference/evaluation.md \
+  && ok "evaluation §5.5: 무데이터 선행 가드(N/A·0/0 금지)" || no "evaluation no-data guard"
+# (g) 무게중심 축이 직무군별로 보편화됐는가(비테크 40% 가중 축 부재 방지)
+grep -qiE '직무군별 축 라이브러리' reference/methodology.md && grep -qiE '영업|디자인|금융' reference/methodology.md \
+  && ok "methodology: 직무군별 무게중심 축 라이브러리(비테크 포함)" || no "methodology axis library"
 # linkedin-export: all fields + user-selectable activation + copy + Fill Plan(computer-use) + ToS/API + credential guard
 grep -qiE '복사|copy' templates/linkedin-export.html && grep -qiE 'ToS|API' templates/linkedin-export.html \
   && grep -qiE 'Fill Plan|computer-use' templates/linkedin-export.html && grep -qiE '활성화|섹션 선택' templates/linkedin-export.html \
