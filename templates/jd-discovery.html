@@ -4,7 +4,10 @@
   최대 발굴(직무·전공 유사 + 커리어 발전 가능성) → 점수화·순위화 → 한줄 요약·공고 링크 ·
   위시리스트 체크박스 → 일정관리(application-tracker '관심' 연동). 자체완결, 외부 네트워크 0.
   ★ 스킬은 JD Browsing 실검색 결과로 아래 JOBS 배열을 치환한다. 공고는 실제 결과만·날조 금지,
-    각 항목에 출처·조회일·Truth Tier. 게이트된 상세는 추론 + [직접 확인] 플래그.
+    각 항목에 출처·조회일·Truth Tier. 취득 실패 상세는 추론 + [직접 확인] 플래그 + GATED에 유형코드 기록.
+  ★ 재직자면 BASELINE(현직 품질 5축)을 반드시 채운다 — 없으면 Δ 판정이 불가하고, 무의식적 하향
+    이직을 막지 못한다. 무직·첫 취업이면 null 그대로 둔다(0으로 가정 금지).
+  ★ 공고 필드: self(현직 회사 = 사내 전배) · status('만료' 등) · qualfit('미달'|'정합'|'오버').
   ★ 커밋되는 이 파일은 GENERIC 샘플만(실 공고·PII 금지).
 -->
 <html lang="ko">
@@ -31,6 +34,9 @@
     border-radius:9px; font-size:12.5px; color:var(--muted); }
   .prof b{ color:var(--ink); }
   .gated{ margin-top:8px; font-size:11.5px; color:var(--lo); }
+  /* 발굴 수율 판정 — 유효 최우선 0건이면 채널을 바꾸라고 말한다 */
+  .yield:not(:empty){ margin-top:10px; padding:11px 14px; border-radius:9px; font-size:12.5px; line-height:1.5;
+    background:#f7eede; border:1px solid #e3d5b8; color:var(--mid); }
 
   /* 컨트롤 */
   .controls{ position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; gap:6px; align-items:center;
@@ -70,6 +76,22 @@
   .q-재검토{ color:var(--lo); background:var(--wash); } .q-후순위{ color:var(--faint); background:#f1eee7; }
   .flags{ margin:7px 0 0; display:flex; flex-wrap:wrap; gap:5px; }
   .flags span{ font-size:10.5px; font-weight:700; color:#fff; background:var(--lo); border-radius:12px; padding:2px 9px; }
+  /* 상태 배지 — 만료·사내전배·자격정합·확신부족·Δ (evaluation §5.6-b·§5.8-b·§5.8-c) */
+  .st{ margin:7px 0 0; display:flex; flex-wrap:wrap; gap:5px; }
+  .st span{ font-size:10.5px; font-weight:700; border-radius:12px; padding:2px 9px; background:var(--wash); color:var(--muted); }
+  .st .s-만료{ background:#f1eee7; color:var(--faint); }
+  .st .s-사내{ background:#e8eaf2; color:#3d4a6b; }
+  .st .s-보류{ background:#f7eede; color:var(--mid); }
+  .st .s-자격{ background:#f7eede; color:var(--mid); }
+  .st .s-상향{ background:#e7f1eb; color:var(--hi); }
+  .st .s-하향{ background:var(--wash); color:var(--lo); }
+  .st .s-보합{ background:var(--wash); color:var(--muted); }
+  /* 기준선 카드 — 현직 대비 판정의 원점 */
+  .base{ border:1px dashed var(--line); border-radius:10px; padding:12px 14px; margin:0 0 12px;
+    background:var(--wash); display:flex; gap:14px; align-items:baseline; flex-wrap:wrap; }
+  .base b{ font-size:13px; color:var(--ink); }
+  .base span{ font-size:11.5px; color:var(--muted); }
+  .base .bq{ font-family:var(--serif); font-size:22px; color:var(--ink); }
   .qual{ margin-top:7px; padding-top:7px; border-top:1px dashed var(--line-2); }
   .qual .qh{ font-size:9.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--faint); margin-bottom:4px; }
   .score{ text-align:right; min-width:150px; }
@@ -107,6 +129,8 @@
   <p class="lead"><b>두 점수를 분리해서 봅니다</b> — <b>적합도</b>(내가 붙을까) × <b>직장 품질</b>(갈 만한 곳인가). 합치지 않아야 "붙기 쉬운 나쁜 곳"에 속지 않습니다. ⚠️ 적신호는 점수와 별개로 항상 경고(자동 배제는 하지 않음 — 판단은 본인).</p>
   <div class="prof" id="prof"></div>
   <div class="gated" id="gated"></div>
+  <div id="baseline"></div>
+  <div class="yield" id="yield"></div>
 
   <div class="controls">
     <select id="sort" onchange="render()">
@@ -114,6 +138,7 @@
       <option value="quality">정렬: 직장 품질순(갈 만한가)</option>
       <option value="deadline">정렬: 마감 임박순</option>
       <option value="growth">정렬: 발전 가능성순</option>
+      <option value="delta">정렬: 현직 대비 Δ순</option>
     </select>
     <div class="seg" id="filters"></div>
     <span class="count" id="count"></span>
@@ -150,7 +175,18 @@
     { co:'반도체 C', mono:'C', title:'공정기술 · 수율 혁신 엔지니어', region:'국내',
       summary:'반도체 기판 공정의 수율·생산성 혁신 — 현재 도메인과 직접 인접.',
       score:79, grade:'중상', confidence:'높음', sub:{role:84, major:80, growth:76, weight:78},
+      qualfit:'오버',   // 요구 하한의 2배+ → 적합도가 아니라 품질(보상·성장)에서 처리(§5.6-b)
       reqs:['공정기술','수율 RCA','통계'], deadline:'2026-08-20', link:'#' },
+    { co:'현직 F', mono:'F', title:'생산기술 — 타 사업장 전배', region:'국내', self:true,
+      summary:'현 소속사 공고 — 적합도는 높지만 이직이 아니라 사내 전배. 4분면에서 제외한다.',
+      score:88, grade:'상', confidence:'높음', sub:{role:92, major:90, growth:58, weight:86},
+      err:5, quality:72, qsub:{pay:80, grow:62, stable:86, culture:70, personal:40}, qconf:'중간', flags:[],
+      whatif:['(사내 이동은 사내 절차)'],
+      reqs:['생산기술','경력'], deadline:'2026-09-10', link:'#' },
+    { co:'만료 G', mono:'G', title:'생산혁신 엔지니어 (마감된 공고)', region:'국내', status:'만료',
+      summary:'마감된 공고 — 목록에는 남기되 채점하지 않는다(리소스 낭비 + 지원 가능 착시 방지).',
+      score:76, grade:'중상', confidence:'중간', sub:{role:80, major:78, growth:70, weight:72},
+      reqs:['생산혁신'], deadline:'2026-01-23', link:'#' },
     { co:'PE D', mono:'D', title:'Operating Partner — 제조 실사/개선', region:'글로벌',
       summary:'PE 포트폴리오사의 제조 오퍼레이션 실사·개선을 이끄는 operating partner(성장 트랙).',
       score:64, grade:'중', confidence:'낮음', sub:{role:66, major:70, growth:92, weight:40},
@@ -177,6 +213,54 @@
     if(fit>=65 && qual< 65) return '재검토';
     return '후순위';
   }
+
+  // ── 기준선 · Δ · 승격 가드 (evaluation §5.8-c / §5.8-b) ──────────────────
+  // 현직 기준선: 재직자면 스킬이 직장 품질 5축으로 채점해 주입한다.
+  // 무직·첫 취업·공백기면 null 그대로 — Δ를 표기하지 않는다(0으로 가정 금지).
+  const BASELINE = null;   // 예: { co:'현재 회사', label:'현직 선임', quality:71, qsub:{pay:80,grow:65,stable:85,culture:70,personal:80} }
+
+  function delta(j){
+    return (BASELINE && BASELINE.quality!=null && j.quality!=null) ? j.quality - BASELINE.quality : null;
+  }
+  function deltaLabel(d){ return d==null ? null : d>=10 ? '상향' : d<=-10 ? '하향' : '보합'; }
+  function expired(j){ return j.status==='만료' || (j.deadline && daysTo(j.deadline)<0); }
+
+  // 최우선 승격 가드 — 라벨을 신뢰할 수 있게 만드는 조건. 사유가 있으면 라벨을 내린다.
+  // ★ 배제가 아니라 보류다: 공고는 목록에 그대로 남는다(자유도 보존).
+  function guardReason(j){
+    if(expired(j))            return '만료';
+    if(j.self)                return '사내 전배';
+    if(j.confidence==='낮음') return '확인 필요';
+    const d = delta(j);
+    if(d!=null && d<0)        return '하향';
+    return null;
+  }
+  // 화면에 실제로 붙는 라벨. 최우선만 가드하고 나머지 분면은 그대로 둔다.
+  function quadLabel(j){
+    const q = quadrant(j.score, j.quality);
+    if(!q) return null;
+    return (q==='최우선' && guardReason(j)) ? null : q;
+  }
+  function statusHTML(j){
+    const out=[];
+    if(expired(j))                out.push(['만료','만료']);
+    if(j.self)                    out.push(['사내','사내 전배 — 이직 아님']);
+    if(j.qualfit==='미달')        out.push(['자격','연차·요건 미달']);
+    if(j.qualfit==='오버')        out.push(['자격','오버스펙 — 직급·연봉 하향 리스크']);
+    if(j.confidence==='낮음')     out.push(['보류','확인 필요 — 취득 실패로 확신 낮음']);
+    const d=delta(j), dl=deltaLabel(d);
+    if(dl) out.push([dl, `Δ ${d>0?'+':''}${d} · 현직 대비 ${dl}`]);
+    if(!out.length) return '';
+    return `<div class="st">`+out.map(([c,t])=>`<span class="s-${c}">${escHtml(t)}</span>`).join('')+`</div>`;
+  }
+  function baselineHTML(){
+    const el=document.getElementById('baseline'); if(!el) return;
+    el.innerHTML = BASELINE ? `<div class="base">
+      <b>기준선 · ${escHtml(BASELINE.co)}</b>
+      <span class="bq">${BASELINE.quality}</span>
+      <span>${escHtml(BASELINE.label||'현직')} — 아래 공고의 Δ는 이 점수 대비입니다. 현직보다 낮은 곳은 <b>최우선으로 올리지 않습니다</b>.</span>
+    </div>` : `<div class="base"><span>기준선 없음 — 현직이 없어 Δ를 표기하지 않습니다(0으로 가정하지 않음). 절대 점수 + 시장 위치 레이어로 판단하세요.</span></div>`;
+  }
   let filter='all';
   const wish = new Set();                 // 안정 키(회사␟직무)로 저장 — 동명 공고 오선택·따옴표 깨짐 방지
   function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -197,8 +281,9 @@
     let h = `<div class="subs">`+Object.keys(SUBLABEL).map(k=>
       `<div class="subrow"><span>${SUBLABEL[k]}</span><span class="track"><span class="fill" style="width:${j.sub[k]}%"></span></span><span>${j.sub[k]}</span></div>`
     ).join('')+`</div>`;
-    if(j.qsub){ // 직장 품질 5축 — 적합도와 분리해 표시(합치지 않음)
-      h += `<div class="qual"><div class="qh">직장 품질 ${j.quality!=null?j.quality:'—'}${j.qconf?' · 확신 '+escHtml(j.qconf):''}</div><div class="subs">`+
+    if(j.qsub){ // 직장 품질 5축 — 적합도와 분리해 표시(합치지 않음). Δ는 기준선이 있을 때만.
+      const d=delta(j), dtxt = d==null ? '' : ` (Δ ${d>0?'+':''}${d})`;
+      h += `<div class="qual"><div class="qh">직장 품질 ${j.quality!=null?j.quality:'—'}${dtxt}${j.qconf?' · 확신 '+escHtml(j.qconf):''}</div><div class="subs">`+
         Object.keys(QLABEL).filter(k=>j.qsub[k]!=null).map(k=>
           `<div class="subrow"><span>${QLABEL[k]}</span><span class="track"><span class="fill" style="width:${j.qsub[k]}%"></span></span><span>${j.qsub[k]}</span></div>`
         ).join('')+`</div></div>`;
@@ -222,8 +307,9 @@
       <div class="rank">${i+1}</div>
       <div class="body">
         <div class="co">${escHtml(j.co)} · ${escHtml(j.region)}</div>
-        <div class="title">${escHtml(j.title)}${(function(q){return q?`<span class="quad q-${q}">${q}</span>`:'';})(quadrant(j.score, j.quality))}</div>
+        <div class="title">${escHtml(j.title)}${(function(q){return q?`<span class="quad q-${q}">${q}</span>`:'';})(quadLabel(j))}</div>
         <div class="sum">${escHtml(j.summary)}</div>
+        ${statusHTML(j)}
         ${flagsHTML(j)}
         ${reqHTML(j)}
         ${j.whatif&&j.whatif.length?`<div class="meta"><span>↗ 올리려면: ${j.whatif.map(escHtml).join(' · ')}</span></div>`:''}
@@ -243,7 +329,7 @@
   }
 
   function renderFilters(){
-    const opts=[['all','전체'],['top','최우선'],['flag','⚠️ 적신호'],['국내','국내'],['글로벌','글로벌'],['wish','위시리스트']];
+    const opts=[['all','전체'],['top','최우선'],['up','↑ 상향만'],['live','모집중'],['flag','⚠️ 적신호'],['국내','국내'],['글로벌','글로벌'],['wish','위시리스트']];
     document.getElementById('filters').innerHTML = opts.map(([k,l])=>
       `<button class="${k===filter?'on':''}" onclick="setFilter('${k}')">${l}</button>`).join('');
   }
@@ -251,20 +337,32 @@
   function toggleWish(k){ if(wish.has(k))wish.delete(k); else wish.add(k); render(); }
 
   function render(){
-    profHTML(); renderFilters();
+    profHTML(); renderFilters(); baselineHTML();
     const sort=document.getElementById('sort').value;
     let rows=JOBS.slice();
     rows.sort((a,b)=> sort==='deadline' ? Date.parse(a.deadline)-Date.parse(b.deadline)
                     : sort==='growth' ? b.sub.growth-a.sub.growth
+                    : sort==='delta' ? ((delta(b)==null?-999:delta(b))-(delta(a)==null?-999:delta(a)))
                     : sort==='quality' ? (b.quality||0)-(a.quality||0) : b.score-a.score);
     let shown = filter==='all'?rows
       : filter==='wish'?rows.filter(j=>wish.has(jkey(j)))
-      : filter==='top'?rows.filter(j=>quadrant(j.score,j.quality)==='최우선')
+      : filter==='top'?rows.filter(j=>quadLabel(j)==='최우선')
+      : filter==='up'?rows.filter(j=>{const d=delta(j); return d!=null && d>=10;})
+      : filter==='live'?rows.filter(j=>!expired(j))
       : filter==='flag'?rows.filter(j=>j.flags&&j.flags.length)
       : rows.filter(j=>j.region===filter);
     document.getElementById('list').innerHTML = shown.length ? shown.map(cardHTML).join('')
       : `<div class="prof">해당 조건의 공고가 없습니다.</div>`;
-    document.getElementById('count').textContent = `발굴 ${JOBS.length} · 위시리스트 ${wish.size}`;
+
+    // 발굴 수율 판정 (jd-browsing §2-(2-e) · job-search-ops §2-b) — 유효 최우선 0건이면 채널 전환.
+    const live = JOBS.filter(j=>!expired(j));
+    const eff  = live.filter(j=>quadLabel(j)==='최우선');
+    document.getElementById('count').innerHTML =
+      `발굴 ${JOBS.length} · 모집중 ${live.length} · <b>유효 최우선 ${eff.length}</b> · 위시리스트 ${wish.size}`;
+    const y=document.getElementById('yield');
+    if(y) y.innerHTML = (JOBS.length>=10 && eff.length===0)
+      ? `⚠ <b>유효 최우선 0건</b> — 공고가 없는 게 아니라 <b>이 채널에 없습니다.</b> 같은 보드를 더 훑지 말고 채널을 바꾸세요: 자사 채용홈 직접 · 서치펌·헤드헌터 · 리퍼럴 · 목표기업 직접 아웃리치.`
+      : '';
   }
 
   function copyWishlist(){

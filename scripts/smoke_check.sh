@@ -117,6 +117,49 @@ grep -qiE 'is-inside-work-tree|워크트리' SKILL.md && grep -qF ".gitignore" S
 # (f) ⑤ 무데이터 가드(0/0 방지, 초보 낙담 방지)
 grep -qiE '무데이터|분모가 0|N/A\(자료 없음\)' reference/evaluation.md \
   && ok "evaluation §5.5: 무데이터 선행 가드(N/A·0/0 금지)" || no "evaluation no-data guard"
+# (h) 4분면 승격 가드가 '실제로' 라벨을 내리는가 — 만료/자사/확신낮음/하향이 최우선으로 새면 실사용에서 오판
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
+const grab=(re)=>{const m=s.match(re); if(!m) throw new Error('not found: '+re); return m[0];};
+const src=[/const TODAY = '[^']*';/, /function daysTo\(d\)\{[^}]*\}/, /function quadrant\(fit, qual\)\{[\s\S]*?\n  \}/,
+  /function delta\(j\)\{[\s\S]*?\n  \}/, /function expired\(j\)\{[^}]*\}/,
+  /function guardReason\(j\)\{[\s\S]*?\n  \}/, /function quadLabel\(j\)\{[\s\S]*?\n  \}/].map(grab).join('\n');
+const base=(b)=>new Function('BASELINE','J','\"use strict\";'+src+'return quadLabel(J);');
+const hi={score:90,quality:90,confidence:'높음',deadline:'2099-01-01'};
+const t=[];
+t.push(['정상 최우선', base()(null,hi)==='최우선']);
+t.push(['만료 차단',   base()(null,Object.assign({},hi,{deadline:'2000-01-01'}))!=='최우선']);
+t.push(['자사 차단',   base()(null,Object.assign({},hi,{self:true}))!=='최우선']);
+t.push(['확신낮음 차단',base()(null,Object.assign({},hi,{confidence:'낮음'}))!=='최우선']);
+t.push(['하향 차단',   base()({quality:95},hi)!=='최우선']);
+t.push(['상향 통과',   base()({quality:60},hi)==='최우선']);
+t.push(['기준선없음 Δ미적용', base()(null,hi)==='최우선']);
+t.push(['다른분면 유지', base()(null,{score:40,quality:40,confidence:'높음',deadline:'2099-01-01'})==='후순위']);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+process.exit(0);
+" 2>/dev/null; then ok "jd-discovery: 4분면 승격 가드 동작(만료·자사·확신낮음·하향 차단 / 상향 통과)"; else no "jd-discovery 승격 가드가 동작하지 않음"; fi
+# (i) Δ는 기준선이 있을 때만 — 없는데 0으로 가정하면 무직 사용자에게 허위 판정
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
+const m=s.match(/function delta\(j\)\{[\s\S]*?\n  \}/); if(!m) process.exit(2);
+const f=new Function('BASELINE','j','\"use strict\";'+m[0]+'return delta(j);');
+process.exit((f(null,{quality:50})===null && f({quality:70},{quality:50})===-20 && f({quality:70},{})===null) ? 0 : 1);
+" 2>/dev/null; then ok "jd-discovery: Δ는 기준선 있을 때만(무직 0-가정 금지)"; else no "delta() 기준선 처리 오류"; fi
+# (j) 취득 실패 taxonomy + 폴백 사다리 + 첨부 PDF 회수 경로
+grep -qiE 'G 게이트' reference/jd-browsing.md && grep -qiE 'R 미렌더' reference/jd-browsing.md \
+  && grep -qiE 'M 오조준' reference/jd-browsing.md && grep -qiE '폴백 사다리' reference/jd-browsing.md \
+  && grep -qiE 'PyMuPDF|텍스트 레이어' reference/jd-browsing.md \
+  && ok "jd-browsing §1: 취득실패 유형분류·폴백사다리·첨부PDF 회수" || no "jd-browsing 취득실패 구조"
+# (k) 신선도 게이트 · 기준선 · 발굴 수율→채널전환
+grep -qiE '신선도 게이트' reference/jd-browsing.md && grep -qiE '기준선' reference/jd-browsing.md \
+  && grep -qiE '이 채널에 없다' reference/jd-browsing.md \
+  && ok "jd-browsing §2: 신선도·기준선·수율 채널전환" || no "jd-browsing 발굴 규율"
+grep -qiE '발굴 수율' reference/job-search-ops.md && grep -qiE '이 채널에 없다' reference/job-search-ops.md \
+  && ok "job-search-ops §2-b: 지원 이전 단계 병목(발굴 수율)" || no "job-search-ops 발굴 수율"
+grep -qiE '자격 정합' reference/evaluation.md && grep -qiE '오버스펙|오버' reference/evaluation.md \
+  && grep -qiE '기준선 델타|Δ' reference/evaluation.md \
+  && ok "evaluation §5.6-b·§5.8-c: 자격 정합 3상태 + 기준선 Δ" || no "evaluation 자격/기준선"
 # (g) 무게중심 축이 직무군별로 보편화됐는가(비테크 40% 가중 축 부재 방지)
 grep -qiE '직무군별 축 라이브러리' reference/methodology.md && grep -qiE '영업|디자인|금융' reference/methodology.md \
   && ok "methodology: 직무군별 무게중심 축 라이브러리(비테크 포함)" || no "methodology axis library"
