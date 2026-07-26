@@ -12,6 +12,13 @@ Exit 0 = PASS, 1 = FAIL.
 import pathlib
 import shutil
 import subprocess, sys, glob, os
+import sys
+
+# ★ 한글 Windows 콘솔은 cp949 다 — 한국어 안내를 print 하면 UnicodeEncodeError 로 죽고,
+#   그 예외가 판정 종료코드를 덮어써 "중단"이 "경고"로 강등된다(실측 2026-07).
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8", errors="replace")
 try:
     import fitz
 except ImportError:
@@ -23,6 +30,24 @@ A4_W, A4_H = 595.0, 842.0          # points
 TOL = 3.0                          # pt tolerance on page size
 MARGIN_PT = 15 * 72 / 25.4         # 15mm ≈ 42.5pt (expected @page margin)
 EDGE_SLACK = 6.0                   # allow content within a few pt of margin
+
+INK_LIMIT = 0.40   # 지면 잉크 도포 상한
+
+
+def ink_ratio(page):
+    """지면이 얼마나 어두운지. 다크 테마가 인쇄 경로로 샜는지 잡는다.
+
+    라이트 1% vs 다크 76% 로 갈리므로 40% 임계는 오탐 여지가 없다(실측 2026-07).
+    제출용 PDF 는 배경을 끄면 본문 대비가 무너지므로 인쇄는 항상 라이트여야 한다."""
+    pix = page.get_pixmap(dpi=36)
+    n = dark = 0
+    for x in range(0, pix.width, 3):
+        for y in range(0, pix.height, 3):
+            r, g, b = pix.pixel(x, y)[:3]
+            n += 1
+            if 0.2126 * r + 0.7152 * g + 0.0722 * b < 128:
+                dark += 1
+    return dark / n if n else 0.0
 
 def find_chrome():
     """Chromium 계열 실행 파일을 찾는다 (Linux / Windows / macOS).
@@ -63,6 +88,7 @@ def main():
                     "--no-pdf-header-footer", f"--print-to-pdf={pdf}", pathlib.Path(html).as_uri()],
                    check=True, capture_output=True)
     doc = fitz.open(pdf)
+
     ok = True
     print(f"file: {os.path.basename(html)}  ->  {os.path.basename(pdf)}")
     print(f"pages: {len(doc)}")
@@ -76,11 +102,14 @@ def main():
         min_x0 = min(xs0) if xs0 else MARGIN_PT
         max_x1 = max(xs1) if xs1 else w - MARGIN_PT
         overflow = max_x1 > (w - MARGIN_PT + EDGE_SLACK) or min_x0 < (MARGIN_PT - EDGE_SLACK)
-        page_ok = size_ok and not overflow
+        ink = ink_ratio(page)
+        ink_ok = ink <= INK_LIMIT
+        page_ok = size_ok and not overflow and ink_ok
         ok = ok and page_ok
         print(f"  p{i+1}: size={w:.0f}x{h:.0f}pt A4={'OK' if size_ok else 'FAIL'} | "
               f"content x=[{min_x0:.0f}..{max_x1:.0f}] (printable ~[{MARGIN_PT:.0f}..{w-MARGIN_PT:.0f}]) "
-              f"overflow={'YES' if overflow else 'no'} -> {'PASS' if page_ok else 'FAIL'}")
+              f"overflow={'YES' if overflow else 'no'} | ink={ink:.0%}"
+              f"{'' if ink_ok else ' 다크 테마가 인쇄 경로로 샘'} -> {'PASS' if page_ok else 'FAIL'}")
     doc.close()
     print("RESULT:", "PASS" if ok else "FAIL")
     sys.exit(0 if ok else 1)

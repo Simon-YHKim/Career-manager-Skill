@@ -32,3 +32,11 @@ node_modules/
 # === Raw source inputs kept local (IP caution, D-6). Distilled outputs committed: methodology.md, gems/techniques.md ===
 reference/gems/Jobs_Verstappen_Gems_SystemPrompt.txt
 reference/gems/*.pdf
+
+# === 발굴 산출물 (현직사·타깃기업 포함 — 커밋 금지) ===
+_discovery-results.json
+_discovery-*.json
+
+# === 빌드 산출물 ===
+__pycache__/
+*.py[cod]

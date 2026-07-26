@@ -332,7 +332,8 @@ def sweep(f, out_path):
 def main():
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--filter", help="career/jd-filter@1 JSON 경로")
-    ap.add_argument("--out", default="_discovery-results.json")
+    ap.add_argument("--out", default=".private/_discovery-results.json",
+                    help="기본값이 .private/ 인 이유: 결과에 현직사·타깃기업이 들어간다(커밋 금지 경로)")
     ap.add_argument("--probe", action="store_true", help="소스 도달성만 점검")
     ap.add_argument("--ats", help="채용 페이지 URL에서 ATS 식별")
     a = ap.parse_args()
@@ -347,7 +348,19 @@ def main():
         return
     if not a.filter:
         ap.error("--filter 필요 (templates/jd-filter.html 의 [필터 복사] 출력)")
-    sweep(load_filter(a.filter), a.out)
+    out = Path(a.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    # ★ SKILL.md §2 커밋 금지 가드를 코드로 이행한다 — 선언이 아니라 결과로 확인한다.
+    if subprocess.run(["git", "rev-parse", "--is-inside-work-tree"],
+                      capture_output=True, text=False).returncode == 0:
+        if subprocess.run(["git", "check-ignore", "-q", str(out)],
+                          capture_output=True).returncode != 0:
+            sys.exit(
+                f"중단: {out} 가 git 에 무시되지 않습니다. "
+                f"결과에는 현직사·타깃기업이 들어갑니다. "
+                f".gitignore 에 다음을 넣고 다시 실행하세요: {out.as_posix()}"
+            )
+    sweep(load_filter(a.filter), str(out))
 
 
 if __name__ == "__main__":

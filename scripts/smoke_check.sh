@@ -80,7 +80,7 @@ sys.exit(1 if bad else 0)
 PY
   then ok "discover.py: 개인 값 기본값 없음(현직·타깃기업·직무명)"; else no "discover.py에 개인 값 기본값이 박혀 있음"; fi
   # (b) 필터 없이 실행하면 **반드시 중단** — 기본값으로 조용히 도는 일이 없어야 한다
-  if ! python3 scripts/discover.py >/dev/null 2>&1; then
+  if ! "$PY_BIN" scripts/discover.py >/dev/null 2>&1; then
     ok "discover.py: 필터 없이 실행 시 중단(무단 기본값 실행 차단)"; else no "discover.py가 필터 없이도 실행됨"; fi
   # (c) 스키마 고정 — jd-filter.html 출력과 계약이 어긋나면 조용히 빈 매트릭스가 된다
   grep -qF 'career/jd-filter@1' scripts/discover.py && grep -qF 'career/jd-filter@1' templates/jd-filter.html \
@@ -150,7 +150,10 @@ echo "== self-contained HTML (no external network) =="
 for h in $(git ls-files '*.html' 2>/dev/null || ls templates/*.html); do
   # ★ data: URI 는 자체완결이다(폰트·이미지 내장). 검사 전에 제거하지 않으면
   #   내장 이미지를 쓴 템플릿이 영원히 FAIL 한다 — 폰트는 `src:` 라 통과하고 이미지만 `src=` 로 걸렸다.
-  if sed -E 's/(src|href)[[:space:]]*=[[:space:]]*("|'"'"')?data:[^"'"'"'>[:space:]]*("|'"'"')?//gi' "$h"      | grep -qiE 'https?://|src=|<link|@import|integrity='; then no "external ref in $h"; else ok "self-contained: $h"; fi
+  # ★ 검사 대상은 **네트워크를 실제로 부르는 구성**이다. placeholder·주석·사용자 안내문에 들어간
+  #   https:// 문자열은 요청을 만들지 않는데도 예전 정규식은 그것까지 잡아 FAIL 시켰다.
+  #   data: URI(폰트·이미지 내장)도 자체완결이므로 검사 전에 제거한다.
+  if sed -E 's/(src|href)[[:space:]]*=[[:space:]]*("|'"'"')?data:[^"'"'"'>[:space:]]*("|'"'"')?//gi' "$h"      | grep -qiE '(src|href|action|poster|data-src)[[:space:]]*=[[:space:]]*("|'"'"')?https?://|<link|@import|integrity=|url\([[:space:]]*("|'"'"')?https?://|fetch\([[:space:]]*("|'"'"')?https?://|src[[:space:]]*=[[:space:]]*("|'"'"')?[^"'"'"'>[:space:]]'; then no "external ref in $h"; else ok "self-contained: $h"; fi
 done
 
 echo "== portfolio builder (P0-P8) + wiring =="
@@ -188,7 +191,7 @@ sys.exit(0 if (floor in d and warn in d and end in d) else 1)
 PYEOF
 then ok "임계 SSOT 일치(룰북 §7 표 ↔ check_polish.py 상수)"; else no "임계값이 문서와 코드에서 어긋남"; fi
 # 실행 검사 — 문자열이 아니라 동작
-if [ "$(python3 scripts/check_polish.py --after /dev/null 2>/dev/null; echo $?)" = "3" ]; then
+if [ "$("$PY_BIN" scripts/check_polish.py --after /dev/null 2>/dev/null; echo $?)" = "3" ]; then
   ok "check_polish: 축 미지정 시 판정 보류(추정 금지)"; else no "check_polish 축 미지정 처리"; fi
 # 폴백 축은 [일] — 규칙 많은 쪽이 아니라 오탐 비용 낮은 쪽
 grep -qE '\[일\]' reference/polish-rulebook.md && grep -qF '"일반": "일"' scripts/check_polish.py \
@@ -641,27 +644,29 @@ grep -qiE '조건부 오버레이|6\.1' SKILL.md && grep -qiE '전형 관문|콜
 grep -qiE 'claim-audit|재-그라운딩' SKILL.md && grep -qF "session-state" SKILL.md && ok "SKILL: claim-audit + 세션 핸드오프 배선" || no "SKILL anti-drift/handoff"
 
 echo "== A4 print fidelity =="
-if python3 scripts/check_a4.py samples/sample-resume.html /tmp/_smoke_a4.pdf >/tmp/_smoke_a4.log 2>&1 && grep -q 'RESULT: PASS' /tmp/_smoke_a4.log; then
+if "$PY_BIN" scripts/check_a4.py samples/sample-resume.html /tmp/_smoke_a4.pdf >/tmp/_smoke_a4.log 2>&1 && grep -q 'RESULT: PASS' /tmp/_smoke_a4.log; then
   ok "A4 sample prints clean (A4, no overflow)"; else no "A4 print check (sample)"; fi
-if python3 scripts/check_a4.py templates/a4-doc.html /tmp/_smoke_a4b.pdf >/tmp/_smoke_a4b.log 2>&1 && grep -q 'RESULT: PASS' /tmp/_smoke_a4b.log; then
+if "$PY_BIN" scripts/check_a4.py templates/a4-doc.html /tmp/_smoke_a4b.pdf >/tmp/_smoke_a4b.log 2>&1 && grep -q 'RESULT: PASS' /tmp/_smoke_a4b.log; then
   ok "A4 editorial template prints clean (A4, no overflow)"; else no "A4 print check (a4-doc)"; fi
 # 인쇄 버튼을 노출하는 나머지 템플릿도 A4 규격인지(US Letter로 나가지 않게)
 for pt in templates/report.html templates/interview-prep.html templates/resume-ats.html templates/cover-letter.html; do
-  if python3 scripts/check_a4.py "$pt" "/tmp/_smoke_$(basename "$pt" .html).pdf" >"/tmp/_smoke_$(basename "$pt" .html).log" 2>&1 \
+  if "$PY_BIN" scripts/check_a4.py "$pt" "/tmp/_smoke_$(basename "$pt" .html).pdf" >"/tmp/_smoke_$(basename "$pt" .html).log" 2>&1 \
      && grep -q 'RESULT: PASS' "/tmp/_smoke_$(basename "$pt" .html).log"; then
     ok "A4 print: $(basename "$pt")"; else no "A4 print: $(basename "$pt")"; fi
 done
 # 제출-안전 회귀: a4-doc을 work-mode 강제 ON으로 인쇄해도 작업용 메모가 PDF에 없어야 함
-if command -v python3 >/dev/null && ls /opt/pw-browsers/chromium-*/chrome-linux/chrome >/dev/null 2>&1; then
-  "$PY_BIN" - <<'PY' >/tmp/_smoke_safe.log 2>&1 && ok "제출 안전 회귀: work-mode 인쇄에도 작업메모 미노출" || no "제출 안전 회귀 실패(작업메모 유출)"
-import glob,subprocess,tempfile,pathlib,sys
+# ★ Linux 전용 glob 에 묶여 있어 Windows·macOS 에선 게이트가 통째로 무흔적 스킵됐다.
+CH="$("$PY_BIN" -c "import sys;sys.path.insert(0,'scripts');import check_a4;print(check_a4.find_chrome())" 2>/dev/null)"
+if [ -n "$CH" ]; then
+  CH="$CH" "$PY_BIN" - <<'PY' >/tmp/_smoke_safe.log 2>&1 && ok "제출 안전 회귀: work-mode 인쇄에도 작업메모 미노출" || no "제출 안전 회귀 실패(작업메모 유출)"
+import os,subprocess,tempfile,pathlib,sys
 try: import fitz
 except ImportError: sys.exit(0)   # PyMuPDF 없으면 스킵(다른 게이트가 커버)
-ch=glob.glob('/opt/pw-browsers/chromium-*/chrome-linux/chrome')[0]
-d=tempfile.mkdtemp(); s=pathlib.Path('templates/a4-doc.html').read_text()
-h=pathlib.Path(d+'/w.html'); h.write_text(s.replace('</body>','<script>document.body.classList.add("work-mode")</script></body>'))
+ch=os.environ['CH']   # 크로스플랫폼 — 셸이 check_a4.find_chrome() 으로 찾아 넘긴다
+d=tempfile.mkdtemp(); s=pathlib.Path('templates/a4-doc.html').read_text(encoding='utf-8')
+h=pathlib.Path(d+'/w.html'); h.write_text(s.replace('</body>','<script>document.body.classList.add("work-mode")</script></body>'), encoding='utf-8')
 subprocess.run([ch,'--headless','--disable-gpu','--no-sandbox','--no-pdf-header-footer',
-  f'--print-to-pdf={d}/w.pdf', f'file://{h}'], check=True, capture_output=True)
+  f'--print-to-pdf={d}/w.pdf', pathlib.Path(h).as_uri()], check=True, capture_output=True)
 t=''.join(p.get_text() for p in fitz.open(d+'/w.pdf'))
 sys.exit(1 if ('자기평가' in t or '평가 메모' in t or '면접 근거 메모' in t) else 0)
 PY
