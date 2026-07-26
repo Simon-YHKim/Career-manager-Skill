@@ -173,9 +173,16 @@ def parse_jobkorea(s, excluded):
         joined = " ".join(L).lower()
         if any(e.lower() in joined for e in excluded):
             continue
+        # ★ 배지 문구를 걷어내고 저장한다. 예전에는 날것 그대로 넣어서 `fields[0]`에
+        #   "오늘 마감! 놓치지 마세요!"·"신입 지원 가능" 같은 **광고 배지가 제목 자리**를
+        #   차지했다(실측: 본사 공고 15건 중 10건). 목록만 보면 무슨 공고인지 알 수 없어
+        #   사용자가 일일이 링크를 열어야 했다. card_company 는 원래 L(날것)을 받아
+        #   자체 필터를 하므로, 먼저 뽑아 두고 저장용만 정제한다.
+        company_field = card_company(seg, L)
+        L = [x for x in L if not BADGE.match(x)]
         rows.append({
             "id": m.group(1),
-            "company_field": card_company(seg, L),
+            "company_field": company_field,
             "url": f"https://www.jobkorea.co.kr/Recruit/GI_Read/{m.group(1)}",
             "fields": L[:6],
             "deadline": None,          # 목록에 없음 → 원문 확인 전까지 [확인 필요]
