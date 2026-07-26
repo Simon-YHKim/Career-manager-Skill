@@ -1,0 +1,15 @@
+# 개행은 저장소·워크트리 모두 LF 로 고정한다.
+# ★ 이 파일이 없으면 Windows 의 core.autocrlf=true 가 체크아웃에서 LF→CRLF 로 바꾸고,
+#   `\n` 을 쓰는 스모크 테스트 정규식·셸 스크립트가 통째로 어긋난다(실측 2026-07,
+#   퍼널 병목 판정 테스트가 이 이유로 Windows 에서만 FAIL 했다).
+* text=auto eol=lf
+
+# 바이너리는 변환하지 않는다
+*.woff2 binary
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pyc   binary

@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# ★ Windows 의 python3 는 Microsoft Store 스텁일 수 있다. 실제로 도는 인터프리터를 고른다.
+PY_BIN="$(command -v python3 2>/dev/null)"
+if ! "$PY_BIN" -c "pass" >/dev/null 2>&1; then PY_BIN="$(command -v python 2>/dev/null)"; fi
+: "${PY_BIN:=python3}"
 # career skill — smoke check. Verifies structure, frontmatter, tasks, templates,
 # privacy gitignore, no-persona, self-contained HTML, and A4 print fidelity.
 # Exit 0 = all pass.
@@ -12,7 +16,7 @@ no(){ echo "  [FAIL] $1"; fail=$((fail+1)); }
 # ★ 새로 클론한 컨테이너에서 A4 게이트 6건이 실패했는데 원인은 PyMuPDF 미설치였다(실측).
 #   빨간 줄만 보면 코드 회귀로 오독된다 → 게이트를 돌리기 **전에** 원인을 먼저 알린다.
 #   경고일 뿐 집계에 넣지 않는다. 게이트 자체는 그대로 실패시킨다(조용한 스킵 금지).
-if ! python3 -c 'import fitz' 2>/dev/null; then
+if ! "$PY_BIN" -c 'import fitz' 2>/dev/null; then
   echo "!! 의존성 없음: PyMuPDF — A4 인쇄 게이트가 실패합니다(코드 회귀 아님)."
   echo "   설치: pip install -r scripts/requirements.txt"
   echo
@@ -63,7 +67,7 @@ if git ls-files 2>/dev/null | grep -qiE '(^|/)\.?private/|profile\.md|\.pdf$'; t
 #   기본값이 하나라도 되살아나면 남의 조건으로 발굴하고도 그런 줄 모르게 된다.
 if [ -f scripts/discover.py ]; then
   # (a) 개인 값 하드코딩 금지 — 필터 키를 읽는 코드가 아니라 '값'이 박혀 있는지를 본다
-  if python3 - <<'PY' 2>/dev/null
+  if "$PY_BIN" - <<'PY' 2>/dev/null
 import re, sys
 s = open('scripts/discover.py', encoding='utf-8').read()
 # 리스트 리터럴 안의 한글 회사명/직무명이 기본값으로 쓰이는 패턴
@@ -92,7 +96,7 @@ fi
 # ── hub.html 신뢰 경계: 외부 데이터는 normalize() 한 곳만 통과한다 ──────────
 # ★ hub는 스킬에서 유일하게 **사용자가 파일로 가져오는** JSON을 받는다(붙여넣기·BYO 백엔드·localStorage).
 #   경계가 여러 곳이면 새 경로가 생길 때마다 조용히 샌다 → DATA 대입 형태를 강제한다.
-if python3 - <<'PY' 2>/dev/null
+if "$PY_BIN" - <<'PY' 2>/dev/null
 import re, sys
 s = open('templates/hub.html', encoding='utf-8').read()
 bad = []
@@ -144,7 +148,9 @@ fi
 echo "== self-contained HTML (no external network) =="
 # 추적되는 모든 HTML을 자동 대상화(하드코딩 목록이 새 파일을 놓치는 문제 제거 — samples/ 포함)
 for h in $(git ls-files '*.html' 2>/dev/null || ls templates/*.html); do
-  if grep -qiE 'https?://|src=|<link|@import|integrity=' "$h"; then no "external ref in $h"; else ok "self-contained: $h"; fi
+  # ★ data: URI 는 자체완결이다(폰트·이미지 내장). 검사 전에 제거하지 않으면
+  #   내장 이미지를 쓴 템플릿이 영원히 FAIL 한다 — 폰트는 `src:` 라 통과하고 이미지만 `src=` 로 걸렸다.
+  if sed -E 's/(src|href)[[:space:]]*=[[:space:]]*("|'"'"')?data:[^"'"'"'>[:space:]]*("|'"'"')?//gi' "$h"      | grep -qiE 'https?://|src=|<link|@import|integrity='; then no "external ref in $h"; else ok "self-contained: $h"; fi
 done
 
 echo "== portfolio builder (P0-P8) + wiring =="
@@ -171,7 +177,7 @@ grep -qE 'hedge' reference/polish-rulebook.md && grep -qE '역할 경계' refere
 if grep -qF '~에 있어' reference/polish-rulebook.md && ! grep -qF '~에 있어' reference/writing-voice.md; then
   ok "티 토큰 비중복: 룰북에만 존재(writing-voice는 계약)"; else no "티 토큰이 두 파일에 중복"; fi
 # 임계 SSOT 일치 — 문서와 코드가 각자 숫자를 적으면 어긋난다
-if python3 - <<'PYEOF' 2>/dev/null
+if "$PY_BIN" - <<'PYEOF' 2>/dev/null
 import re,sys
 c=open('scripts/check_polish.py',encoding='utf-8').read()
 d=open('reference/polish-rulebook.md',encoding='utf-8').read()
@@ -188,7 +194,7 @@ if [ "$(python3 scripts/check_polish.py --after /dev/null 2>/dev/null; echo $?)"
 grep -qE '\[일\]' reference/polish-rulebook.md && grep -qF '"일반": "일"' scripts/check_polish.py \
   && ok "룰북 §1: 일반 산출 축[일] 존재(폴백이 자소서 규칙을 안 씀)" || no "일반 산출 축 누락"
 # 하한 비율이 템플릿과 스크립트에서 같은 값인가
-if python3 - <<'PYEOF' 2>/dev/null
+if "$PY_BIN" - <<'PYEOF' 2>/dev/null
 import re,sys
 c=re.search(r'LEN_FLOOR_RATIO\s*=\s*([\d.]+)',open('scripts/check_polish.py',encoding='utf-8').read()).group(1)
 h=re.search(r'FLOOR_RATIO\s*=\s*([\d.]+)',open('templates/cover-letter.html',encoding='utf-8').read()).group(1)
@@ -196,7 +202,7 @@ sys.exit(0 if float(c)==float(h) else 1)
 PYEOF
 then ok "하한 비율 일치(check_polish ↔ cover-letter)"; else no "하한 비율이 스크립트와 템플릿에서 다름"; fi
 # ATS 시트에 구분자 모호 문자가 없는가 — 기계가 읽는 제출본이다
-if python3 -c "
+if "$PY_BIN" -c "
 import sys
 s=open('templates/resume-ats.html',encoding='utf-8').read()
 b=s[s.index('<div class=\"sheet\" id=\"sheet\">'):s.index('<script>')]
@@ -210,7 +216,7 @@ grep -qF 'SIL Open Font License' scripts/embed_fonts.py \
 # ★ 라이선스 없는 공개 저장소는 법적으로 '모든 권리 유보' — 아무도 쓸 수 없다.
 #   LICENSE·plugin.json·NOTICE 세 곳이 어긋나면 이용 조건이 모호해지므로 함께 검사한다.
 [ -f LICENSE ] && ok "exists: LICENSE" || no "LICENSE 없음 — 공개 배포 시 아무도 쓸 수 없다"
-if python3 - <<'PYEOF' 2>/dev/null
+if "$PY_BIN" - <<'PYEOF' 2>/dev/null
 import json, sys, re
 lic = open('LICENSE', encoding='utf-8').read()
 pj = json.load(open('.claude-plugin/plugin.json', encoding='utf-8'))
@@ -287,9 +293,9 @@ grep -qiE '무데이터|분모가 0|N/A\(자료 없음\)' reference/evaluation.m
 if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
 const grab=(re)=>{const m=s.match(re); if(!m) throw new Error('not found: '+re); return m[0];};
-const src=[/function daysTo\(d\)\{[^}]*\}/, /function dlOk\(j\)\{[^}]*\}/, /function quadrant\(fit, qual\)\{[\s\S]*?\n  \}/,
-  /function delta\(j\)\{[\s\S]*?\n  \}/, /function expired\(j\)\{[^}]*\}/,
-  /function guardReason\(j\)\{[\s\S]*?\n  \}/, /function quadLabel\(j\)\{[\s\S]*?\n  \}/].map(grab).join('\n');
+const src=[/function daysTo\(d\)\{[^}]*\}/, /function dlOk\(j\)\{[^}]*\}/, /function quadrant\(fit, qual\)\{[\s\S]*?\r?\n  \}/,
+  /function delta\(j\)\{[\s\S]*?\r?\n  \}/, /function expired\(j\)\{[^}]*\}/,
+  /function guardReason\(j\)\{[\s\S]*?\r?\n  \}/, /function quadLabel\(j\)\{[\s\S]*?\r?\n  \}/].map(grab).join('\n');
 const FIX='const TODAY='+JSON.stringify('2026-07-26')+';';
 const base=(b)=>new Function('BASELINE','J','\"use strict\";'+FIX+src+'return quadLabel(J);');
 const hi={score:90,quality:90,confidence:'높음',deadline:'2099-01-01',dlVerified:true};
@@ -310,7 +316,7 @@ process.exit(0);
 # (i) Δ는 기준선이 있을 때만 — 없는데 0으로 가정하면 무직 사용자에게 허위 판정
 if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
-const m=s.match(/function delta\(j\)\{[\s\S]*?\n  \}/); if(!m) process.exit(2);
+const m=s.match(/function delta\(j\)\{[\s\S]*?\r?\n  \}/); if(!m) process.exit(2);
 const f=new Function('BASELINE','j','\"use strict\";'+m[0]+'return delta(j);');
 process.exit((f(null,{quality:50})===null && f({quality:70},{quality:50})===-20 && f({quality:70},{})===null) ? 0 : 1);
 " 2>/dev/null; then ok "jd-discovery: Δ는 기준선 있을 때만(무직 0-가정 금지)"; else no "delta() 기준선 처리 오류"; fi
@@ -346,9 +352,9 @@ grep -qF 'git check-ignore' SKILL.md && grep -qF 'git rm --cached' SKILL.md \
 if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/application-tracker.html','utf8');
 const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
-const src=[g(/const STAGES = \[[^\]]*\];/), g(/const STAGE_ALIAS = \{[\s\S]*?\};/), g(/function normStage\(a\)\{[\s\S]*?\n  \}/),
-  g(/const MIN_SAMPLE = 10;/), g(/function reached\(app, idx\)\{[\s\S]*?\n  \}/)].join('\n');
-const body=g(/    \/\/ ── 병목 판정[\s\S]*?\n    \}\n/);
+const src=[g(/const STAGES = \[[^\]]*\];/), g(/const STAGE_ALIAS = \{[\s\S]*?\};/), g(/function normStage\(a\)\{[\s\S]*?\r?\n  \}/),
+  g(/const MIN_SAMPLE = 10;/), g(/function reached\(app, idx\)\{[\s\S]*?\r?\n  \}/)].join('\n');
+const body=g(/    \/\/ ── 병목 판정[\s\S]*?\r?\n    \}\r?\n/);
 function run(n,dp,itv,fin,off){
   const APPS=[];
   for(let k=0;k<n;k++){ let st='불합격',la='서류접수',re='fail';
@@ -378,8 +384,8 @@ if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
 if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
 const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
-const src=[g(/const FIT_W  = \{[^}]*\};/), g(/const QUAL_W = \{[^}]*\};/), g(/function wsum\(obj, W\)\{[\s\S]*?\n  \}/),
-  g(/const calcFit[^\n]*\n/), g(/const calcQual[^\n]*\n/), g(/const TOL = \d+;[^\n]*\n/), g(/function mismatch\(j\)\{[\s\S]*?\n  \}/)].join('\n');
+const src=[g(/const FIT_W  = \{[^}]*\};/), g(/const QUAL_W = \{[^}]*\};/), g(/function wsum\(obj, W\)\{[\s\S]*?\r?\n  \}/),
+  g(/const calcFit[^\n]*\n/), g(/const calcQual[^\n]*\n/), g(/const TOL = \d+;[^\n]*\n/), g(/function mismatch\(j\)\{[\s\S]*?\r?\n  \}/)].join('\n');
 const M=(j)=>new Function('j',src+'return mismatch(j);')(j);
 const S4=(v)=>({role:v,major:v,growth:v,weight:v}), S5=(v)=>({pay:v,grow:v,stable:v,culture:v,personal:v});
 const t=[];
@@ -418,7 +424,7 @@ grep -qiE '훅이 1–2개 심겨' reference/methodology.md \
 if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/cover-letter.html','utf8');
 const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
-const f=new Function(g(/const WORK_MARK = [^;]+;/)+'\n'+g(/function stripWorkMarks\(text\)\{[\s\S]*?\n  \}/)+'return stripWorkMarks;')();
+const f=new Function(g(/const WORK_MARK = [^;]+;/)+'\n'+g(/function stripWorkMarks\(text\)\{[\s\S]*?\r?\n  \}/)+'return stripWorkMarks;')();
 const t=[];
 t.push(['마커 전용 줄 삭제', !/T2/.test(f('본문\n\n[T2 — 메모]\n\n계속'))]);
 t.push(['문미 마커 제거',   f('문장입니다. [확인 필요]')==='문장입니다.']);
@@ -434,7 +440,7 @@ grep -qE 'print-copy' templates/cover-letter.html && grep -qE 'textarea\{ displa
 if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
 const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
-const src=[g(/function delta\(j\)\{[\s\S]*?\n  \}/), g(/const BAND_TARGET = \{[^}]*\};/), g(/function band\(j\)\{[\s\S]*?\n  \}/)].join('\n');
+const src=[g(/function delta\(j\)\{[\s\S]*?\r?\n  \}/), g(/const BAND_TARGET = \{[^}]*\};/), g(/function band\(j\)\{[\s\S]*?\r?\n  \}/)].join('\n');
 const B=(BL,j)=>new Function('BASELINE','j','\"use strict\";'+src+'return band(j);')(BL,j);
 const t=[];
 t.push(['80+ → 쉬움',       B(null,{score:88,quality:70,confidence:'높음'})==='쉬움']);
@@ -465,8 +471,8 @@ if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/application-tracker.html','utf8');
 const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss '+re); return m[0];};
 const src=[/const STAGES = \[[^\]]*\];/, /function daysBetween\(a,b\)\{[^}]*\}/, /function dlOk\(a\)\{[^}]*\}/,
-  /function ddayText\(a\)\{[\s\S]*?\n  \}/, /const STAGE_ALIAS = \{[\s\S]*?\};/,
-  /function normStage\(a\)\{[\s\S]*?\n  \}/].map(g).join('\n');
+  /function ddayText\(a\)\{[\s\S]*?\r?\n  \}/, /const STAGE_ALIAS = \{[\s\S]*?\};/,
+  /function normStage\(a\)\{[\s\S]*?\r?\n  \}/].map(g).join('\n');
 const FIX='const TODAY='+JSON.stringify('2026-07-26')+';';
 const R=(b)=>new Function('A','\"use strict\";'+FIX+src+b);
 const dd=R('return ddayText(A);'), ns=R('return normStage(A);');
@@ -481,7 +487,7 @@ const bad=t.filter(x=>!x[1]).map(x=>x[0]);
 if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
 " 2>/dev/null; then ok "tracker: 마감 검증 + 전형단계 정규화(퍼널 붕괴 방지)"; else no "tracker: 마감 미검증/단계 어휘 불일치가 그대로 통과"; fi
 # P8 문서 어휘가 트래커 STAGES와 어긋나지 않는가
-if python3 - <<'PYEOF' 2>/dev/null
+if "$PY_BIN" - <<'PYEOF' 2>/dev/null
 import re,sys,pathlib
 tr=pathlib.Path('templates/application-tracker.html').read_text(encoding='utf-8')
 st=set(re.findall(r"'([^']+)'", re.search(r"const STAGES = \[([^\]]*)\]", tr).group(1)))
@@ -495,9 +501,9 @@ if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
 const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
 const src=[/function daysTo\(d\)\{[^}]*\}/, /function dlOk\(j\)\{[^}]*\}/,
-  /function dday\(j\)\{[\s\S]*?\n  \}/, /function expired\(j\)\{[^}]*\}/,
-  /function delta\(j\)\{[\s\S]*?\n  \}/, /function guardReason\(j\)\{[\s\S]*?\n  \}/,
-  /function quadrant\(fit, qual\)\{[\s\S]*?\n  \}/, /function quadLabel\(j\)\{[\s\S]*?\n  \}/].map(g).join('\n');
+  /function dday\(j\)\{[\s\S]*?\r?\n  \}/, /function expired\(j\)\{[^}]*\}/,
+  /function delta\(j\)\{[\s\S]*?\r?\n  \}/, /function guardReason\(j\)\{[\s\S]*?\r?\n  \}/,
+  /function quadrant\(fit, qual\)\{[\s\S]*?\r?\n  \}/, /function quadLabel\(j\)\{[\s\S]*?\r?\n  \}/].map(g).join('\n');
 const FIX='const TODAY='+JSON.stringify('2026-07-26')+';';
 const F=(body)=>new Function('BASELINE','J','\"use strict\";'+FIX+src+body);
 const dd=(j)=>F('return dday(J);')(null,j);
@@ -522,7 +528,7 @@ grep -qiE '마감일을 추정으로 채우지 않는다' reference/jd-browsing.
 # (h2) 커버리지 원장이 '미실행'을 실제로 노출하는가 — 조용한 누락 방지(규칙만으로는 두 번 실패했다)
 if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
-const m=s.match(/function coverageHTML\(\)\{[\s\S]*?\n  \}/); if(!m) process.exit(2);
+const m=s.match(/function coverageHTML\(\)\{[\s\S]*?\r?\n  \}/); if(!m) process.exit(2);
 const esc=(x)=>String(x==null?'':x);
 const run=(COVERAGE)=>{ let out=''; const el={set innerHTML(v){out=v;}};
   const f=new Function('COVERAGE','document','escHtml','escAttr','\"use strict\";'+m[0]+'coverageHTML();');
@@ -647,7 +653,7 @@ for pt in templates/report.html templates/interview-prep.html templates/resume-a
 done
 # 제출-안전 회귀: a4-doc을 work-mode 강제 ON으로 인쇄해도 작업용 메모가 PDF에 없어야 함
 if command -v python3 >/dev/null && ls /opt/pw-browsers/chromium-*/chrome-linux/chrome >/dev/null 2>&1; then
-  python3 - <<'PY' >/tmp/_smoke_safe.log 2>&1 && ok "제출 안전 회귀: work-mode 인쇄에도 작업메모 미노출" || no "제출 안전 회귀 실패(작업메모 유출)"
+  "$PY_BIN" - <<'PY' >/tmp/_smoke_safe.log 2>&1 && ok "제출 안전 회귀: work-mode 인쇄에도 작업메모 미노출" || no "제출 안전 회귀 실패(작업메모 유출)"
 import glob,subprocess,tempfile,pathlib,sys
 try: import fitz
 except ImportError: sys.exit(0)   # PyMuPDF 없으면 스킵(다른 게이트가 커버)
@@ -665,16 +671,16 @@ echo "== plugin packaging =="
 for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json; do
   [ -f "$f" ] && ok "exists: $f" || no "missing: $f"
 done
-python3 -c "import json; d=json.load(open('.claude-plugin/plugin.json')); assert d['name']=='career'" 2>/dev/null \
+"$PY_BIN" -c "import json; d=json.load(open('.claude-plugin/plugin.json', encoding='utf-8')); assert d['name']=='career'" 2>/dev/null \
   && ok "plugin.json valid JSON (name=career)" || no "plugin.json invalid"
-python3 -c "import json; d=json.load(open('.claude-plugin/marketplace.json')); assert any(p['name']=='career' for p in d['plugins'])" 2>/dev/null \
+"$PY_BIN" -c "import json; d=json.load(open('.claude-plugin/marketplace.json', encoding='utf-8')); assert any(p['name']=='career' for p in d['plugins'])" 2>/dev/null \
   && ok "marketplace.json valid JSON (lists plugin career)" || no "marketplace.json invalid"
 extra=$(ls .claude-plugin | grep -vE '^(plugin|marketplace)\.json$' || true)
 [ -z "$extra" ] && ok ".claude-plugin holds only manifests" || no ".claude-plugin has extra files: $extra"
 # 로드 가능성 실질 검증: marketplace의 source가 실제 스킬 정의(루트 SKILL.md 또는 skills/)를 가리키는가
-python3 - <<'PY' 2>/dev/null && ok "plugin loadable: marketplace source → 실제 스킬 정의 존재" || no "plugin source가 스킬 정의를 못 가리킴"
+"$PY_BIN" - <<'PY' 2>/dev/null && ok "plugin loadable: marketplace source → 실제 스킬 정의 존재" || no "plugin source가 스킬 정의를 못 가리킴"
 import json, os, sys
-mk=json.load(open('.claude-plugin/marketplace.json'))
+mk=json.load(open('.claude-plugin/marketplace.json', encoding='utf-8'))
 p=[x for x in mk['plugins'] if x.get('name')=='career'][0]
 src=p.get('source', './')
 base=src if isinstance(src,str) else src.get('path','./')

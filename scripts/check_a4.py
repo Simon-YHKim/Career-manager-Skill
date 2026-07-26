@@ -9,6 +9,8 @@ Renders an HTML file to PDF with headless Chromium, then verifies with PyMuPDF:
 Usage: python3 scripts/check_a4.py <file.html> [out.pdf]
 Exit 0 = PASS, 1 = FAIL.
 """
+import pathlib
+import shutil
 import subprocess, sys, glob, os
 try:
     import fitz
@@ -23,12 +25,27 @@ MARGIN_PT = 15 * 72 / 25.4         # 15mm ≈ 42.5pt (expected @page margin)
 EDGE_SLACK = 6.0                   # allow content within a few pt of margin
 
 def find_chrome():
+    """Chromium 계열 실행 파일을 찾는다 (Linux / Windows / macOS).
+
+    ★ which(1) 은 Windows 에 없고, Windows 의 Chrome·Edge 는 PATH 에 없는 것이 정상이다.
+      Linux 경로만 뒤지면 Windows 에서 항상 'no chromium found' 로 죽는다(실측 2026-07).
+    """
     for p in glob.glob("/opt/pw-browsers/chromium-*/chrome-linux/chrome"):
         return p
-    for p in ("chromium", "chromium-browser", "google-chrome"):
-        if subprocess.run(["which", p], capture_output=True).returncode == 0:
+    for name in ("chromium", "chromium-browser", "google-chrome", "chrome",
+                 "msedge", "microsoft-edge"):
+        p = shutil.which(name)          # which(1) 의존 제거 — 전 OS 동작
+        if p:
             return p
-    sys.exit("no chromium found")
+    for p in (r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+              r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+              r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+              r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+              "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+              "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"):
+        if os.path.exists(p):
+            return p
+    sys.exit("no chromium found — Linux: apt install chromium / Windows·macOS: Chrome 또는 Edge 설치")
 
 def main():
     if len(sys.argv) < 2:
@@ -43,7 +60,7 @@ def main():
                            os.path.basename(html).rsplit(".", 1)[0] + ".pdf")
     chrome = find_chrome()
     subprocess.run([chrome, "--headless", "--disable-gpu", "--no-sandbox",
-                    "--no-pdf-header-footer", f"--print-to-pdf={pdf}", f"file://{html}"],
+                    "--no-pdf-header-footer", f"--print-to-pdf={pdf}", pathlib.Path(html).as_uri()],
                    check=True, capture_output=True)
     doc = fitz.open(pdf)
     ok = True

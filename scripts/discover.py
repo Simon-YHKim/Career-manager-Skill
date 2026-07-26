@@ -32,6 +32,13 @@ import urllib.parse
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
+# ★ 한글 Windows 콘솔은 cp949 다 — 한국어를 print 하면 UnicodeEncodeError 로 죽는다.
+#   이 스크립트는 진행 로그를 한국어로 찍으므로 stdout 을 UTF-8 로 고정한다.
+#   (PYTHONUTF8=1 을 사용자에게 요구하지 않고 스크립트가 스스로 해결한다.)
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8", errors="replace")
+
 KST = timezone(timedelta(hours=9))
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0 Safari/537.36")
@@ -100,9 +107,12 @@ def detect_ats(url):
 def fetch(url, timeout=45):
     r = subprocess.run(
         ["curl", "-sS", "-A", UA, "--max-time", str(timeout), "-w", "\n@@%{http_code}", url],
-        capture_output=True, text=True,
+        # ★ text=True 는 locale 인코딩을 쓴다 — 한글 Windows(cp949)에서 UTF-8 응답을
+        #   디코딩하다 리더 스레드가 UnicodeDecodeError 로 죽고 stdout 이 None 이 된다.
+        #   크로스플랫폼 배포 스크립트는 locale 기본값에 기대면 안 된다.
+        capture_output=True, encoding="utf-8", errors="replace",
     )
-    body, code = r.stdout, "000"
+    body, code = (r.stdout or ""), "000"
     if "\n@@" in body:
         body, _, code = body.rpartition("\n@@")
     return code, body

@@ -21,9 +21,30 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const CHROME = ['/opt/pw-browsers/chromium', '/usr/bin/chromium', '/usr/bin/chromium-browser']
-  .find((p) => fs.existsSync(p));
-if (!CHROME) { console.error('검사 불가: chromium 없음 (fail-closed)'); process.exit(2); }
+// ★ Linux 절대경로만 뒤지면 Windows·macOS 에서 항상 fail-closed 로 끝나 검사 자체가 죽는다(실측 2026-07).
+//   Windows 의 Chrome·Edge 는 PATH 에 없는 것이 정상이므로 기본 설치 경로까지 본다.
+const CHROME = (() => {
+  const abs = [
+    '/opt/pw-browsers/chromium', '/usr/bin/chromium', '/usr/bin/chromium-browser',
+    '/usr/bin/google-chrome',
+    'C:/Program Files/Google/Chrome/Application/chrome.exe',
+    'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
+    'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+    'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+  ].find((p) => fs.existsSync(p));
+  if (abs) return abs;
+  const where = process.platform === 'win32' ? 'where' : 'which';
+  for (const name of ['chromium', 'chromium-browser', 'google-chrome', 'chrome', 'msedge']) {
+    try {
+      const out = execFileSync(where, [name], { encoding: 'utf8' }).trim().split(/\s+/)[0];
+      if (out && fs.existsSync(out)) return out;
+    } catch { /* 없으면 다음 후보 */ }
+  }
+  return null;
+})();
+if (!CHROME) { console.error('검사 불가: chromium 없음 (fail-closed) — Chrome 또는 Edge 설치 필요'); process.exit(2); }
 
 // ★ 페이로드가 하나면 **싱크 종류만큼의 사각지대**가 생긴다. 실제로 cover-letter.html은
 //   `<textarea>${값}</textarea>`에 날값을 넣고 있었는데, `<img ...>` 하나만 쏘던 옛 페이로드는
