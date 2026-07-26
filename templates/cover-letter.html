@@ -71,12 +71,15 @@
   .q-drill{ width:100%; margin-top:7px; border:1px dashed var(--line-2); border-radius:7px; padding:8px 10px;
     font-family:var(--sans); font-size:11.5px; line-height:1.6; color:var(--mid); background:#fdfbf7; resize:vertical; }
   .q-drill::placeholder{ color:var(--faint); }
+  .counter b.active{ color:var(--accent); text-decoration:underline; }
+  .limbase{ font-family:var(--sans); font-size:10.5px; border:1px solid var(--line-2); border-radius:5px;
+    padding:1px 4px; margin-left:5px; color:var(--muted); background:#fff; }
   .print-copy{ display:none; white-space:pre-wrap; font-size:12.5px; line-height:1.75; color:#1b1a17; margin-top:6px; }
   @media print{
     html,body{ background:#fff; }
     /* 작업용 메모는 제출본에 절대 나가지 않는다 */
     .q-intent, .q-drill{ display:none !important; }   /* 작업용 — 제출본에 절대 미노출 */
-    .actionbar, .add, .q-del, #out, .lead, .counter{ display:none !important; }
+    .actionbar, .add, .q-del, #out, .lead, .counter, .limbase{ display:none !important; }
     textarea{ display:none !important; }          /* 원본 대신 미러를 찍는다 */
     .print-copy{ display:block !important; }
     .q-title{ border:none !important; background:transparent !important; font-weight:700; }
@@ -129,15 +132,24 @@
         <div class="counter">
           <span>공백 포함 <b class="n cw">0</b>자</span>
           <span>공백 제외 <b class="cn">0</b>자</span>
-          <span class="lim">권장 상한 <input type="number" class="limv" value="${data.lim||1000}"> 자</span>
+          <span class="lim">권장 상한 <input type="number" class="limv" value="${data.lim||1000}"> 자
+            <select class="limbase" title="기업마다 기준이 다르다 — 공고에 명시된 기준을 고르세요">
+              <option value="with">공백 포함 기준</option><option value="no">공백 제외 기준</option>
+            </select></span>
         </div>
       </div>`);
     const ta = node.querySelector('textarea');
     const cw = node.querySelector('.cw'), cn = node.querySelector('.cn'), limv = node.querySelector('.limv');
     const counter = node.querySelector('.counter');
+    const limbase = node.querySelector('.limbase');
+    // ★ 상한 초과 판정 기준을 고정하지 않는다. '공백 제외 1,000자' 공고에서 공백 포함으로 재면
+    //   멀쩡한 분량이 초과로 뜨고 불필요하게 잘라내게 된다(과잉 트림).
     function upd(){ const c=countChars(ta.value); cw.textContent=c.withSpace; cn.textContent=c.noSpace;
-      const lim=parseInt(limv.value)||0; counter.classList.toggle('over', lim>0 && c.withSpace>lim); }
-    ta.addEventListener('input', upd); limv.addEventListener('input', upd);
+      const lim=parseInt(limv.value)||0;
+      const cur = limbase.value==='no' ? c.noSpace : c.withSpace;
+      counter.classList.toggle('over', lim>0 && cur>lim);
+      cw.classList.toggle('active', limbase.value!=='no'); cn.classList.toggle('active', limbase.value==='no'); }
+    ta.addEventListener('input', upd); limv.addEventListener('input', upd); limbase.addEventListener('change', upd);
     document.getElementById('qs').appendChild(node); renumber(); upd();
   }
   // 제출본에서 작업용 마커를 제거한다 (SKILL §6.0 #7 Truth Tier 제출 게이트).

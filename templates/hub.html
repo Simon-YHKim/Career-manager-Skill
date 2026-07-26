@@ -218,6 +218,10 @@
 </div>
 
 <script>
+  // 마감임박 임계는 전 템플릿 단일 소스 — 트래커·jd-browsing(D-7)과 같은 값을 쓴다.
+  // ★ 예전엔 허브만 3일이라, 같은 데이터에서 트래커는 경고하는데 허브는 조용했다(실측).
+  const URGENT_DAYS = 7;
+
   const KEY='career_hub_v1', CFGKEY='career_hub_cfg_v2', ONBKEY='career_hub_onb';
   // XSS 방어: esc/escAttr는 innerHTML 싱크에 들어가는 모든 사용자 값에 적용(가져오기 JSON 포함).
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -280,7 +284,7 @@
   function dday(d){ if(!d) return 9999; return Math.round((Date.parse(d)-Date.now())/86400000); }
   function renderDash(){ const apps=DATA.applications;
     const active=apps.filter(a=>a.result==='progress').length;
-    const urgent=apps.filter(a=>!a.applied && dday(a.deadline)>=0 && dday(a.deadline)<=3).length;
+    const urgent=apps.filter(a=>!a.applied && dday(a.deadline)>=0 && dday(a.deadline)<=URGENT_DAYS).length;
     const cells=[['경험 원자',DATA.bank.length],['지원/관심',apps.length],['진행중',active],['마감임박·미지원',urgent]];
     document.getElementById('dash-grid').innerHTML=cells.map(([l,n])=>`<div class="cell"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join(''); }
 
@@ -315,7 +319,7 @@
   // ── 지원 현황 ──
   const RESULTS=[['interest','관심(미지원)'],['progress','진행중'],['pass','합격'],['fail','불합격'],['wait','결과 대기']];
   const STAGES=['관심','아웃리치','서류접수','서류합격','인적성/과제','1차면접','2차면접','최종'];
-  function appItemHTML(a,i){ const urgent=!a.applied && dday(a.deadline)>=0 && dday(a.deadline)<=3;
+  function appItemHTML(a,i){ const urgent=!a.applied && dday(a.deadline)>=0 && dday(a.deadline)<=URGENT_DAYS;
     return `<div class="item ${a.result==='interest'?'wished':''}" data-i="${i}">
       <div class="item-top"><span class="t">${urgent?'⚑ 마감임박 · ':''}지원 · ${esc(a.co||'')}</span><button class="del" title="삭제" onclick="delApp(${i})">×</button></div>
       <div class="row c2"><div class="fld"><label>회사</label><input data-k="co" value="${escAttr(a.co)}"></div><div class="fld"><label>직무</label><input data-k="title" value="${escAttr(a.title)}"></div></div>
@@ -330,7 +334,7 @@
     </div>`; }
   function renderApps(){ const box=document.getElementById('apps-list');
     let list=DATA.applications.map((a,i)=>({a,i}));
-    list.sort((x,y)=> ((!x.a.applied&&dday(x.a.deadline)>=0&&dday(x.a.deadline)<=3)?0:1)-((!y.a.applied&&dday(y.a.deadline)>=0&&dday(y.a.deadline)<=3)?0:1) || (Date.parse(x.a.deadline||'2999')||0)-(Date.parse(y.a.deadline||'2999')||0));
+    list.sort((x,y)=> ((!x.a.applied&&dday(x.a.deadline)>=0&&dday(x.a.deadline)<=URGENT_DAYS)?0:1)-((!y.a.applied&&dday(y.a.deadline)>=0&&dday(y.a.deadline)<=URGENT_DAYS)?0:1) || (Date.parse(x.a.deadline||'2999')||0)-(Date.parse(y.a.deadline||'2999')||0));
     box.innerHTML = DATA.applications.length ? list.map(({a,i})=>appItemHTML(a,i)).join('') : `<div class="guide">아직 지원 건이 없습니다.</div>`;
     box.querySelectorAll('.item').forEach(it=>{ const i=+it.dataset.i;
       it.querySelectorAll('[data-k]').forEach(f=> f.addEventListener('input', ()=>{ DATA.applications[i][f.dataset.k]=f.value; persist(); renderDash(); })); }); }

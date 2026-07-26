@@ -58,6 +58,10 @@
   .b-도전{ background:var(--wash); color:var(--lo); }
   .b-미달{ background:#f1eee7; color:var(--faint); }
   .st .s-band{ font-weight:700; }
+  .st .s-검산{ background:var(--lo); color:#fff; }
+  .subrow.na span:last-child{ color:var(--faint); font-style:italic; }
+  .subrow.na .track{ background:repeating-linear-gradient(45deg,var(--bar),var(--bar)3px,transparent 3px,transparent 6px); }
+  .noerr{ color:var(--lo); cursor:help; }
 
   /* 발굴 수율 판정 — 유효 최우선 0건이면 채널을 바꾸라고 말한다 */
   .yield:not(:empty){ margin-top:10px; padding:11px 14px; border-radius:9px; font-size:12.5px; line-height:1.5;
@@ -359,6 +363,35 @@
       + `</div>`;
   }
 
+
+  // ── 총점 검산 (evaluation §5.6·§5.8) ────────────────────────────────────
+  // ★ 총점과 축 점수를 각각 손으로 적으면 서로 어긋난다(실측: 실사용 보드 13건 중 6건 불일치,
+  //   최대 −6). 여기서 축으로부터 다시 계산해 대조하고, 벌어지면 화면에 경고한다.
+  const FIT_W  = { weight:0.40, role:0.25, major:0.25, growth:0.10 };   // §5.6 무게중심 ×0.40
+  const QUAL_W = { pay:0.25, grow:0.25, stable:0.20, culture:0.15, personal:0.15 };
+  function wsum(obj, W){
+    if(!obj) return null;
+    let n=0, d=0;
+    for(const k in W) if(obj[k]!=null){ n+=obj[k]*W[k]; d+=W[k]; }   // N/A 축은 재정규화(0점 처리 금지)
+    return d ? Math.round(n/d) : null;
+  }
+  const calcFit  = j => wsum(j.sub,  FIT_W);
+  const calcQual = j => wsum(j.qsub, QUAL_W);
+  const TOL = 3;   // 반올림 여유
+  function mismatch(j){
+    const out=[];
+    const f=calcFit(j),  q=calcQual(j);
+    // 하드필터 미충족(§5.6-b '미달')은 총점을 **의도적으로 낮추는** 상한이다 — 하향 편차는 정상.
+    // 다만 위로 벌어지는 것은 어느 경우에도 오류다(상한이 상향을 만들 수는 없다).
+    const capped = j.qualfit === '미달';
+    if(f!=null && j.score!=null){
+      const d = j.score - f;
+      if(d > TOL || (!capped && d < -TOL)) out.push(`적합도 ${j.score} vs 4축 ${f}`);
+    }
+    if(q!=null && j.quality!=null && Math.abs(j.quality-q)>TOL) out.push(`품질 ${j.quality} vs 5축 ${q}`);
+    return out;
+  }
+
   function baselineHTML(){
     const el=document.getElementById('baseline'); if(!el) return;
     el.innerHTML = BASELINE ? `<div class="base">
@@ -415,8 +448,10 @@
     if(j.qsub){ // 직장 품질 5축 — 적합도와 분리해 표시(합치지 않음). Δ는 기준선이 있을 때만.
       const d=delta(j), dtxt = d==null ? '' : ` (Δ ${d>0?'+':''}${d})`;
       h += `<div class="qual"><div class="qh">직장 품질 ${j.quality!=null?j.quality:'—'}${dtxt}${j.qconf?' · 확신 '+escHtml(j.qconf):''}</div><div class="subs">`+
-        Object.keys(QLABEL).filter(k=>j.qsub[k]!=null).map(k=>
-          `<div class="subrow"><span>${QLABEL[k]}</span><span class="track"><span class="fill" style="width:${j.qsub[k]}%"></span></span><span>${j.qsub[k]}</span></div>`
+        Object.keys(QLABEL).map(k=> j.qsub[k]==null
+          ? `<div class="subrow na"><span>${QLABEL[k]}</span><span class="track"></span><span>N/A</span></div>`
+          : 
+          `<div class="subrow"><span>${QLABEL[k]}</span><span class="track"><span class="fill" style="width:${Number(j.qsub[k])||0}%"></span></span><span>${escHtml(j.qsub[k])}</span></div>`
         ).join('')+`</div></div>`;
     }
     return h;
@@ -441,6 +476,7 @@
         <div class="title">${escHtml(j.title)}${(function(q){return q?`<span class="quad q-${q}">${q}</span>`:'';})(quadLabel(j))}</div>
         <div class="sum">${escHtml(j.summary)}</div>
         ${(function(b){return b?`<div class="st"><span class="s-band b-${b}">${escHtml(b)} · ${escHtml(bandNote(j))}</span></div>`:'';})(band(j))}
+        ${(function(m){return m.length?`<div class="st"><span class="s-검산">⚠ 총점 불일치: ${escHtml(m.join(' · '))}</span></div>`:'';})(mismatch(j))}
         ${statusHTML(j)}
         ${flagsHTML(j)}
         ${reqHTML(j)}
@@ -452,7 +488,7 @@
         </div>
       </div>
       <div class="score">
-        <div class="num">${j.score}<small>${j.err?' ±'+j.err:''}/100</small></div>
+        <div class="num">${escHtml(j.score)}<small>${j.err?' ±'+escHtml(j.err):'<b class="noerr" title="§5.9: 점수만 단독 제시 금지 — 오차·확신도 병기 필수">±?</b>'}/100</small></div>
         <div class="grade g-${j.grade}">${j.grade}</div>
         <div class="conf">적합도 · 확신 ${escHtml(j.confidence)}</div>
         ${barsHTML(j)}

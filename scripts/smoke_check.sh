@@ -160,6 +160,90 @@ const m=s.match(/function delta\(j\)\{[\s\S]*?\n  \}/); if(!m) process.exit(2);
 const f=new Function('BASELINE','j','\"use strict\";'+m[0]+'return delta(j);');
 process.exit((f(null,{quality:50})===null && f({quality:70},{quality:50})===-20 && f({quality:70},{})===null) ? 0 : 1);
 " 2>/dev/null; then ok "jd-discovery: Δ는 기준선 있을 때만(무직 0-가정 금지)"; else no "delta() 기준선 처리 오류"; fi
+# (h13) PII 보호가 '선언'이 아니라 '결과 검증'인가 — 임시 저장소로 실제 유출을 재현해 확인
+# ★ 실측: .gitignore에 줄을 적어도 경로가 이미 추적 중이면 무효인데, 스킬은 "등록했습니다"라고 보고했다.
+if bash -c '
+set -e
+T=$(mktemp -d); cd "$T"
+git init -q . && git config user.email t@t && git config user.name t
+mkdir -p .private reference/private
+echo secret > .private/profile.md
+echo resume > reference/private/resume.pdf
+git add -A -f >/dev/null && git commit -qm init          # 개인정보가 이미 추적 중인 상태
+printf ".private/\nreference/private/\n" > .gitignore   # 규칙 ②만 이행
+# 낡은 절차(텍스트 확인)는 여기서 "보호됨"이라 판정했다:
+grep -q "^\.private/$" .gitignore || exit 9
+# 새 절차(결과 검증)는 반드시 실패를 감지해야 한다:
+if git check-ignore -q .private/profile.md; then exit 1; fi   # 추적 중이므로 무시 안 됨 → 감지 성공
+git ls-files --error-unmatch .private/profile.md >/dev/null 2>&1 || exit 2
+# 안내대로 조치하면 보호가 실제로 성립하는가
+git rm --cached -r -q .private reference/private
+git check-ignore -q .private/profile.md || exit 3
+git check-ignore -q reference/private/resume.pdf || exit 4
+cd /; rm -rf "$T"
+' 2>/dev/null; then ok "PII: check-ignore 결과 검증(추적중 감지 + 조치 후 실제 보호)"; else no "PII 보호가 결과로 검증되지 않음"; fi
+grep -qF 'git check-ignore' SKILL.md && grep -qF 'git rm --cached' SKILL.md \
+  && grep -qF 'reference/private/' SKILL.md \
+  && grep -qiE '선언은 보호가 아니다' SKILL.md \
+  && ok "SKILL §2: PII 가드가 결과 검증 절차(두 경로·중단·재고지)" || no "SKILL PII 절차가 텍스트 확인에 머무름"
+# (h12) 퍼널 병목 판정 — 서류에서 떨어지는 사람에게 "자소서 수정은 우선순위가 아니다"라고 하지 않는가
+# ★ 실측 오진: 배타 if-else 사슬이라 서류통과 1건이면 docRate<=0.05를 빠져나가 '면접 전환' 병목으로 갔다.
+#   서류통과 5%(19건 중 1건)인데 "서류는 통과하는데"라고 단정 — 리소스 배분을 정확히 반대로 돌린다.
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/application-tracker.html','utf8');
+const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
+const src=[g(/const STAGES = \[[^\]]*\];/), g(/const STAGE_ALIAS = \{[\s\S]*?\};/), g(/function normStage\(a\)\{[\s\S]*?\n  \}/),
+  g(/const MIN_SAMPLE = 10;/), g(/function reached\(app, idx\)\{[\s\S]*?\n  \}/)].join('\n');
+const body=g(/    \/\/ ── 병목 판정[\s\S]*?\n    \}\n/);
+function run(n,dp,itv,fin,off){
+  const APPS=[];
+  for(let k=0;k<n;k++){ let st='불합격',la='서류접수',re='fail';
+    if(k<off){st='최종';la='최종';re='pass';} else if(k<fin){st='최종';la='최종';re='progress';}
+    else if(k<itv){st='1차면접';la='1차면접';re='progress';} else if(k<dp){st='서류합격';la='서류합격';re='progress';}
+    APPS.push({applied:'2026-01-01',stage:st,lastStage:la,result:re}); }
+  const pre=src+'\nconst escHtml=x=>String(x);const applied=APPS.filter(a=>a.applied);'+
+   'const iDoc=STAGES.indexOf(\"서류합격\"),i1=STAGES.indexOf(\"1차면접\"),iF=STAGES.indexOf(\"최종\");'+
+   'const n=applied.length;const docPass=applied.filter(a=>reached(a,iDoc)).length;'+
+   'const itv=applied.filter(a=>reached(a,i1)).length;const fin=applied.filter(a=>reached(a,iF)).length;'+
+   'const offer=applied.filter(a=>a.result===\"pass\").length;';
+  return new Function('APPS',pre+body+'return verdict;')(APPS);
+}
+const t=[];
+t.push(['서류 5%는 문서 병목',   /문서·타겟팅/.test(run(19,1,0,0,0))]);
+t.push(['서류 10%도 문서 병목',  /문서·타겟팅/.test(run(10,1,0,0,0))]);
+t.push(['서류 0%도 문서 병목',   /문서·타겟팅/.test(run(10,0,0,0,0))]);
+t.push(['서류 저조시 면접병목 아님', !/면접 전환/.test(run(19,1,0,0,0))]);
+t.push(['분모 1로 임원병목 단정 금지', !/임원·컬처핏/.test(run(10,1,1,0,0))]);
+t.push(['계산 근거 병기',        /근거:/.test(run(19,1,0,0,0))]);
+t.push(['표본 부족은 보류',      /표본 부족/.test(run(5,0,0,0,0))]);
+t.push(['건강한 퍼널은 병목 없음', !/병목:/.test(run(20,10,7,3,2))]);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "tracker: 퍼널 병목 argmin 판정(서류 저조 오진 방지·분모 가드·근거 병기)"; else no "퍼널 병목 오진 — 서류 저조인데 면접/임원 병목으로 판정"; fi
+# (h11) 총점 검산 — 총점과 축을 각각 손으로 적으면 어긋난다(실측: 실사용 보드 13건 중 6건 불일치)
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
+const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
+const src=[g(/const FIT_W  = \{[^}]*\};/), g(/const QUAL_W = \{[^}]*\};/), g(/function wsum\(obj, W\)\{[\s\S]*?\n  \}/),
+  g(/const calcFit[^\n]*\n/), g(/const calcQual[^\n]*\n/), g(/const TOL = \d+;[^\n]*\n/), g(/function mismatch\(j\)\{[\s\S]*?\n  \}/)].join('\n');
+const M=(j)=>new Function('j',src+'return mismatch(j);')(j);
+const S4=(v)=>({role:v,major:v,growth:v,weight:v}), S5=(v)=>({pay:v,grow:v,stable:v,culture:v,personal:v});
+const t=[];
+t.push(['일치는 통과',       M({score:80,sub:S4(80),quality:70,qsub:S5(70)}).length===0]);
+t.push(['적합도 불일치 검출', M({score:70,sub:S4(85),quality:70,qsub:S5(70)}).length>0]);
+t.push(['품질 불일치 검출',   M({score:80,sub:S4(80),quality:60,qsub:S5(80)}).length>0]);
+t.push(['N/A 축 재정규화',    M({score:80,sub:S4(80),quality:80,qsub:{pay:80,grow:80,stable:80,personal:80}}).length===0]);
+t.push(['하드필터 하향상한 허용', M({score:38,sub:S4(60),quality:70,qsub:S5(70),qualfit:'미달'}).length===0]);
+t.push(['상한인데 상향은 오류',   M({score:90,sub:S4(60),quality:70,qsub:S5(70),qualfit:'미달'}).length>0]);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "jd-discovery: 총점 검산(축 가중합 대조·N/A 재정규화·하드필터 상한 구분)"; else no "총점 검산이 동작하지 않음"; fi
+# §5.9 오차 병기 강제 + N/A 명시 렌더
+grep -qE 'class="noerr"' templates/jd-discovery.html \
+  && grep -qiE '점수만 단독 제시 금지' templates/jd-discovery.html \
+  && ok "jd-discovery §5.9: 오차 누락 시 화면 경고(±?)" || no "오차 없는 단독 점수가 조용히 렌더됨"
+grep -qE 'subrow na' templates/jd-discovery.html && grep -qE ">N/A<" templates/jd-discovery.html \
+  && ok "jd-discovery: N/A 축 명시 렌더(null 문자열·0점 취급 방지)" || no "N/A 축이 null/0으로 렌더됨"
 # (h10) 자소서 = 면접 대본 (methodology §2-5.5) — 원칙이 아니라 산출물로 강제되는가
 grep -qiE '면접 역산 설계' reference/methodology.md \
   && grep -qiE '내가 쓴 모든 문장이 곧 내가 받을 질문' reference/methodology.md \

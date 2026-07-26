@@ -50,6 +50,7 @@
   .verdict{ margin-top:11px; padding:10px 12px; border-left:3px solid var(--accent); background:var(--wash);
     border-radius:4px; font-size:12.5px; color:var(--ink); }
   .verdict b{ color:var(--accent); }
+  .verdict .basis{ display:block; margin-top:5px; font-size:11px; color:var(--faint); }
   .verdict .no{ color:var(--muted); font-size:11.5px; display:block; margin-top:4px; }
 
   /* 필터 */
@@ -222,15 +223,42 @@
       {l:'최종', n:fin,      r:pct(fin,itv)},
       {l:'오퍼', n:offer,    r:pct(offer,fin)},
     ];
-    // 병목 판정(표본 충족 시에만)
+    // ── 병목 판정 ─────────────────────────────────────────────────────────
+    // ★ 예전엔 배타 if-else 사슬이라 서류통과가 1건만 있어도 첫 분기(docRate<=0.05)를 빠져나가
+    //   "서류는 통과하는데 면접에서 막힙니다 / 자소서 수정은 우선순위가 아닙니다"로 갔다.
+    //   서류에서 90% 떨어지는 사람에게 정확히 반대 지시를 내리던 오진이다(실측 재현).
+    //   이제 각 구간 전환율을 벤치마크와 비교해 **가장 나쁜 구간**을 고른다(argmin).
+    // ★ 분모 가드: 총 지원 수만 보고 하위 비율의 분모(docPass·itv·fin)를 안 보면
+    //   면접 1건으로 "실무 준비는 충분합니다"가 나온다. 구간마다 분모 최소치를 요구한다.
+    const MIN_DEN = 3;                       // 하위 구간 판정에 필요한 최소 분모
+    const BENCH = [                          // [단계idx, 라벨, 통과수, 분모, 기준선, 판정문]
+      {i:1, key:'문서·타겟팅', pass:docPass, den:n,       base:0.15,
+       msg:'<b>병목: 문서·타겟팅</b> — 서류에서 막혔습니다. ② 첨삭·① 무게중심 재검토·타깃 재선정에 집중하세요.<span class="no">지금 면접 준비는 효과가 없습니다.</span>'},
+      {i:2, key:'면접 전환',   pass:itv,     den:docPass, base:0.50,
+       msg:'<b>병목: 면접 전환</b> — 서류는 통과하는데 면접에서 막힙니다. ③④ 집중·복기·전달력.<span class="no">자소서 추가 수정은 우선순위가 아닙니다.</span>'},
+      {i:3, key:'임원·컬처핏', pass:fin,     den:itv,     base:0.40,
+       msg:'<b>병목: 임원·컬처핏</b> — 지원동기·비전 프레임을 재구성하세요(④ 임원 라운드).<span class="no">실무 기술 준비는 이미 충분합니다.</span>'},
+      {i:4, key:'조건·협상',   pass:offer,   den:fin,     base:0.50,
+       msg:'<b>병목: 조건·협상</b> — ⑥ 연봉협상·타깃 조건 재조정.'},
+    ];
     let bi=-1, verdict='';
     if(n >= MIN_SAMPLE){
-      const docRate = n>0 ? docPass/n : 0;
-      if(docRate <= 0.05){ bi=1; verdict='<b>병목: 문서·타겟팅</b> — 서류에서 막혔습니다. ② 첨삭·① 무게중심 재검토·타깃 재선정에 집중하세요.<span class="no">지금 면접 준비는 효과가 없습니다.</span>'; }
-      else if(docPass>0 && itv/docPass < 0.5){ bi=2; verdict='<b>병목: 면접 전환</b> — 서류는 통과하는데 면접에서 막힙니다. ③④ 집중·복기·전달력.<span class="no">자소서 추가 수정은 우선순위가 아닙니다.</span>'; }
-      else if(itv>0 && fin/itv < 0.4){ bi=3; verdict='<b>병목: 임원·컬처핏</b> — 지원동기·비전 프레임을 재구성하세요(④ 임원 라운드).<span class="no">실무 기술 준비는 이미 충분합니다.</span>'; }
-      else if(fin>0 && offer===0){ bi=4; verdict='<b>병목: 조건·협상</b> — ⑥ 연봉협상·타깃 조건 재조정.'; }
-      else { verdict='뚜렷한 병목이 보이지 않습니다 — <b>활동량</b>을 늘리는 것이 다음 레버입니다(주간 리듬).'; }
+      // 분모가 충분한 구간만 후보. 기준선 대비 부족분(base-rate)이 가장 큰 구간이 병목.
+      const cand = BENCH
+        .filter(b => b.den >= (b.i===1 ? MIN_SAMPLE : MIN_DEN))
+        .map(b => Object.assign({}, b, {rate: b.den>0 ? b.pass/b.den : 0}))
+        .filter(b => b.rate < b.base);
+      if(cand.length){
+        cand.sort((a,b)=> (b.base-b.rate) - (a.base-a.rate));
+        const w = cand[0];
+        bi = w.i;
+        // 계산 근거를 항상 병기한다 — 문구와 숫자가 어긋나면 눈에 띄게(실측: 5%인데 "서류는 통과"라고 떴다)
+        verdict = w.msg + `<span class="basis">근거: ${escHtml(w.pass)}/${escHtml(w.den)} = ${Math.round(w.rate*100)}% (기준선 ${Math.round(w.base*100)}%)</span>`;
+      } else {
+        const skipped = BENCH.filter(b => b.den < (b.i===1 ? MIN_SAMPLE : MIN_DEN)).map(b=>b.key);
+        verdict = '뚜렷한 병목이 보이지 않습니다 — <b>활동량</b>을 늘리는 것이 다음 레버입니다(주간 리듬).'
+          + (skipped.length ? `<span class="no">단, ${escHtml(skipped.join('·'))} 구간은 표본이 적어 판정하지 않았습니다.</span>` : '');
+      }
     } else {
       verdict = `표본 부족 — 지원 <b>${escHtml(n)}건</b>. 전환율은 <b>${MIN_SAMPLE}건</b> 이상부터 신뢰합니다.<span class="no">지금 판정하면 노이즈입니다. ${Math.max(0,MIN_SAMPLE-n)}건 더 쌓고 다시 보세요.</span>`;
     }
