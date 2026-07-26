@@ -159,6 +159,29 @@ const m=s.match(/function delta\(j\)\{[\s\S]*?\n  \}/); if(!m) process.exit(2);
 const f=new Function('BASELINE','j','\"use strict\";'+m[0]+'return delta(j);');
 process.exit((f(null,{quality:50})===null && f({quality:70},{quality:50})===-20 && f({quality:70},{})===null) ? 0 : 1);
 " 2>/dev/null; then ok "jd-discovery: Δ는 기준선 있을 때만(무직 0-가정 금지)"; else no "delta() 기준선 처리 오류"; fi
+# (h8) 난이도 밴드(쉬움/적정/도전)가 실제로 판정되는가 — 사용자가 "어디에 몇 개 넣을지"를 정하는 축
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
+const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
+const src=[g(/function delta\(j\)\{[\s\S]*?\n  \}/), g(/const BAND_TARGET = \{[^}]*\};/), g(/function band\(j\)\{[\s\S]*?\n  \}/)].join('\n');
+const B=(BL,j)=>new Function('BASELINE','j','\"use strict\";'+src+'return band(j);')(BL,j);
+const t=[];
+t.push(['80+ → 쉬움',       B(null,{score:88,quality:70,confidence:'높음'})==='쉬움']);
+t.push(['60–79 → 적정',     B(null,{score:70,quality:60,confidence:'중간'})==='적정']);
+t.push(['40–59 → 도전',     B(null,{score:45,quality:80,confidence:'중간'})==='도전']);
+t.push(['<40 → 미달',       B(null,{score:35,quality:80,confidence:'중간'})==='미달']);
+t.push(['확신낮음 보수화',   B(null,{score:88,quality:70,confidence:'낮음'})==='적정']);
+t.push(['하드필터 미달 우선', B(null,{score:90,quality:80,confidence:'높음',qualfit:'미달'})==='미달']);
+t.push(['재직자 하향은 안전카드 아님', B({quality:90},{score:88,quality:70,confidence:'높음'})==='적정']);
+t.push(['재직자 보합은 안전카드 유지', B({quality:75},{score:88,quality:70,confidence:'높음'})==='쉬움']);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "jd-discovery: 난이도 밴드 판정(확신 보수화·하드필터·재직자 특례)"; else no "난이도 밴드 판정이 동작하지 않음"; fi
+grep -qiE '난이도 밴드' reference/evaluation.md && grep -qiE '권장 비중' reference/evaluation.md \
+  && grep -qiE '한 밴드에만 몰아' reference/evaluation.md \
+  && ok "evaluation §5.6-c: 난이도 밴드 + 지원 배분 규율" || no "evaluation 난이도 밴드 누락"
+grep -qF "bandMixHTML" templates/jd-discovery.html && grep -qiE '몰아넣으면' templates/jd-discovery.html \
+  && ok "jd-discovery: 배분 쏠림 경고 렌더" || no "배분 경고 미구현"
 # (h6) TODAY 하드코딩 방지 — 치환 누락 시 브라우저 현재 날짜로 폴백하는가
 # ★ 실측: 커밋된 템플릿의 TODAY가 이미 과거(2026-07-22/23)여서 D-day·만료가 조용히 틀렸다.
 for T in templates/jd-discovery.html templates/application-tracker.html templates/roadmap.html; do
