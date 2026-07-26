@@ -121,11 +121,11 @@ grep -qiE '무데이터|분모가 0|N/A\(자료 없음\)' reference/evaluation.m
 if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
 const grab=(re)=>{const m=s.match(re); if(!m) throw new Error('not found: '+re); return m[0];};
-const src=[/const TODAY = '[^']*';/, /function daysTo\(d\)\{[^}]*\}/, /function quadrant\(fit, qual\)\{[\s\S]*?\n  \}/,
+const src=[/const TODAY = '[^']*';/, /function daysTo\(d\)\{[^}]*\}/, /function dlOk\(j\)\{[^}]*\}/, /function quadrant\(fit, qual\)\{[\s\S]*?\n  \}/,
   /function delta\(j\)\{[\s\S]*?\n  \}/, /function expired\(j\)\{[^}]*\}/,
   /function guardReason\(j\)\{[\s\S]*?\n  \}/, /function quadLabel\(j\)\{[\s\S]*?\n  \}/].map(grab).join('\n');
 const base=(b)=>new Function('BASELINE','J','\"use strict\";'+src+'return quadLabel(J);');
-const hi={score:90,quality:90,confidence:'높음',deadline:'2099-01-01'};
+const hi={score:90,quality:90,confidence:'높음',deadline:'2099-01-01',dlVerified:true};
 const t=[];
 t.push(['정상 최우선', base()(null,hi)==='최우선']);
 t.push(['만료 차단',   base()(null,Object.assign({},hi,{deadline:'2000-01-01'}))!=='최우선']);
@@ -134,7 +134,7 @@ t.push(['확신낮음 차단',base()(null,Object.assign({},hi,{confidence:'낮�
 t.push(['하향 차단',   base()({quality:95},hi)!=='최우선']);
 t.push(['상향 통과',   base()({quality:60},hi)==='최우선']);
 t.push(['기준선없음 Δ미적용', base()(null,hi)==='최우선']);
-t.push(['다른분면 유지', base()(null,{score:40,quality:40,confidence:'높음',deadline:'2099-01-01'})==='후순위']);
+t.push(['다른분면 유지', base()(null,{score:40,quality:40,confidence:'높음',deadline:'2099-01-01',dlVerified:true})==='후순위']);
 const bad=t.filter(x=>!x[1]).map(x=>x[0]);
 if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
 process.exit(0);
@@ -146,6 +146,66 @@ const m=s.match(/function delta\(j\)\{[\s\S]*?\n  \}/); if(!m) process.exit(2);
 const f=new Function('BASELINE','j','\"use strict\";'+m[0]+'return delta(j);');
 process.exit((f(null,{quality:50})===null && f({quality:70},{quality:50})===-20 && f({quality:70},{})===null) ? 0 : 1);
 " 2>/dev/null; then ok "jd-discovery: Δ는 기준선 있을 때만(무직 0-가정 금지)"; else no "delta() 기준선 처리 오류"; fi
+# (h4) 미검증 마감일이 D-day로 둔갑하지 않는가 — 실사용에서 11건 중 10건이 추정 날짜였다(날조 금지의 구멍)
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
+const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
+const src=[/const TODAY = '[^']*';/, /function daysTo\(d\)\{[^}]*\}/, /function dlOk\(j\)\{[^}]*\}/,
+  /function dday\(j\)\{[\s\S]*?\n  \}/, /function expired\(j\)\{[^}]*\}/,
+  /function delta\(j\)\{[\s\S]*?\n  \}/, /function guardReason\(j\)\{[\s\S]*?\n  \}/,
+  /function quadrant\(fit, qual\)\{[\s\S]*?\n  \}/, /function quadLabel\(j\)\{[\s\S]*?\n  \}/].map(g).join('\n');
+const F=(body)=>new Function('BASELINE','J','\"use strict\";'+src+body);
+const dd=(j)=>F('return dday(J);')(null,j);
+const ex=(j)=>F('return expired(J);')(null,j);
+const ql=(j)=>F('return quadLabel(J);')(null,j);
+const t=[];
+// 미검증 날짜: D-day 만들지 않고, 만료로도 단정하지 않는다
+t.push(['미검증→D-day 금지', dd({deadline:'2099-01-01'}).unknown===true && !/^D-/.test(dd({deadline:'2099-01-01'}).t)]);
+t.push(['미검증 과거날짜→만료 단정 금지', ex({deadline:'2000-01-01'})===false]);
+t.push(['미검증→최우선 승격 차단', ql({score:90,quality:90,confidence:'높음',deadline:'2099-01-01'})!=='최우선']);
+// 검증된 날짜는 정상 동작
+t.push(['검증→D-day 계산', /^D-/.test(dd({deadline:'2099-01-01',dlVerified:true}).t)]);
+t.push(['검증 과거→만료',   ex({deadline:'2000-01-01',dlVerified:true})===true]);
+t.push(['검증→최우선 허용', ql({score:90,quality:90,confidence:'높음',deadline:'2099-01-01',dlVerified:true})==='최우선']);
+// status:'만료'는 날짜 없이도 만료
+t.push(['status 만료 존중', ex({status:'만료'})===true]);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "jd-discovery: 미검증 마감일→D-day/만료 단정 금지(추정 날짜 차단)"; else no "미검증 마감일이 확정 날짜처럼 렌더됨"; fi
+grep -qiE '마감일을 추정으로 채우지 않는다' reference/jd-browsing.md \
+  && ok "jd-browsing §2-(2-c): 마감일 추정 금지 명문화" || no "마감일 추정 금지 규칙 누락"
+# (h2) 커버리지 원장이 '미실행'을 실제로 노출하는가 — 조용한 누락 방지(규칙만으로는 두 번 실패했다)
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
+const m=s.match(/function coverageHTML\(\)\{[\s\S]*?\n  \}/); if(!m) process.exit(2);
+const esc=(x)=>String(x==null?'':x);
+const run=(COVERAGE)=>{ let out=''; const el={set innerHTML(v){out=v;}};
+  const f=new Function('COVERAGE','document','escHtml','escAttr','\"use strict\";'+m[0]+'coverageHTML();');
+  f(COVERAGE,{getElementById:()=>el},esc,esc); return out; };
+const miss=run([{axis:'ZZAXIS',detail:'d',ran:false,found:0}]);
+// 경고 배너를 제거한 뒤에도 '칩 자체'가 미실행을 표시해야 한다(배너 하나로 두 검사를 통과시키지 않기 위함)
+const chipOnly=miss.replace(/<span class=\"cvwarn\">[\s\S]*?<\/span>/g,'');
+const t=[];
+t.push(['미실행 칩 라벨', chipOnly.includes('ZZAXIS') && chipOnly.includes('미실행')]);
+t.push(['미실행 칩 off클래스', chipOnly.includes('cv off')]);
+t.push(['미실행 경고 배너',   miss.includes('완전하지 않')]);
+t.push(['전부 실행시 경고없음', !run([{axis:'a',detail:'d',ran:true,found:3}]).includes('완전하지 않')]);
+t.push(['실행 축은 건수 표시', run([{axis:'a',detail:'d',ran:true,found:3}]).includes('3건')]);
+t.push(['원장 자체 부재도 경고', run([]).includes('커버리지 원장 없음')]);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "jd-discovery: 커버리지 원장이 미실행 축을 노출(조용한 누락 방지)"; else no "커버리지 원장이 미실행을 숨김"; fi
+# (h3) SPA 데이터 경로 폴백 + 첨부·분리된 직무목록 회수 + 직무명 사전
+grep -qiE '데이터 경로 직접 조회' reference/jd-browsing.md \
+  && grep -qiE 'POST form-urlencoded|form-urlencoded' reference/jd-browsing.md \
+  && grep -qiE '우회가 아니다' reference/jd-browsing.md \
+  && ok "jd-browsing §1-(2): SPA 데이터 경로 폴백(+우회 경계 명시)" || no "SPA 폴백 단계 누락"
+grep -qiE 'addFiles|첨부파일 목록을 반드시' reference/jd-browsing.md \
+  && grep -qiE '직무 목록이 별도 사이트' reference/jd-browsing.md \
+  && ok "jd-browsing §1-(2-b): 첨부·분리 직무목록 회수 의무" || no "부속 데이터 회수 규칙 누락"
+grep -qiE '직무명 사전' reference/jd-browsing.md && grep -qiE '설비기술' reference/jd-browsing.md \
+  && grep -qiE '커버리지 원장' reference/jd-browsing.md \
+  && ok "jd-browsing §2: 직무명 사전 + 커버리지 원장" || no "직무명 사전/원장 누락"
 # (j) 취득 실패 taxonomy + 폴백 사다리 + 첨부 PDF 회수 경로
 grep -qiE 'G 게이트' reference/jd-browsing.md && grep -qiE 'R 미렌더' reference/jd-browsing.md \
   && grep -qiE 'M 오조준' reference/jd-browsing.md && grep -qiE '폴백 사다리' reference/jd-browsing.md \
