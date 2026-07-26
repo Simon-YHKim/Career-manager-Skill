@@ -6,7 +6,51 @@
 
 ---
 
-## Latest — 2026-07-26 / 실사용 1회로 규칙 6건 도출·머지 (#12–#17)
+## Latest — 2026-07-26 / 재개 리추얼 검증 중 XSS 게이트 사각지대 발견·차단
+
+### 어디까지 왔나
+
+이전 세션의 **재개 리추얼 자체를 실행해보는 것**에서 시작했다. 두 가지가 드러났다 — 하나는
+리추얼이 재현되지 않는다는 것, 다른 하나는 **XSS 게이트가 템플릿 12개 중 2개만 보고 있었다**는 것.
+큐 D("`check_xss.js`가 `jd-filter.html`을 검사하는지 확인")를 파고들다 발견했다. **전부 실측 근거가 있다.**
+
+| 발견 | 실측 | 조치 |
+|---|---|---|
+| 새 컨테이너에서 스모크가 **152/6 실패** | `ModuleNotFoundError: fitz` — PyMuPDF 미설치. 코드 회귀 아님 | `scripts/requirements.txt` 신설 · 사전 점검 배너 · `check_a4.py` 트레이스백 → 실행 가능한 메시지 |
+| XSS 게이트가 **2/12 템플릿만** 검사 | `CASES`가 하드코딩 2건 — 나머지는 조용히 미검사 | 검사 7건으로 확대 + **미분류 템플릿 차단 가드** |
+| `roadmap.html` **이스케이프 누락 11곳** | `PROFILE.*` 4필드·`arch`·`grade`·`confidence`·`RANK.base`·`interview[]`·`sub[]`(style)·`status`(class) 실측 유출 | 전부 `escHtml`/`escAttr` 적용 |
+| `linkedin-export.html` **누락 5곳** | `name`·`group`·`label`·`hint`·`k`(id·onclick 인자) 실측 유출 | 이스케이프 + `escJsAttr` 신설 |
+| `cover-letter.html` **textarea 탈출** | `"`만 치환 → 닫는 태그로 시작하는 값이 엘리먼트로 파싱됨 | `escHtml`/`escAttr`로 교체 |
+| `interview-prep.html` `tierBadge` 누락 | `class="tier ${t}"`·본문 모두 날값 | 이스케이프 적용 |
+| 페이로드 1종의 사각지대 | `<img>` 하나로는 **textarea 본문 탈출을 못 본다** — cover-letter가 그래서 통과했다 | 페이로드 3종(일반·textarea 탈출·속성 탈출)으로 확대 |
+
+### 이번에 확립된 핵심 원칙
+
+7. **게이트의 커버리지도 게이트로 지킨다** — `CASES` 같은 수동 목록은 조용히 뒤처진다.
+   새 템플릿은 **검사(CASES) 아니면 면제(EXEMPT, 사유 필수)로 분류되지 않으면 통과 못 한다.**
+   휴리스틱 자동 판별을 쓰지 않은 이유: 휴리스틱은 틀려도 조용하다.
+8. **페이로드 1종 = 싱크 1종만 검사** — 이스케이프 결함은 싱크 종류마다 다르게 샌다.
+   속성·텍스트·textarea 본문은 각각 다른 탈출 문자열을 요구한다.
+9. **게이트를 고쳤으면 일부러 되돌려 확인한다** — 이번에 이스케이프를 되돌려 게이트가 실제로
+   빨개지는지 확인했다(음성 대조). 통과하는 게이트가 *작동하는* 게이트라는 보장은 없다.
+
+### 검증
+
+- `bash scripts/smoke_check.sh` → **158 passed / 0 failed**
+- `node scripts/check_xss.js` → 템플릿 7 × 페이로드 3 통과, 미분류 템플릿 주입 시 exit 2
+- **음성 대조**: `PROFILE.role`·`data.a` 이스케이프를 되돌리자 게이트가 정확히 해당 파일·페이로드에서 실패 — cover-letter는 **textarea 탈출 페이로드에서만** 실패했다(3종 확대가 필요했던 이유)
+- **기능 회귀**: 수정한 5개 템플릿 실제 렌더 확인(경로 5·스텝 15 / 섹션 5·필드 17 / 항목 3·QA 9 / 문항 3 / 뱅크·지원 1) + 인라인 `onclick` 상호작용 유지(로드맵 필터 5→1, 링크드인 토글 5→6) + `&` 이중 이스케이프 없음
+
+### 미결 / 판단 대기
+
+- **`interview-prep.html`의 `summary`는 의도적 리치텍스트**(`<b>10×</b>`)라 오염 검사에서 뺐다.
+  "스킬 생성물이라 신뢰한다"는 가정에 기대고 있다 — 사용자 임포트 경로가 생기면 **구조화 데이터로 바꿔야 한다.**
+- `hub.html`은 유일하게 **사용자가 파일로 가져오는** JSON을 받는다(현재 검사 통과). 가져오기 경로가
+  늘어나면 신뢰 경계를 문서화할 필요.
+
+---
+
+## 이전 — 2026-07-26 / 실사용 1회로 규칙 6건 도출·머지 (#12–#17)
 
 ### 어디까지 왔나
 
@@ -37,7 +81,7 @@
 | A | **`jd-filter.html` 필터를 `discover` 계열이 자동 소비**하도록 배선 — 지금은 사용자가 JSON을 붙여넣으면 에이전트가 수동 반영 | med | ⭐ 필터를 만들어 놓고 손으로 옮기는 건 반쪽 |
 | B | **자사 채용홈 조회를 스킬 차원 절차로** — 현재는 개인 저장소의 `discover.py`에만 구현. ATS 패턴(#15 ③-d) 기반 범용 절차로 승격 | large | 대기업 커버리지의 본체 |
 | C | 발굴 보드를 [`templates/jd-discovery.html`](../templates/jd-discovery.html)로 렌더 — 지금은 텍스트 표로만 출력 | small | 템플릿이 이미 있는데 안 쓰임 |
-| D | `check_xss.js`가 신규 템플릿(`jd-filter.html`)을 검사 대상에 넣는지 확인 | small | 스모크는 통과하나 개별 검사 미확인 |
+| ~~D~~ | ~~`check_xss.js`가 신규 템플릿(`jd-filter.html`)을 검사 대상에 넣는지 확인~~ | — | **완료** — `jd-filter.html`은 마크업 싱크 0(출력이 `textContent`)이라 **면제가 정답**이었다. 대신 다른 5개 템플릿이 미검사였고 그중 4개에 실제 이스케이프 결함이 있었다(위 표) |
 
 ### 미결 / 판단 대기
 
@@ -54,7 +98,9 @@
 
 ```bash
 git fetch origin main && git pull origin main && cat docs/HANDOFF.md
-bash scripts/smoke_check.sh          # 158 passed / 0 failed 기대
+pip install -r scripts/requirements.txt   # ★ 새 컨테이너 필수 — 없으면 A4 게이트 6건 실패(코드 회귀 아님)
+bash scripts/smoke_check.sh               # 158 passed / 0 failed 기대
+node scripts/check_xss.js                 # exit 0 기대 (템플릿 7 × 페이로드 3)
 ```
 
 **Fallback:** PR #12–#17 본문에 각 변경의 근거와 검증 결과가 인라인으로 남아 있다 ·

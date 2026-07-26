@@ -114,6 +114,11 @@
     { q:'본인의 강점과 그것이 직무에 기여할 방식 (600자)', intent:'차별화·기여방안 — 필살기 3요소(유사·정량성공·인사이트)', a:'', lim:600 },
   ];
   function el(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstChild; }
+  // ★ 이전에는 `"`만 치환했다. 속성 탈출은 막지만 **textarea 본문은 못 막는다** —
+  //   닫는 textarea 태그로 시작하는 값이 그대로 이미지 엘리먼트로 파싱됐다(실측).
+  //   `<`를 막아야 닫는 태그 자체가 성립하지 않는다.
+  function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
   function countChars(s){ const withSpace=[...s].length; const noSpace=[...s.replace(/\s/g,'')].length; return {withSpace,noSpace}; }
 
   function addQ(data){
@@ -122,17 +127,17 @@
       <div class="q">
         <div class="q-top">
           <span class="q-no"></span>
-          <input class="q-title" value="${(data.q||'').replace(/"/g,'&quot;')}">
+          <input class="q-title" value="${escAttr(data.q||'')}">
           <button class="q-del" title="삭제" onclick="this.closest('.q').remove(); renumber();">×</button>
         </div>
-        <input class="q-intent" placeholder="문항 의도(역산) — 무엇을 보려는 문항인가 · 배치할 필살기(스킬이 채움)" value="${(data.intent||'').replace(/"/g,'&quot;')}">
-        <textarea placeholder="답변 (두괄식: 주장 → 근거 → 맺음말)">${data.a||''}</textarea>
+        <input class="q-intent" placeholder="문항 의도(역산) — 무엇을 보려는 문항인가 · 배치할 필살기(스킬이 채움)" value="${escAttr(data.intent||'')}">
+        <textarea placeholder="답변 (두괄식: 주장 → 근거 → 맺음말)">${escHtml(data.a||'')}</textarea>
         <div class="print-copy"></div>
-        <textarea class="q-drill" rows="4" placeholder="예상 꼬리질문 3개 + 답변 골자 (methodology §2-5.5 면접 역산) — 작업용, 제출본 미인쇄">${data.drill||''}</textarea>
+        <textarea class="q-drill" rows="4" placeholder="예상 꼬리질문 3개 + 답변 골자 (methodology §2-5.5 면접 역산) — 작업용, 제출본 미인쇄">${escHtml(data.drill||'')}</textarea>
         <div class="counter">
           <span>공백 포함 <b class="n cw">0</b>자</span>
           <span>공백 제외 <b class="cn">0</b>자</span>
-          <span class="lim">권장 상한 <input type="number" class="limv" value="${data.lim||1000}"> 자
+          <span class="lim">권장 상한 <input type="number" class="limv" value="${escAttr(data.lim||1000)}"> 자
             <select class="limbase" title="기업마다 기준이 다르다 — 공고에 명시된 기준을 고르세요">
               <option value="with">공백 포함 기준</option><option value="no">공백 제외 기준</option>
             </select></span>

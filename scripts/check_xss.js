@@ -25,7 +25,14 @@ const CHROME = ['/opt/pw-browsers/chromium', '/usr/bin/chromium', '/usr/bin/chro
   .find((p) => fs.existsSync(p));
 if (!CHROME) { console.error('검사 불가: chromium 없음 (fail-closed)'); process.exit(2); }
 
-const PAY = '<img src=x onerror="window.__XSS=1">';
+// ★ 페이로드가 하나면 **싱크 종류만큼의 사각지대**가 생긴다. 실제로 cover-letter.html은
+//   `<textarea>${값}</textarea>`에 날값을 넣고 있었는데, `<img ...>` 하나만 쏘던 옛 페이로드는
+//   textarea 본문 안에서 텍스트로 남아 통과했다. 닫는 태그를 포함한 탈출 페이로드로만 드러난다.
+const PAYLOADS = [
+  '<img src=x onerror="window.__XSS=1">',                    // 일반 innerHTML 싱크
+  '</textarea><img src=x onerror="window.__XSS=1">',         // textarea 본문 탈출
+  '"><img src=x onerror="window.__XSS=1">',                  // 속성값 탈출
+];
 const URL_PAY = 'javascript:window.__XSS=1';
 
 /** 각 템플릿의 데이터 전역을 오염된 값으로 갈아끼우는 주입 스크립트 */
@@ -55,14 +62,102 @@ const CASES = [
       render();
     `,
   },
+  {
+    file: 'templates/hub.html',
+    // 유일하게 **사용자가 파일로 가져오는** JSON(가져오기/localStorage)이 들어온다 → 신뢰도 최하.
+    inject: `
+      DATA.bank.length = 0;
+      DATA.bank.push({ title:P, org:P, period:P, role:P, action:P,
+        result:P, insight:P, stack:P, tier:P });
+      DATA.applications.length = 0;
+      DATA.applications.push({ co:P, title:P, stage:P, result:P,
+        deadline:P, link:U, score:P, applied:P });
+      DATA.profile = { role:P, years:P, seed:P };
+      renderAll();
+    `,
+  },
+  {
+    file: 'templates/roadmap.html',
+    inject: `
+      PATHS.length = 0;
+      PATHS.push({ arch:P, title:P, risk:P, why:P,
+        score:70, grade:'유력', confidence:'높음', sub:{fit:70,feasible:70,growth:70,intent:70},
+        tags:[P], track:[{when:P, goal:P, act:P, metric:P}] });
+      PROFILE.role = P; PROFILE.anchor = P; PROFILE.years = P; PROFILE.seed = P;
+      render();
+    `,
+  },
+  {
+    file: 'templates/linkedin-export.html',
+    inject: `
+      SECTIONS.length = 0;
+      SECTIONS.push({ key:'headline', name:P, group:P, core:true,
+        fields:[{ k:'headline', label:P, limit:220, type:'text', hint:P, sample:P }] });
+      renderPicker(); renderSections();
+    `,
+  },
+  {
+    file: 'templates/interview-prep.html',
+    // ⚠️ `summary`는 **의도적 리치텍스트**다(스킬이 `<b>10×</b>` 같은 강조를 넣는다) → 오염 대상에서 뺀다.
+    //    나머지 필드는 전부 이스케이프 대상. summary의 신뢰는 "스킬 생성물"이라는 가정에 기대며,
+    //    이 가정이 깨지면(사용자 임포트 등) 구조화 데이터로 바꿔야 한다 — HANDOFF 미결 항목.
+    inject: `
+      ITEMS.length = 0;
+      ITEMS.push({ title:P, meta:P, tier:P, summary:'<b>고정</b>',
+        questions:[{ q:P, intent:P, defense:P, probes:[P] }] });
+      renderFilters(); render();
+    `,
+  },
+  {
+    file: 'templates/cover-letter.html',
+    inject: `
+      document.getElementById('qs').innerHTML = '';
+      SAMPLES.length = 0;
+      SAMPLES.push({ q:P, intent:P, a:P, drill:P, lim:1000 });
+      SAMPLES.forEach(addQ); renumber();
+    `,
+  },
 ];
+
+/**
+ * 데이터를 마크업 싱크에 넣지 **않는** 템플릿 — 면제 사유를 명시한다.
+ * ★ 왜 자동 판별이 아니라 명시 목록인가: 정적으로 "이 템플릿이 데이터를 렌더하는가"를 맞히려면
+ *   휴리스틱이 필요하고, 휴리스틱은 조용히 틀린다. 실제로 #14에서 추가된 템플릿이 아무 경고 없이
+ *   1년 가까이 미검사로 남았다(실측). 목록을 강제하면 **새 템플릿은 분류를 거치지 않고는 통과 못 한다.**
+ */
+const EXEMPT = {
+  'templates/a4-doc.html':      '정적 편집 문서 — 데이터 전역·마크업 싱크 없음',
+  'templates/report.html':      '정적 리포트 — 스킬이 파일 자체를 생성, 런타임 렌더 없음',
+  'templates/resume-ats.html':  '정적 이력서 — 런타임 렌더 없음',
+  'templates/jd-filter.html':   '필터 **출력** 전용 — 입력은 폼, 출력은 textContent(JSON.stringify). 마크업 싱크 0',
+  'templates/intake-form.html': 'el() 싱크는 있으나 전부 정적 리터럴 — 인자 v를 보간하지 않음',
+};
+
+// 모든 템플릿은 CASES(검사) 또는 EXEMPT(면제) 중 하나로 **분류되어 있어야** 한다.
+{
+  const known = new Set([...CASES.map(c => c.file), ...Object.keys(EXEMPT)]);
+  const all = fs.readdirSync('templates').filter(f => f.endsWith('.html')).map(f => 'templates/' + f);
+  const unclassified = all.filter(f => !known.has(f));
+  const stale = [...known].filter(f => !all.includes(f));
+  if (unclassified.length) {
+    console.error('검사 불가: 미분류 템플릿 — CASES에 추가하거나 EXEMPT에 사유와 함께 등록하세요:\n  ' +
+      unclassified.join('\n  '));
+    process.exit(2);
+  }
+  if (stale.length) {
+    console.error('검사 불가: 존재하지 않는 템플릿이 CASES/EXEMPT에 남아 있음:\n  ' + stale.join('\n  '));
+    process.exit(2);
+  }
+}
 
 const problems = [];
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'xsschk-'));
 
 for (const c of CASES) {
   if (!fs.existsSync(c.file)) { console.error(`검사 불가: ${c.file} 없음`); process.exit(2); }
-  let html = fs.readFileSync(c.file, 'utf8');
+  const src = fs.readFileSync(c.file, 'utf8');
+  for (const PAY of PAYLOADS) {
+  let html = src;
 
   const probe = `
 <script>
@@ -100,10 +195,12 @@ for (const c of CASES) {
   try { r = JSON.parse(m[1].replace(/&quot;/g, '"')); }
   catch (e) { console.error(`검사 불가: ${c.file} 프로브 결과 파싱 실패`); process.exit(2); }
 
-  if (r.err) problems.push(`${c.file} — 렌더 예외: ${r.err}`);
-  if (r.xss) problems.push(`${c.file} — 페이로드 실행됨(onerror 발화)`);
-  if (r.el) problems.push(`${c.file} — 페이로드가 엘리먼트로 파싱됨(이스케이프 뚫림)`);
-  if (r.url) problems.push(`${c.file} — javascript:/data: href가 살아있음(safeUrl 미적용)`);
+  const at = `${c.file} [payload: ${PAY.slice(0, 18)}…]`;
+  if (r.err) problems.push(`${at} — 렌더 예외: ${r.err}`);
+  if (r.xss) problems.push(`${at} — 페이로드 실행됨(onerror 발화)`);
+  if (r.el) problems.push(`${at} — 페이로드가 엘리먼트로 파싱됨(이스케이프 뚫림)`);
+  if (r.url) problems.push(`${at} — javascript:/data: href가 살아있음(safeUrl 미적용)`);
+  }
 }
 
 fs.rmSync(tmp, { recursive: true, force: true });

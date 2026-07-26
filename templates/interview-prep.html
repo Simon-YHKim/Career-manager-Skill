@@ -145,7 +145,8 @@
   ];
 
   let filter='all';
-  function tierBadge(t){ return t?`<span class="tier ${t}">${t}</span>`:''; }
+  function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
+  function tierBadge(t){ return t?`<span class="tier ${escAttr(t)}">${escHtml(t)}</span>`:''; }
   function qaHTML(qa,i){
     const probes = (qa.probes&&qa.probes.length)
       ? `<details><summary>꼬리질문 ${qa.probes.length}개 펼치기</summary><ul>${qa.probes.map(p=>`<li>${escHtml(p)}</li>`).join('')}</ul></details>` : '';
