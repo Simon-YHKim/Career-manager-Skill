@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>공고 발굴 필터 — career</title>
+<!--
+  career skill — 공고 발굴 필터 입력 폼 (태스크 ① 발굴 모드)
+  사용자가 버튼·입력란으로 조건을 고르면 하단 "필터 복사"로 JSON이 클립보드에 담긴다.
+  그 JSON을 스킬에 붙여넣으면 발굴 매트릭스가 그 조건으로 좁혀진다.
+  ★ 자체완결(외부 네트워크 0) · PII 없음 · 값은 브라우저 밖으로 나가지 않는다.
+-->
+<style>
+:root{
+  --accent:#0f4c81; --accent-soft:#eef5fb; --ink:#16202b; --muted:#5c6b7a;
+  --faint:#8c99a6; --line:#dde5ee; --paper:#fff; --bg:#eef1f5;
+  --sans:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);font-family:var(--sans);color:var(--ink);
+  font-size:14px;line-height:1.55;padding:22px 14px 60px;}
+.wrap{max-width:760px;margin:0 auto;}
+header{margin-bottom:18px;}
+h1{margin:0 0 6px;font-size:21px;letter-spacing:-.02em;}
+.sub{color:var(--muted);font-size:13px;}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;
+  padding:16px 18px;margin-bottom:12px;}
+.card > h2{margin:0 0 3px;font-size:13.5px;font-weight:700;letter-spacing:-.01em;}
+.hint{margin:0 0 10px;font-size:11.8px;color:var(--faint);}
+.chips{display:flex;flex-wrap:wrap;gap:7px;}
+.chip{border:1px solid var(--line);background:#fbfcfe;color:var(--muted);
+  border-radius:999px;padding:6px 13px;font-size:12.8px;font-weight:600;
+  cursor:pointer;user-select:none;transition:.12s;font-family:inherit;}
+.chip:hover{border-color:#b9cde2;}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);font-weight:600;}
+input[type=text],input[type=number],textarea{
+  border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:13px;
+  font-family:inherit;color:var(--ink);background:#fbfcfe;min-width:0;}
+input:focus,textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent);}
+textarea{width:100%;resize:vertical;min-height:56px;}
+.toggle{display:flex;align-items:flex-start;gap:9px;padding:8px 0;cursor:pointer;}
+.toggle input{margin-top:3px;width:16px;height:16px;accent-color:var(--accent);flex:none;}
+.toggle span b{display:block;font-size:13px;}
+.toggle span i{font-style:normal;font-size:11.8px;color:var(--faint);}
+.bar{position:sticky;bottom:0;background:var(--paper);border:1px solid var(--line);
+  border-radius:12px;padding:12px 16px;margin-top:16px;display:flex;gap:10px;
+  align-items:center;flex-wrap:wrap;box-shadow:0 -2px 14px rgba(15,35,60,.07);}
+button.go{background:var(--accent);color:#fff;border:0;border-radius:8px;
+  padding:10px 18px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;}
+button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line);
+  border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;font-family:inherit;}
+.state{font-size:12.3px;color:var(--faint);flex:1;min-width:140px;}
+pre{background:#f6f8fb;border:1px solid var(--line);border-radius:9px;padding:12px;
+  font-size:11.7px;overflow:auto;max-height:230px;margin:12px 0 0;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}
+.note{font-size:11.8px;color:var(--faint);margin-top:10px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>공고 발굴 필터</h1>
+  <div class="sub">고르지 않은 항목은 <b>제한 없음</b>으로 처리합니다. 아무것도 안 골라도 됩니다 — 그때는 전체를 훑습니다.</div>
+</header>
+
+<div class="card">
+  <h2>지역</h2>
+  <p class="hint">현재 거주·근무지 기준으로 통근 가능한 범위를 고르세요.</p>
+  <div class="chips" data-group="region">
+    <button class="chip" aria-pressed="false">수도권</button>
+    <button class="chip" aria-pressed="false">경기 남부</button>
+    <button class="chip" aria-pressed="false">충청권</button>
+    <button class="chip" aria-pressed="false">영남권</button>
+    <button class="chip" aria-pressed="false">호남권</button>
+    <button class="chip" aria-pressed="false">강원권</button>
+    <button class="chip" aria-pressed="false">해외</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>직무</h2>
+  <p class="hint">회사마다 부르는 이름이 달라서 여러 개를 켜 두는 편이 유리합니다.</p>
+  <div class="chips" data-group="role">
+    <button class="chip" aria-pressed="false">생산기술</button>
+    <button class="chip" aria-pressed="false">공정기술</button>
+    <button class="chip" aria-pressed="false">제조기술</button>
+    <button class="chip" aria-pressed="false">생산혁신</button>
+    <button class="chip" aria-pressed="false">제조혁신</button>
+    <button class="chip" aria-pressed="false">산업공학</button>
+    <button class="chip" aria-pressed="false">설비기술</button>
+    <button class="chip" aria-pressed="false">품질</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>도메인 · 산업</h2>
+  <div class="chips" data-group="domain">
+    <button class="chip" aria-pressed="false">반도체</button>
+    <button class="chip" aria-pressed="false">패키징·후공정</button>
+    <button class="chip" aria-pressed="false">기판·PCB</button>
+    <button class="chip" aria-pressed="false">전장·카메라</button>
+    <button class="chip" aria-pressed="false">이차전지</button>
+    <button class="chip" aria-pressed="false">디스플레이</button>
+    <button class="chip" aria-pressed="false">자동차부품</button>
+    <button class="chip" aria-pressed="false">제조 DX·SW</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>기업 규모</h2>
+  <div class="chips" data-group="size">
+    <button class="chip" aria-pressed="false">대기업</button>
+    <button class="chip" aria-pressed="false">중견</button>
+    <button class="chip" aria-pressed="false">중소</button>
+    <button class="chip" aria-pressed="false">외국계</button>
+    <button class="chip" aria-pressed="false">스타트업</button>
+  </div>
+</div>
+
+<div class="card">
+  <h2>조건</h2>
+  <div class="row" style="gap:16px;">
+    <label class="f">경력 하한(년)<input id="expMin" type="number" min="0" max="40" placeholder="예: 5" style="width:110px;"/></label>
+    <label class="f">경력 상한(년)<input id="expMax" type="number" min="0" max="40" placeholder="예: 12" style="width:110px;"/></label>
+    <label class="f">연봉 하한(만원)<input id="payMin" type="number" min="0" step="100" placeholder="예: 7000" style="width:140px;"/></label>
+  </div>
+</div>
+
+<div class="card">
+  <h2>제외</h2>
+  <p class="hint">기본값은 대부분의 경력 이직에 맞춰 켜 두었습니다.</p>
+  <label class="toggle"><input id="exCurrent" type="checkbox" checked/>
+    <span><b>현재 재직 중인 회사 제외</b><i>자사 공고는 이직 후보가 아닙니다. 사내 전배를 보고 싶으면 끄세요.</i></span></label>
+  <label class="toggle"><input id="exSub" type="checkbox" checked/>
+    <span><b>협력사 · 파견 · 도급 공고 제외</b><i>제목에 대기업명이 들어간 용역 공고를 걸러냅니다.</i></span></label>
+  <label class="toggle"><input id="exNew" type="checkbox" checked/>
+    <span><b>신입 · 인턴 전용 공고 제외</b><i>"신입 지원 가능"은 남기고 신입 전용만 뺍니다.</i></span></label>
+  <label class="toggle"><input id="exShift" type="checkbox"/>
+    <span><b>교대 생산직(OP) 제외</b><i>엔지니어 직군만 보고 싶을 때.</i></span></label>
+  <label class="f" style="margin-top:8px;">제외 키워드 (쉼표로 구분)
+    <input id="exWords" type="text" placeholder="예: 건축, 조경, 용접, 물류"/></label>
+  <label class="f" style="margin-top:10px;">현재 회사명 (표기 변형까지 쉼표로)
+    <input id="curName" type="text" placeholder="예: LG이노텍, 엘지이노텍, LG Innotek"/></label>
+</div>
+
+<div class="card">
+  <h2>꼭 넣고 싶은 회사 <span style="font-weight:500;color:var(--faint);">(선택)</span></h2>
+  <p class="hint">여기 적은 곳은 <b>회사명으로 직접 조회</b>합니다. 보드 검색만으로는 대기업 본사 공고가 잡히지 않습니다.</p>
+  <textarea id="targets" placeholder="쉼표 또는 줄바꿈으로 구분&#10;예: 삼성전기, SK하이닉스, 심텍, 대덕전자"></textarea>
+</div>
+
+<div class="bar">
+  <button class="go" id="copy">필터 복사</button>
+  <button class="ghost" id="reset">초기화</button>
+  <button class="ghost" id="peek">미리보기</button>
+  <span class="state" id="state">고른 조건이 없으면 전체를 훑습니다.</span>
+</div>
+<pre id="out" hidden></pre>
+<p class="note">이 폼은 자체완결 문서입니다. 입력값은 어디로도 전송되지 않고, 복사 버튼을 눌러야만 클립보드에 담깁니다.</p>
+</div>
+
+<script>
+document.querySelectorAll('.chip').forEach(function (b) {
+  b.addEventListener('click', function () {
+    b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+    render();
+  });
+});
+
+function picked(group) {
+  return Array.from(document.querySelectorAll('[data-group="' + group + '"] .chip'))
+    .filter(function (b) { return b.getAttribute('aria-pressed') === 'true'; })
+    .map(function (b) { return b.textContent.trim(); });
+}
+function num(id) { var v = document.getElementById(id).value.trim(); return v === '' ? null : Number(v); }
+function list(id) {
+  return document.getElementById(id).value.split(/[,\n]/)
+    .map(function (s) { return s.trim(); }).filter(Boolean);
+}
+
+function build() {
+  return {
+    _schema: 'career/jd-filter@1',
+    region: picked('region'),
+    role: picked('role'),
+    domain: picked('domain'),
+    companySize: picked('size'),
+    experienceYears: { min: num('expMin'), max: num('expMax') },
+    salaryMinManwon: num('payMin'),
+    exclude: {
+      currentEmployer: document.getElementById('exCurrent').checked,
+      subcontractor: document.getElementById('exSub').checked,
+      entryLevelOnly: document.getElementById('exNew').checked,
+      shiftOperator: document.getElementById('exShift').checked,
+      keywords: list('exWords')
+    },
+    currentEmployerNames: list('curName'),
+    targetCompanies: list('targets')
+  };
+}
+
+function count(f) {
+  return f.region.length + f.role.length + f.domain.length + f.companySize.length
+    + f.targetCompanies.length + f.exclude.keywords.length
+    + (f.experienceYears.min !== null ? 1 : 0) + (f.experienceYears.max !== null ? 1 : 0)
+    + (f.salaryMinManwon !== null ? 1 : 0);
+}
+
+function render() {
+  var f = build(), n = count(f);
+  document.getElementById('state').textContent =
+    n === 0 ? '고른 조건이 없으면 전체를 훑습니다.' : '조건 ' + n + '개 적용됨.';
+  var out = document.getElementById('out');
+  if (!out.hidden) out.textContent = JSON.stringify(f, null, 2);
+}
+
+document.querySelectorAll('input').forEach(function (el) {
+  el.addEventListener('input', render);
+  el.addEventListener('change', render);
+});
+
+document.getElementById('peek').addEventListener('click', function () {
+  var out = document.getElementById('out');
+  out.hidden = !out.hidden;
+  this.textContent = out.hidden ? '미리보기' : '접기';
+  render();
+});
+
+document.getElementById('reset').addEventListener('click', function () {
+  document.querySelectorAll('.chip').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+  document.querySelectorAll('input[type=text],input[type=number]').forEach(function (i) { i.value = ''; });
+  document.getElementById('targets').value = '';
+  document.getElementById('exCurrent').checked = true;
+  document.getElementById('exSub').checked = true;
+  document.getElementById('exNew').checked = true;
+  document.getElementById('exShift').checked = false;
+  render();
+});
+
+document.getElementById('copy').addEventListener('click', function () {
+  var btn = this, text = JSON.stringify(build(), null, 2);
+  var done = function (ok) {
+    btn.textContent = ok ? '복사됨 — 대화창에 붙여넣으세요' : '복사 실패 — 미리보기에서 직접 복사';
+    setTimeout(function () { btn.textContent = '필터 복사'; }, 2600);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta); done(ok);
+  }
+});
+
+render();
+</script>
+</body>
+</html>
