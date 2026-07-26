@@ -126,6 +126,18 @@
 
   function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
+  // URL 스킴 화이트리스트 — 데이터에서 온 링크가 실행 가능한 스킴으로 렌더되는 것을 차단.
+  // javascript:·data:·vbscript: 등은 클릭 시 코드가 실행된다. 공고 링크는 외부 입력(JSON 임포트·
+  // 스킬 생성)이므로 신뢰할 수 없다. http/https/mailto와 상대경로만 허용하고 나머지는 무력화한다.
+  function safeUrl(u){
+    const raw = String(u == null ? '' : u).trim();
+    if (!raw) return '#';
+    // 제어문자·공백을 제거해 "java\tscript:" 같은 우회를 막는다
+    const flat = raw.replace(/[\u0000-\u001F\u007F\s]/g, '').toLowerCase();
+    if (/^(https?:|mailto:)/.test(flat)) return raw;
+    if (/^[a-z][a-z0-9+.-]*:/.test(flat)) return '#';   // 그 외 모든 스킴 차단
+    return raw;                                          // 상대경로·앵커는 허용
+  }
 
   // .private/applications/ 누적 히스토리 (샘플 — 스킬이 실제 데이터로 치환)
   // 관심(위시리스트 → 미지원): applied 비움 + result:'interest' + link(공고)·score(적합도). 발굴 보드에서 유입.
@@ -159,7 +171,7 @@
     const urg=apps.filter(urgent).length;
     const cells=[['총 지원/관심',c.total],['관심(미지원)',c.interest],['진행중',c.progress],['합격',c.pass],[`마감임박(${URGENT_DAYS}일)`,urg]];
     document.getElementById('summary').innerHTML=cells.map(([l,n])=>
-      `<div class="cell"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join('');
+      `<div class="cell"><div class="num">${escHtml(n)}</div><div class="lbl">${l}</div></div>`).join('');
   }
 
   // ── 퍼널 진단 (reference/job-search-ops.md §1) ───────────────────────────────
@@ -195,10 +207,10 @@
       else if(fin>0 && offer===0){ bi=4; verdict='<b>병목: 조건·협상</b> — ⑥ 연봉협상·타깃 조건 재조정.'; }
       else { verdict='뚜렷한 병목이 보이지 않습니다 — <b>활동량</b>을 늘리는 것이 다음 레버입니다(주간 리듬).'; }
     } else {
-      verdict = `표본 부족 — 지원 <b>${n}건</b>. 전환율은 <b>${MIN_SAMPLE}건</b> 이상부터 신뢰합니다.<span class="no">지금 판정하면 노이즈입니다. ${Math.max(0,MIN_SAMPLE-n)}건 더 쌓고 다시 보세요.</span>`;
+      verdict = `표본 부족 — 지원 <b>${escHtml(n)}건</b>. 전환율은 <b>${MIN_SAMPLE}건</b> 이상부터 신뢰합니다.<span class="no">지금 판정하면 노이즈입니다. ${Math.max(0,MIN_SAMPLE-n)}건 더 쌓고 다시 보세요.</span>`;
     }
     document.getElementById('funnel').innerHTML =
-      `<h3>구직 퍼널 진단</h3><div class="sub">병목이 아닌 단계엔 리소스를 쓰지 않습니다. (지원한 건만 집계 · 표본 ${n}건)</div>
+      `<h3>구직 퍼널 진단</h3><div class="sub">병목이 아닌 단계엔 리소스를 쓰지 않습니다. (지원한 건만 집계 · 표본 ${escHtml(n)}건)</div>
        <div class="fsteps">`+steps.map((s,i)=>
          `<div class="fstep ${i===bi?'bottleneck':''}"><div class="n">${s.n}</div><div class="l">${s.l}</div><div class="r">${s.r}</div></div>`).join('')+
        `</div><div class="verdict">${verdict}</div>`;
@@ -218,7 +230,7 @@
     const dd=ddayText(app.deadline);
     const urg=urgent(app);
     const docs= app.docs && app.docs.length
-      ? app.docs.map(d=>`<a href="${escAttr(d.href)}" target="_blank" rel="noopener">${escHtml(d.label)} ↗</a>`).join('')
+      ? app.docs.map(d=>`<a href="${escAttr(safeUrl(d.href))}" target="_blank" rel="noopener">${escHtml(d.label)} ↗</a>`).join('')
       : `<span class="none">제출 파생본 없음</span>`;
     return `<div class="app ${urg?'urgent':''}" data-result="${app.result}">
       <div class="app-top">
@@ -226,7 +238,7 @@
         <div class="app-id">
           <div class="co">${escHtml(app.co)}${urg?'<span class="urgent-flag">마감임박 · 미지원</span>':''}</div>
           <div class="ti">${escHtml(app.title)}</div>
-          ${app.link?`<div class="link"><a href="${escAttr(app.link)}" target="_blank" rel="noopener">공고 ↗</a></div>`:''}
+          ${app.link?`<div class="link"><a href="${escAttr(safeUrl(app.link))}" target="_blank" rel="noopener">공고 ↗</a></div>`:''}
         </div>
         ${app.score?`<span class="badge score">적합도 ${escHtml(app.score)}</span>`:''}
         <span class="badge ${app.result}">${RESULT_LABEL[app.result]||app.result}</span>

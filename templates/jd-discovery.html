@@ -307,6 +307,18 @@
   const wish = new Set();                 // 안정 키(회사␟직무)로 저장 — 동명 공고 오선택·따옴표 깨짐 방지
   function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
+  // URL 스킴 화이트리스트 — 데이터에서 온 링크가 실행 가능한 스킴으로 렌더되는 것을 차단.
+  // javascript:·data:·vbscript: 등은 클릭 시 코드가 실행된다. 공고 링크는 외부 입력(JSON 임포트·
+  // 스킬 생성)이므로 신뢰할 수 없다. http/https/mailto와 상대경로만 허용하고 나머지는 무력화한다.
+  function safeUrl(u){
+    const raw = String(u == null ? '' : u).trim();
+    if (!raw) return '#';
+    // 제어문자·공백을 제거해 "java\tscript:" 같은 우회를 막는다
+    const flat = raw.replace(/[\u0000-\u001F\u007F\s]/g, '').toLowerCase();
+    if (/^(https?:|mailto:)/.test(flat)) return raw;
+    if (/^[a-z][a-z0-9+.-]*:/.test(flat)) return '#';   // 그 외 모든 스킴 차단
+    return raw;                                          // 상대경로·앵커는 허용
+  }
   function jkey(j){ return (j.co||'')+'␟'+(j.title||''); }
 
   function daysTo(d){ return Math.round((Date.parse(d)-Date.parse(TODAY))/86400000); }
@@ -327,9 +339,9 @@
 
   function profHTML(){
     document.getElementById('prof').innerHTML =
-      `탐색 프로파일 · <b>${PROFILE.role}</b> · 언어 ${PROFILE.langs} · 지역 ${PROFILE.region} · 연차 ${PROFILE.level} · 조회 ${TODAY}`;
+      `탐색 프로파일 · <b>${escHtml(PROFILE.role)}</b> · 언어 ${escHtml(PROFILE.langs)} · 지역 ${escHtml(PROFILE.region)} · 연차 ${escHtml(PROFILE.level)} · 조회 ${escHtml(TODAY)}`;
     document.getElementById('gated').innerHTML = GATED.length
-      ? `⚠ 게이트되어 상세 미확보(직접 확인 필요): ${GATED.join(' · ')}` : '';
+      ? `⚠ 게이트되어 상세 미확보(직접 확인 필요): ${GATED.map(escHtml).join(' · ')}` : '';
   }
 
   function barsHTML(j){
@@ -370,8 +382,8 @@
         ${j.whatif&&j.whatif.length?`<div class="meta"><span>↗ 올리려면: ${j.whatif.map(escHtml).join(' · ')}</span></div>`:''}
         <div class="meta">
           <span class="dday ${d.past?'past':''}">${d.t}</span>
-          <span class="src">출처·조회 ${TODAY} · 확신 ${escHtml(j.confidence)}</span>
-          <a href="${escAttr(j.link)}" target="_blank" rel="noopener">공고 ↗</a>
+          <span class="src">출처·조회 ${escHtml(TODAY)} · 확신 ${escHtml(j.confidence)}</span>
+          <a href="${escAttr(safeUrl(j.link))}" target="_blank" rel="noopener">공고 ↗</a>
         </div>
       </div>
       <div class="score">
@@ -414,7 +426,7 @@
     const live = JOBS.filter(j=>!expired(j));
     const eff  = live.filter(j=>quadLabel(j)==='최우선');
     document.getElementById('count').innerHTML =
-      `발굴 ${JOBS.length} · 모집중 ${live.length} · <b>유효 최우선 ${eff.length}</b> · 위시리스트 ${wish.size}`;
+      `발굴 ${JOBS.length} · 모집중 ${live.length} · <b>유효 최우선 ${eff.length}</b> · 위시리스트 ${escHtml(wish.size)}`;
     const y=document.getElementById('yield');
     if(y) y.innerHTML = (JOBS.length>=10 && eff.length===0)
       ? `⚠ <b>유효 최우선 0건</b> — 공고가 없는 게 아니라 <b>이 채널에 없습니다.</b> 같은 보드를 더 훑지 말고 채널을 바꾸세요: 자사 채용홈 직접 · 서치펌·헤드헌터 · 리퍼럴 · 목표기업 직접 아웃리치.`

@@ -95,13 +95,11 @@ SECRET_RE='sk-ant-[A-Za-z0-9]|sk-proj-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|gh[pou
 hits=$(git ls-files -z | grep -zv '^scripts/smoke_check\.sh$' | xargs -0 grep -lE "$SECRET_RE" 2>/dev/null || true)
 [ -z "$hits" ] && ok "추적 파일 전체 시크릿 스캔 0건" || no "secret-like string in: $hits"
 # --- 동작 회귀 게이트 (문자열 존재가 아니라 '실제로 동작하는가' — 최종검증에서 발견된 결함 재발 방지) ---
-# (a) hub esc()가 진짜 이스케이프하는가 (no-op이면 저장형 XSS → 워커 토큰 유출)
-if node -e "
-const fs=require('fs');const s=fs.readFileSync('templates/hub.html','utf8');
-const m=s.match(/function esc\(s\)\{[\s\S]*?\}/); if(!m){process.exit(2);}
-const esc=new Function('return ('+m[0].replace('function esc','function')+')')();
-process.exit(esc('<img src=x>').includes('&lt;') ? 0 : 1);
-" 2>/dev/null; then ok "hub esc(): 실제 이스케이프(XSS 회귀 게이트)"; else no "hub esc() is a no-op → XSS 위험"; fi
+# (a) XSS: 런타임 실증 — 악성 값을 데이터에 심고 실제로 렌더해 살아나는지 본다.
+# ★ 옛 게이트는 esc() 정의만 격리 실행해 호출부를 다 지워도 통과했다. 정적 sink 스캔은 오탐이 많다.
+#   그래서 chromium으로 실제 렌더 후 (i) onerror 발화 (ii) 엘리먼트 파싱 (iii) 위험 스킴 href를 검사한다.
+node scripts/check_xss.js 2>/dev/null \
+  && ok "XSS: 런타임 실증(페이로드 미실행·미파싱·위험스킴 href 없음)" || no "XSS: 페이로드가 살아있는 마크업/링크로 렌더됨"
 # (b) worker provider: 클라이언트가 벤더를 절대 못 정하는가 (키 오전송 방지) — 문자열이 아니라 실제 로직 실행
 # ★ 이전 게이트는 순수 grep이라 주석에 문자열만 남기고 우선순위를 뒤집어도 통과했다.
 #   또한 AI_PROVIDER 미설정(기본 배포)이라는 핵심 케이스를 아예 검사하지 않았다.
