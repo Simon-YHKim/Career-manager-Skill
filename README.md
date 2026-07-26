@@ -146,3 +146,13 @@ python3 scripts/check_a4.py samples/sample-resume.html   # A4 인쇄 검증
 ## Privacy (D-6)
 `.private/`, `reference/private/`, 젬 원본은 **gitignore**되어 커밋·번들되지 않는다. 개인 이력서·포트폴리오·
 프로필·타깃은 스킬 번들에 포함하지 않으며, IP·영업비밀 소지 항목은 대외 산출물에 비IP·방어 가능 범위로만 축약.
+
+---
+
+## 라이선스
+
+이 저장소는 **MIT License** 로 배포된다 → [`LICENSE`](LICENSE).
+
+제3자 저작물 고지는 [`NOTICE`](NOTICE) 를 참고할 것. 참고한 원본도 MIT 라 충돌은 없다.
+**폰트 바이너리는 이 저장소에 포함되지 않으며**, 내장해 쓰는 폰트의 라이선스는 각자 따른다
+(`scripts/embed_fonts.py` 는 폰트 경로를 인자로 받는 로직일 뿐이다).

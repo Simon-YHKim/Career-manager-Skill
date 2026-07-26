@@ -205,6 +205,26 @@ then ok "resume-ats: 시트에 모호 구분자 0건(em/en dash·middot)"; else 
 # 폰트 고지 — 서브셋 내장은 원본 파일을 지우므로 고지가 증발한다
 grep -qF 'SIL Open Font License' scripts/embed_fonts.py \
   && ok "embed_fonts: 폰트 라이선스 고지를 산출물에 배출" || no "embed_fonts 고지 누락"
+
+# ── 배포 라이선스 ────────────────────────────────────────────────────────────
+# ★ 라이선스 없는 공개 저장소는 법적으로 '모든 권리 유보' — 아무도 쓸 수 없다.
+#   LICENSE·plugin.json·NOTICE 세 곳이 어긋나면 이용 조건이 모호해지므로 함께 검사한다.
+[ -f LICENSE ] && ok "exists: LICENSE" || no "LICENSE 없음 — 공개 배포 시 아무도 쓸 수 없다"
+if python3 - <<'PYEOF' 2>/dev/null
+import json, sys, re
+lic = open('LICENSE', encoding='utf-8').read()
+pj = json.load(open('.claude-plugin/plugin.json', encoding='utf-8'))
+notice = open('NOTICE', encoding='utf-8').read()
+ok = ('MIT License' in lic
+      and pj.get('license') == 'MIT'
+      and 'MIT License' in notice
+      and re.search(r'Copyright \(c\) \d{4}', lic))
+sys.exit(0 if ok else 1)
+PYEOF
+then ok "라이선스 일치(LICENSE ↔ plugin.json ↔ NOTICE) + 저작권 표기"; else no "라이선스 표기가 세 파일에서 어긋남"; fi
+# 제3자 고지가 살아 있는가 — 파생 사실을 지우면 원본 MIT 조건 위반
+grep -qF 'epoko77-ai' NOTICE && grep -qF 'MIT License' NOTICE \
+  && ok "NOTICE: 제3자 저작권 고지 유지" || no "제3자 고지 누락(원본 MIT 조건 위반)"
 # intake form + tracker have the required affordances
 grep -qF "데이터 복사" templates/intake-form.html && ok "intake-form: 데이터 복사 button" || no "intake-form copy button"
 grep -qiE '전형|D-day|dday' templates/application-tracker.html && ok "application-tracker: 전형/D-day" || no "application-tracker content"
