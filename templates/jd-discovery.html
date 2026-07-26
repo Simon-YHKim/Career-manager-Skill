@@ -169,7 +169,11 @@
 </div>
 
 <script>
-  const TODAY = '2026-07-23';   // 스킬이 렌더 시 실제 KST로 치환
+  // 기준일 — 스킬이 렌더 시 실제 KST 날짜로 TODAY_PINNED에 채운다.
+  // ★ 치환이 누락되면 **브라우저 현재 날짜로 자동 폴백**한다. 하드코딩된 과거 날짜를 그대로 쓰면
+  //   D-day·마감임박·만료 판정이 전부 조용히 틀린다(실측: 커밋된 템플릿이 이미 과거 날짜였다).
+  const TODAY_PINNED = '';
+  const TODAY = TODAY_PINNED || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
   // 탐색 프로파일 (스킬이 뱅크·프로필로 자동 생성)
   const PROFILE = { role:'제조 오퍼레이션/생산혁신', langs:'국문 + 영어', region:'국내 우선 + 글로벌', level:'미드~시니어' };
   // 게이트되어 상세 미확보된 보드 (정직 표기)

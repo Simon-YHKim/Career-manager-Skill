@@ -118,8 +118,11 @@
 </div>
 
 <script>
-  // 기준일 — 스킬이 렌더 시 실제 KST 날짜로 치환(자체완결·재현성)
-  const TODAY = '2026-07-22';
+  // 기준일 — 스킬이 렌더 시 실제 KST 날짜로 TODAY_PINNED에 채운다.
+  // ★ 치환이 누락되면 **브라우저 현재 날짜로 자동 폴백**한다. 하드코딩된 과거 날짜를 그대로 쓰면
+  //   D-day·마감임박·만료 판정이 전부 조용히 틀린다(실측: 커밋된 템플릿이 이미 과거 날짜였다).
+  const TODAY_PINNED = '';
+  const TODAY = TODAY_PINNED || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
 
   // 전형 단계 표준 파이프라인. '아웃리치'=지원 전 접촉(커피챗·리퍼럴 요청, SKILL §6.1 #4).
   const STAGES = ['관심','아웃리치','서류접수','서류합격','인적성/과제','1차면접','2차면접','최종'];
@@ -143,26 +146,48 @@
   // 관심(위시리스트 → 미지원): applied 비움 + result:'interest' + link(공고)·score(적합도). 발굴 보드에서 유입.
   const APPS = [
     { co:'제조 C', mono:'C', title:'생산기술 · 공정혁신', link:'#', score:82, applied:'', deadline:'2026-07-24',
-      stage:'관심', result:'interest', docs:[] },
+      stage:'관심', result:'interest', dueVerified:true, docs:[] },
     { co:'핀테크 A', mono:'A', title:'백엔드 엔지니어', link:'#', score:86, applied:'2026-07-01', deadline:'2026-07-25',
-      stage:'1차면접', result:'progress', docs:[{label:'제출 이력서', href:'#'},{label:'자소서 4문항', href:'#'}] },
+      stage:'1차면접', result:'progress', dueVerified:true, docs:[{label:'제출 이력서', href:'#'},{label:'자소서 4문항', href:'#'}] },
     { co:'커머스 B', mono:'B', title:'플랫폼 엔지니어', link:'#', score:79, applied:'2026-06-10', deadline:'2026-06-20',
-      stage:'최종', result:'pass', docs:[{label:'제출본 스냅샷', href:'#'}] },
+      stage:'최종합격', result:'pass', dueVerified:true, lastStage:'최종', docs:[{label:'제출본 스냅샷', href:'#'}] },
     { co:'스타트업 D', mono:'D', title:'서버 개발', link:'#', score:64, applied:'2026-06-05', deadline:'2026-06-15',
-      stage:'서류합격', result:'fail', docs:[{label:'제출 이력서', href:'#'}] },
+      stage:'불합격', result:'fail', lastStage:'서류합격', docs:[{label:'제출 이력서', href:'#'}] },
   ];
 
   const RESULT_LABEL={ interest:'관심(미지원)', progress:'진행중', pass:'최종 합격', fail:'불합격', wait:'결과 대기' };
   // 마감임박 임계값은 단일 소스 — 요약 카운터·필터·정렬·경고가 모두 이 값을 쓴다(숫자 불일치 방지).
   const URGENT_DAYS = 7;
-  function urgent(a){ const d=daysBetween(TODAY,a.deadline); return !a.applied && d>=0 && d<=URGENT_DAYS; }
+  function urgent(a){ if(!dlOk(a)) return false;   // 마감 미확인은 임박 판정 안 함
+    const d=daysBetween(TODAY,a.deadline); return !a.applied && d>=0 && d<=URGENT_DAYS; }
 
   function daysBetween(a,b){ return Math.round((Date.parse(b)-Date.parse(a))/86400000); }
-  function ddayText(deadline){
-    const d=daysBetween(TODAY,deadline);
+
+  // 마감일 출처 검증 — 발굴 보드(jd-discovery)의 dlVerified와 동일한 규율.
+  // ★ 위시리스트가 이 트래커로 넘어올 때 '마감 [확인 필요]' 상태가 함께 와야 한다. 검증 안 된
+  //   날짜로 D-day를 만들면 빈 값이 '마감(NaN일 경과)'가 되어 **만료로 둔갑**한다(실측 재현).
+  function dlOk(a){ return !!(a && a.dueVerified === true && a.deadline); }
+  function ddayText(a){
+    if(!dlOk(a)) return { t:'마감 [확인 필요]', past:false, unknown:true };
+    const d=daysBetween(TODAY,a.deadline);
     if(d>0) return {t:'D-'+d, past:false};
     if(d===0) return {t:'D-DAY', past:false};
     return {t:'마감('+(-d)+'일 경과)', past:true};
+  }
+
+  // 전형 단계 정규화 — 기록 어휘와 파이프라인 어휘가 어긋나도 조용히 사라지지 않게 한다.
+  // ★ P8 스키마가 '최종합격/불합격'을 단계로 적으면 STAGES에 없어 퍼널이 통째로 비었다(실측).
+  //   합격/불합격은 **단계가 아니라 결과**다. 여기서 단계와 결과로 분리해 준다.
+  const STAGE_ALIAS = { '최종합격':'최종', '최종 합격':'최종', '합격':'최종',
+                        '불합격':null, '탈락':null, '서류 합격':'서류합격', '서류전형':'서류접수' };
+  function normStage(a){
+    const raw = String(a && a.stage || '').trim();
+    if (STAGES.indexOf(raw) >= 0) return raw;
+    if (Object.prototype.hasOwnProperty.call(STAGE_ALIAS, raw)) {
+      const mapped = STAGE_ALIAS[raw];
+      return mapped || (a && a.lastStage) || '서류접수';   // 불합격은 직전 단계에 남긴다
+    }
+    return raw ? '__unknown__' : '';
   }
 
   function renderSummary(apps){
@@ -178,7 +203,7 @@
   // 병목이 아닌 단계엔 리소스를 쓰지 않는다. 표본 부족(<10)이면 판정하지 않는다(허위 정밀도 금지).
   const MIN_SAMPLE = 10;
   function reached(app, idx){ // 이 지원 건이 idx 단계까지 도달했는가
-    const i = STAGES.indexOf(app.stage);
+    const i = STAGES.indexOf(normStage(app));
     return i >= idx;
   }
   function renderFunnel(){
@@ -217,7 +242,7 @@
   }
 
   function pipeHTML(app){
-    const curIdx=STAGES.indexOf(app.stage);
+    const curIdx=STAGES.indexOf(normStage(app));
     return `<div class="pipe">`+STAGES.map((s,i)=>{
       let cls='step';
       if(i<curIdx) cls+=' done';
@@ -227,7 +252,7 @@
   }
 
   function cardHTML(app){
-    const dd=ddayText(app.deadline);
+    const dd=ddayText(app);
     const urg=urgent(app);
     const docs= app.docs && app.docs.length
       ? app.docs.map(d=>`<a href="${escAttr(safeUrl(d.href))}" target="_blank" rel="noopener">${escHtml(d.label)} ↗</a>`).join('')
@@ -260,7 +285,8 @@
       : filter==='urgent'? APPS.filter(urgent)
       : APPS.filter(a=>a.result===filter);
     // 정렬: 마감임박·미지원을 최상단, 그다음 마감 임박순
-    shown.sort((a,b)=> (urgent(a)?0:1)-(urgent(b)?0:1) || Date.parse(a.deadline)-Date.parse(b.deadline));
+    const dk=a=>dlOk(a)?Date.parse(a.deadline):Number.POSITIVE_INFINITY;   // 미검증은 뒤로
+    shown.sort((a,b)=> (urgent(a)?0:1)-(urgent(b)?0:1) || dk(a)-dk(b));
     const list=document.getElementById('list');
     list.innerHTML = shown.length ? shown.map(cardHTML).join('')
       : `<div class="empty">해당 상태의 지원 건이 없습니다.</div>`;

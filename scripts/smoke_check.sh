@@ -133,10 +133,11 @@ grep -qiE '무데이터|분모가 0|N/A\(자료 없음\)' reference/evaluation.m
 if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
 const grab=(re)=>{const m=s.match(re); if(!m) throw new Error('not found: '+re); return m[0];};
-const src=[/const TODAY = '[^']*';/, /function daysTo\(d\)\{[^}]*\}/, /function dlOk\(j\)\{[^}]*\}/, /function quadrant\(fit, qual\)\{[\s\S]*?\n  \}/,
+const src=[/function daysTo\(d\)\{[^}]*\}/, /function dlOk\(j\)\{[^}]*\}/, /function quadrant\(fit, qual\)\{[\s\S]*?\n  \}/,
   /function delta\(j\)\{[\s\S]*?\n  \}/, /function expired\(j\)\{[^}]*\}/,
   /function guardReason\(j\)\{[\s\S]*?\n  \}/, /function quadLabel\(j\)\{[\s\S]*?\n  \}/].map(grab).join('\n');
-const base=(b)=>new Function('BASELINE','J','\"use strict\";'+src+'return quadLabel(J);');
+const FIX='const TODAY='+JSON.stringify('2026-07-26')+';';
+const base=(b)=>new Function('BASELINE','J','\"use strict\";'+FIX+src+'return quadLabel(J);');
 const hi={score:90,quality:90,confidence:'높음',deadline:'2099-01-01',dlVerified:true};
 const t=[];
 t.push(['정상 최우선', base()(null,hi)==='최우선']);
@@ -158,15 +159,53 @@ const m=s.match(/function delta\(j\)\{[\s\S]*?\n  \}/); if(!m) process.exit(2);
 const f=new Function('BASELINE','j','\"use strict\";'+m[0]+'return delta(j);');
 process.exit((f(null,{quality:50})===null && f({quality:70},{quality:50})===-20 && f({quality:70},{})===null) ? 0 : 1);
 " 2>/dev/null; then ok "jd-discovery: Δ는 기준선 있을 때만(무직 0-가정 금지)"; else no "delta() 기준선 처리 오류"; fi
+# (h6) TODAY 하드코딩 방지 — 치환 누락 시 브라우저 현재 날짜로 폴백하는가
+# ★ 실측: 커밋된 템플릿의 TODAY가 이미 과거(2026-07-22/23)여서 D-day·만료가 조용히 틀렸다.
+for T in templates/jd-discovery.html templates/application-tracker.html templates/roadmap.html; do
+  if grep -qE "const TODAY = TODAY_PINNED \|\| new Date\(\)" "$T" && grep -qE "timeZone: 'Asia/Seoul'" "$T"; then
+    ok "TODAY 자동 폴백: $(basename $T)"
+  else no "TODAY가 하드코딩(치환 누락 시 과거 날짜로 계산): $(basename $T)"; fi
+done
+# (h7) 트래커도 마감일 검증·단계 정규화를 하는가 — 하류에서 무너지면 발굴보드 수정이 무의미
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/application-tracker.html','utf8');
+const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss '+re); return m[0];};
+const src=[/const STAGES = \[[^\]]*\];/, /function daysBetween\(a,b\)\{[^}]*\}/, /function dlOk\(a\)\{[^}]*\}/,
+  /function ddayText\(a\)\{[\s\S]*?\n  \}/, /const STAGE_ALIAS = \{[\s\S]*?\};/,
+  /function normStage\(a\)\{[\s\S]*?\n  \}/].map(g).join('\n');
+const FIX='const TODAY='+JSON.stringify('2026-07-26')+';';
+const R=(b)=>new Function('A','\"use strict\";'+FIX+src+b);
+const dd=R('return ddayText(A);'), ns=R('return normStage(A);');
+const t=[];
+t.push(['미검증 마감 → D-day 금지', dd({deadline:'2099-01-01'}).unknown===true]);
+t.push(['빈 마감 → NaN 금지', !/NaN/.test(dd({}).t)]);
+t.push(['검증 마감 → D-day 계산', /^D-/.test(dd({deadline:'2099-01-01',dueVerified:true}).t)]);
+t.push(['최종합격 → 최종 단계로 정규화', ns({stage:'최종합격'})==='최종']);
+t.push(['불합격 → 직전 단계 유지', ns({stage:'불합격',lastStage:'서류합격'})==='서류합격']);
+t.push(['정상 단계 보존', ns({stage:'1차면접'})==='1차면접']);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "tracker: 마감 검증 + 전형단계 정규화(퍼널 붕괴 방지)"; else no "tracker: 마감 미검증/단계 어휘 불일치가 그대로 통과"; fi
+# P8 문서 어휘가 트래커 STAGES와 어긋나지 않는가
+if python3 - <<'PYEOF' 2>/dev/null
+import re,sys,pathlib
+tr=pathlib.Path('templates/application-tracker.html').read_text(encoding='utf-8')
+st=set(re.findall(r"'([^']+)'", re.search(r"const STAGES = \[([^\]]*)\]", tr).group(1)))
+doc=pathlib.Path('reference/portfolio-builder.md').read_text(encoding='utf-8')
+m=re.search(r'전형 단계 파이프라인[^`]*`([^`]+)`', doc)
+sys.exit(1 if not m else (0 if {x.strip() for x in m.group(1).split('→')} <= st else 1))
+PYEOF
+then ok "P8 전형단계 어휘 ⊆ 트래커 STAGES(퍼널 어휘 정합)"; else no "P8 전형단계 어휘가 트래커 STAGES에 없음"; fi
 # (h4) 미검증 마감일이 D-day로 둔갑하지 않는가 — 실사용에서 11건 중 10건이 추정 날짜였다(날조 금지의 구멍)
 if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
 const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
-const src=[/const TODAY = '[^']*';/, /function daysTo\(d\)\{[^}]*\}/, /function dlOk\(j\)\{[^}]*\}/,
+const src=[/function daysTo\(d\)\{[^}]*\}/, /function dlOk\(j\)\{[^}]*\}/,
   /function dday\(j\)\{[\s\S]*?\n  \}/, /function expired\(j\)\{[^}]*\}/,
   /function delta\(j\)\{[\s\S]*?\n  \}/, /function guardReason\(j\)\{[\s\S]*?\n  \}/,
   /function quadrant\(fit, qual\)\{[\s\S]*?\n  \}/, /function quadLabel\(j\)\{[\s\S]*?\n  \}/].map(g).join('\n');
-const F=(body)=>new Function('BASELINE','J','\"use strict\";'+src+body);
+const FIX='const TODAY='+JSON.stringify('2026-07-26')+';';
+const F=(body)=>new Function('BASELINE','J','\"use strict\";'+FIX+src+body);
 const dd=(j)=>F('return dday(J);')(null,j);
 const ex=(j)=>F('return expired(J);')(null,j);
 const ql=(j)=>F('return quadLabel(J);')(null,j);
