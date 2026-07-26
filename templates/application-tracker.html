@@ -50,6 +50,7 @@
   .verdict{ margin-top:11px; padding:10px 12px; border-left:3px solid var(--accent); background:var(--wash);
     border-radius:4px; font-size:12.5px; color:var(--ink); }
   .verdict b{ color:var(--accent); }
+  .verdict .basis{ display:block; margin-top:5px; font-size:11px; color:var(--faint); }
   .verdict .no{ color:var(--muted); font-size:11.5px; display:block; margin-top:4px; }
 
   /* 필터 */
@@ -118,39 +119,76 @@
 </div>
 
 <script>
-  // 기준일 — 스킬이 렌더 시 실제 KST 날짜로 치환(자체완결·재현성)
-  const TODAY = '2026-07-22';
+  // 기준일 — 스킬이 렌더 시 실제 KST 날짜로 TODAY_PINNED에 채운다.
+  // ★ 치환이 누락되면 **브라우저 현재 날짜로 자동 폴백**한다. 하드코딩된 과거 날짜를 그대로 쓰면
+  //   D-day·마감임박·만료 판정이 전부 조용히 틀린다(실측: 커밋된 템플릿이 이미 과거 날짜였다).
+  const TODAY_PINNED = '';
+  const TODAY = TODAY_PINNED || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
 
   // 전형 단계 표준 파이프라인. '아웃리치'=지원 전 접촉(커피챗·리퍼럴 요청, SKILL §6.1 #4).
   const STAGES = ['관심','아웃리치','서류접수','서류합격','인적성/과제','1차면접','2차면접','최종'];
 
   function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
+  // URL 스킴 화이트리스트 — 데이터에서 온 링크가 실행 가능한 스킴으로 렌더되는 것을 차단.
+  // javascript:·data:·vbscript: 등은 클릭 시 코드가 실행된다. 공고 링크는 외부 입력(JSON 임포트·
+  // 스킬 생성)이므로 신뢰할 수 없다. http/https/mailto와 상대경로만 허용하고 나머지는 무력화한다.
+  function safeUrl(u){
+    const raw = String(u == null ? '' : u).trim();
+    if (!raw) return '#';
+    // 제어문자·공백을 제거해 "java\tscript:" 같은 우회를 막는다
+    const flat = raw.replace(/[\u0000-\u001F\u007F\s]/g, '').toLowerCase();
+    if (/^(https?:|mailto:)/.test(flat)) return raw;
+    if (/^[a-z][a-z0-9+.-]*:/.test(flat)) return '#';   // 그 외 모든 스킴 차단
+    return raw;                                          // 상대경로·앵커는 허용
+  }
 
   // .private/applications/ 누적 히스토리 (샘플 — 스킬이 실제 데이터로 치환)
   // 관심(위시리스트 → 미지원): applied 비움 + result:'interest' + link(공고)·score(적합도). 발굴 보드에서 유입.
   const APPS = [
     { co:'제조 C', mono:'C', title:'생산기술 · 공정혁신', link:'#', score:82, applied:'', deadline:'2026-07-24',
-      stage:'관심', result:'interest', docs:[] },
+      stage:'관심', result:'interest', dueVerified:true, docs:[] },
     { co:'핀테크 A', mono:'A', title:'백엔드 엔지니어', link:'#', score:86, applied:'2026-07-01', deadline:'2026-07-25',
-      stage:'1차면접', result:'progress', docs:[{label:'제출 이력서', href:'#'},{label:'자소서 4문항', href:'#'}] },
+      stage:'1차면접', result:'progress', dueVerified:true, docs:[{label:'제출 이력서', href:'#'},{label:'자소서 4문항', href:'#'}] },
     { co:'커머스 B', mono:'B', title:'플랫폼 엔지니어', link:'#', score:79, applied:'2026-06-10', deadline:'2026-06-20',
-      stage:'최종', result:'pass', docs:[{label:'제출본 스냅샷', href:'#'}] },
+      stage:'최종합격', result:'pass', dueVerified:true, lastStage:'최종', docs:[{label:'제출본 스냅샷', href:'#'}] },
     { co:'스타트업 D', mono:'D', title:'서버 개발', link:'#', score:64, applied:'2026-06-05', deadline:'2026-06-15',
-      stage:'서류합격', result:'fail', docs:[{label:'제출 이력서', href:'#'}] },
+      stage:'불합격', result:'fail', lastStage:'서류합격', docs:[{label:'제출 이력서', href:'#'}] },
   ];
 
   const RESULT_LABEL={ interest:'관심(미지원)', progress:'진행중', pass:'최종 합격', fail:'불합격', wait:'결과 대기' };
   // 마감임박 임계값은 단일 소스 — 요약 카운터·필터·정렬·경고가 모두 이 값을 쓴다(숫자 불일치 방지).
   const URGENT_DAYS = 7;
-  function urgent(a){ const d=daysBetween(TODAY,a.deadline); return !a.applied && d>=0 && d<=URGENT_DAYS; }
+  function urgent(a){ if(!dlOk(a)) return false;   // 마감 미확인은 임박 판정 안 함
+    const d=daysBetween(TODAY,a.deadline); return !a.applied && d>=0 && d<=URGENT_DAYS; }
 
   function daysBetween(a,b){ return Math.round((Date.parse(b)-Date.parse(a))/86400000); }
-  function ddayText(deadline){
-    const d=daysBetween(TODAY,deadline);
+
+  // 마감일 출처 검증 — 발굴 보드(jd-discovery)의 dlVerified와 동일한 규율.
+  // ★ 위시리스트가 이 트래커로 넘어올 때 '마감 [확인 필요]' 상태가 함께 와야 한다. 검증 안 된
+  //   날짜로 D-day를 만들면 빈 값이 '마감(NaN일 경과)'가 되어 **만료로 둔갑**한다(실측 재현).
+  function dlOk(a){ return !!(a && a.dueVerified === true && a.deadline); }
+  function ddayText(a){
+    if(!dlOk(a)) return { t:'마감 [확인 필요]', past:false, unknown:true };
+    const d=daysBetween(TODAY,a.deadline);
     if(d>0) return {t:'D-'+d, past:false};
     if(d===0) return {t:'D-DAY', past:false};
     return {t:'마감('+(-d)+'일 경과)', past:true};
+  }
+
+  // 전형 단계 정규화 — 기록 어휘와 파이프라인 어휘가 어긋나도 조용히 사라지지 않게 한다.
+  // ★ P8 스키마가 '최종합격/불합격'을 단계로 적으면 STAGES에 없어 퍼널이 통째로 비었다(실측).
+  //   합격/불합격은 **단계가 아니라 결과**다. 여기서 단계와 결과로 분리해 준다.
+  const STAGE_ALIAS = { '최종합격':'최종', '최종 합격':'최종', '합격':'최종',
+                        '불합격':null, '탈락':null, '서류 합격':'서류합격', '서류전형':'서류접수' };
+  function normStage(a){
+    const raw = String(a && a.stage || '').trim();
+    if (STAGES.indexOf(raw) >= 0) return raw;
+    if (Object.prototype.hasOwnProperty.call(STAGE_ALIAS, raw)) {
+      const mapped = STAGE_ALIAS[raw];
+      return mapped || (a && a.lastStage) || '서류접수';   // 불합격은 직전 단계에 남긴다
+    }
+    return raw ? '__unknown__' : '';
   }
 
   function renderSummary(apps){
@@ -159,14 +197,14 @@
     const urg=apps.filter(urgent).length;
     const cells=[['총 지원/관심',c.total],['관심(미지원)',c.interest],['진행중',c.progress],['합격',c.pass],[`마감임박(${URGENT_DAYS}일)`,urg]];
     document.getElementById('summary').innerHTML=cells.map(([l,n])=>
-      `<div class="cell"><div class="num">${n}</div><div class="lbl">${l}</div></div>`).join('');
+      `<div class="cell"><div class="num">${escHtml(n)}</div><div class="lbl">${l}</div></div>`).join('');
   }
 
   // ── 퍼널 진단 (reference/job-search-ops.md §1) ───────────────────────────────
   // 병목이 아닌 단계엔 리소스를 쓰지 않는다. 표본 부족(<10)이면 판정하지 않는다(허위 정밀도 금지).
   const MIN_SAMPLE = 10;
   function reached(app, idx){ // 이 지원 건이 idx 단계까지 도달했는가
-    const i = STAGES.indexOf(app.stage);
+    const i = STAGES.indexOf(normStage(app));
     return i >= idx;
   }
   function renderFunnel(){
@@ -185,27 +223,54 @@
       {l:'최종', n:fin,      r:pct(fin,itv)},
       {l:'오퍼', n:offer,    r:pct(offer,fin)},
     ];
-    // 병목 판정(표본 충족 시에만)
+    // ── 병목 판정 ─────────────────────────────────────────────────────────
+    // ★ 예전엔 배타 if-else 사슬이라 서류통과가 1건만 있어도 첫 분기(docRate<=0.05)를 빠져나가
+    //   "서류는 통과하는데 면접에서 막힙니다 / 자소서 수정은 우선순위가 아닙니다"로 갔다.
+    //   서류에서 90% 떨어지는 사람에게 정확히 반대 지시를 내리던 오진이다(실측 재현).
+    //   이제 각 구간 전환율을 벤치마크와 비교해 **가장 나쁜 구간**을 고른다(argmin).
+    // ★ 분모 가드: 총 지원 수만 보고 하위 비율의 분모(docPass·itv·fin)를 안 보면
+    //   면접 1건으로 "실무 준비는 충분합니다"가 나온다. 구간마다 분모 최소치를 요구한다.
+    const MIN_DEN = 3;                       // 하위 구간 판정에 필요한 최소 분모
+    const BENCH = [                          // [단계idx, 라벨, 통과수, 분모, 기준선, 판정문]
+      {i:1, key:'문서·타겟팅', pass:docPass, den:n,       base:0.15,
+       msg:'<b>병목: 문서·타겟팅</b> — 서류에서 막혔습니다. ② 첨삭·① 무게중심 재검토·타깃 재선정에 집중하세요.<span class="no">지금 면접 준비는 효과가 없습니다.</span>'},
+      {i:2, key:'면접 전환',   pass:itv,     den:docPass, base:0.50,
+       msg:'<b>병목: 면접 전환</b> — 서류는 통과하는데 면접에서 막힙니다. ③④ 집중·복기·전달력.<span class="no">자소서 추가 수정은 우선순위가 아닙니다.</span>'},
+      {i:3, key:'임원·컬처핏', pass:fin,     den:itv,     base:0.40,
+       msg:'<b>병목: 임원·컬처핏</b> — 지원동기·비전 프레임을 재구성하세요(④ 임원 라운드).<span class="no">실무 기술 준비는 이미 충분합니다.</span>'},
+      {i:4, key:'조건·협상',   pass:offer,   den:fin,     base:0.50,
+       msg:'<b>병목: 조건·협상</b> — ⑥ 연봉협상·타깃 조건 재조정.'},
+    ];
     let bi=-1, verdict='';
     if(n >= MIN_SAMPLE){
-      const docRate = n>0 ? docPass/n : 0;
-      if(docRate <= 0.05){ bi=1; verdict='<b>병목: 문서·타겟팅</b> — 서류에서 막혔습니다. ② 첨삭·① 무게중심 재검토·타깃 재선정에 집중하세요.<span class="no">지금 면접 준비는 효과가 없습니다.</span>'; }
-      else if(docPass>0 && itv/docPass < 0.5){ bi=2; verdict='<b>병목: 면접 전환</b> — 서류는 통과하는데 면접에서 막힙니다. ③④ 집중·복기·전달력.<span class="no">자소서 추가 수정은 우선순위가 아닙니다.</span>'; }
-      else if(itv>0 && fin/itv < 0.4){ bi=3; verdict='<b>병목: 임원·컬처핏</b> — 지원동기·비전 프레임을 재구성하세요(④ 임원 라운드).<span class="no">실무 기술 준비는 이미 충분합니다.</span>'; }
-      else if(fin>0 && offer===0){ bi=4; verdict='<b>병목: 조건·협상</b> — ⑥ 연봉협상·타깃 조건 재조정.'; }
-      else { verdict='뚜렷한 병목이 보이지 않습니다 — <b>활동량</b>을 늘리는 것이 다음 레버입니다(주간 리듬).'; }
+      // 분모가 충분한 구간만 후보. 기준선 대비 부족분(base-rate)이 가장 큰 구간이 병목.
+      const cand = BENCH
+        .filter(b => b.den >= (b.i===1 ? MIN_SAMPLE : MIN_DEN))
+        .map(b => Object.assign({}, b, {rate: b.den>0 ? b.pass/b.den : 0}))
+        .filter(b => b.rate < b.base);
+      if(cand.length){
+        cand.sort((a,b)=> (b.base-b.rate) - (a.base-a.rate));
+        const w = cand[0];
+        bi = w.i;
+        // 계산 근거를 항상 병기한다 — 문구와 숫자가 어긋나면 눈에 띄게(실측: 5%인데 "서류는 통과"라고 떴다)
+        verdict = w.msg + `<span class="basis">근거: ${escHtml(w.pass)}/${escHtml(w.den)} = ${Math.round(w.rate*100)}% (기준선 ${Math.round(w.base*100)}%)</span>`;
+      } else {
+        const skipped = BENCH.filter(b => b.den < (b.i===1 ? MIN_SAMPLE : MIN_DEN)).map(b=>b.key);
+        verdict = '뚜렷한 병목이 보이지 않습니다 — <b>활동량</b>을 늘리는 것이 다음 레버입니다(주간 리듬).'
+          + (skipped.length ? `<span class="no">단, ${escHtml(skipped.join('·'))} 구간은 표본이 적어 판정하지 않았습니다.</span>` : '');
+      }
     } else {
-      verdict = `표본 부족 — 지원 <b>${n}건</b>. 전환율은 <b>${MIN_SAMPLE}건</b> 이상부터 신뢰합니다.<span class="no">지금 판정하면 노이즈입니다. ${Math.max(0,MIN_SAMPLE-n)}건 더 쌓고 다시 보세요.</span>`;
+      verdict = `표본 부족 — 지원 <b>${escHtml(n)}건</b>. 전환율은 <b>${MIN_SAMPLE}건</b> 이상부터 신뢰합니다.<span class="no">지금 판정하면 노이즈입니다. ${Math.max(0,MIN_SAMPLE-n)}건 더 쌓고 다시 보세요.</span>`;
     }
     document.getElementById('funnel').innerHTML =
-      `<h3>구직 퍼널 진단</h3><div class="sub">병목이 아닌 단계엔 리소스를 쓰지 않습니다. (지원한 건만 집계 · 표본 ${n}건)</div>
+      `<h3>구직 퍼널 진단</h3><div class="sub">병목이 아닌 단계엔 리소스를 쓰지 않습니다. (지원한 건만 집계 · 표본 ${escHtml(n)}건)</div>
        <div class="fsteps">`+steps.map((s,i)=>
          `<div class="fstep ${i===bi?'bottleneck':''}"><div class="n">${s.n}</div><div class="l">${s.l}</div><div class="r">${s.r}</div></div>`).join('')+
        `</div><div class="verdict">${verdict}</div>`;
   }
 
   function pipeHTML(app){
-    const curIdx=STAGES.indexOf(app.stage);
+    const curIdx=STAGES.indexOf(normStage(app));
     return `<div class="pipe">`+STAGES.map((s,i)=>{
       let cls='step';
       if(i<curIdx) cls+=' done';
@@ -215,10 +280,10 @@
   }
 
   function cardHTML(app){
-    const dd=ddayText(app.deadline);
+    const dd=ddayText(app);
     const urg=urgent(app);
     const docs= app.docs && app.docs.length
-      ? app.docs.map(d=>`<a href="${escAttr(d.href)}" target="_blank" rel="noopener">${escHtml(d.label)} ↗</a>`).join('')
+      ? app.docs.map(d=>`<a href="${escAttr(safeUrl(d.href))}" target="_blank" rel="noopener">${escHtml(d.label)} ↗</a>`).join('')
       : `<span class="none">제출 파생본 없음</span>`;
     return `<div class="app ${urg?'urgent':''}" data-result="${app.result}">
       <div class="app-top">
@@ -226,7 +291,7 @@
         <div class="app-id">
           <div class="co">${escHtml(app.co)}${urg?'<span class="urgent-flag">마감임박 · 미지원</span>':''}</div>
           <div class="ti">${escHtml(app.title)}</div>
-          ${app.link?`<div class="link"><a href="${escAttr(app.link)}" target="_blank" rel="noopener">공고 ↗</a></div>`:''}
+          ${app.link?`<div class="link"><a href="${escAttr(safeUrl(app.link))}" target="_blank" rel="noopener">공고 ↗</a></div>`:''}
         </div>
         ${app.score?`<span class="badge score">적합도 ${escHtml(app.score)}</span>`:''}
         <span class="badge ${app.result}">${RESULT_LABEL[app.result]||app.result}</span>
@@ -248,7 +313,8 @@
       : filter==='urgent'? APPS.filter(urgent)
       : APPS.filter(a=>a.result===filter);
     // 정렬: 마감임박·미지원을 최상단, 그다음 마감 임박순
-    shown.sort((a,b)=> (urgent(a)?0:1)-(urgent(b)?0:1) || Date.parse(a.deadline)-Date.parse(b.deadline));
+    const dk=a=>dlOk(a)?Date.parse(a.deadline):Number.POSITIVE_INFINITY;   // 미검증은 뒤로
+    shown.sort((a,b)=> (urgent(a)?0:1)-(urgent(b)?0:1) || dk(a)-dk(b));
     const list=document.getElementById('list');
     list.innerHTML = shown.length ? shown.map(cardHTML).join('')
       : `<div class="empty">해당 상태의 지원 건이 없습니다.</div>`;

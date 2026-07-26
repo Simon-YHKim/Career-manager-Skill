@@ -4,7 +4,12 @@
   최대 발굴(직무·전공 유사 + 커리어 발전 가능성) → 점수화·순위화 → 한줄 요약·공고 링크 ·
   위시리스트 체크박스 → 일정관리(application-tracker '관심' 연동). 자체완결, 외부 네트워크 0.
   ★ 스킬은 JD Browsing 실검색 결과로 아래 JOBS 배열을 치환한다. 공고는 실제 결과만·날조 금지,
-    각 항목에 출처·조회일·Truth Tier. 게이트된 상세는 추론 + [직접 확인] 플래그.
+    각 항목에 출처·조회일·Truth Tier. 취득 실패 상세는 추론 + [직접 확인] 플래그 + GATED에 유형코드 기록.
+  ★ 재직자면 BASELINE(현직 품질 5축)을 반드시 채운다 — 없으면 Δ 판정이 불가하고, 무의식적 하향
+    이직을 막지 못한다. 무직·첫 취업이면 null 그대로 둔다(0으로 가정 금지).
+  ★ 공고 필드: self(현직 회사 = 사내 전배) · status('만료' 등) · qualfit('미달'|'정합'|'오버').
+  ★ 마감일: **공고 원문에서 확인한 것만** deadline + dlVerified:true. 검색목록이 "즉시 지원"만 줬다면
+    날짜를 지어내지 말고 비워 둔다 → 화면에 '마감 [확인 필요]'로 뜨고 D-day·만료 판정을 하지 않는다.
   ★ 커밋되는 이 파일은 GENERIC 샘플만(실 공고·PII 금지).
 -->
 <html lang="ko">
@@ -31,6 +36,36 @@
     border-radius:9px; font-size:12.5px; color:var(--muted); }
   .prof b{ color:var(--ink); }
   .gated{ margin-top:8px; font-size:11.5px; color:var(--lo); }
+  /* 커버리지 원장 — 무엇을 실제로 돌렸나 */
+  .cov{ margin-top:10px; padding:10px 13px; border:1px dashed var(--line); border-radius:9px;
+    background:var(--paper); display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:11.5px; }
+  .cov b{ font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--faint); margin-right:4px; }
+  .cv{ position:relative; border-radius:12px; padding:2px 9px; font-weight:700; cursor:default; }
+  .cv i{ display:none; position:absolute; left:0; top:120%; z-index:5; white-space:nowrap; font-style:normal;
+    font-weight:400; background:#1b1a17; color:#e9e4d8; padding:4px 8px; border-radius:6px; font-size:10.5px; }
+  .cv:hover i{ display:block; }
+  .cv.on{ background:#e7f1eb; color:var(--hi); }
+  .cv.off{ background:var(--wash); color:var(--lo); text-decoration:line-through; }
+  .cvwarn{ color:var(--lo); font-weight:700; }
+  /* 난이도 밴드 — 지원 포트폴리오 배분 */
+  .bm{ position:relative; border-radius:12px; padding:2px 10px; font-weight:700; font-size:11.5px; }
+  .bm i{ display:none; position:absolute; left:0; top:120%; z-index:5; white-space:nowrap; font-style:normal;
+    font-weight:400; background:#1b1a17; color:#e9e4d8; padding:4px 8px; border-radius:6px; font-size:10.5px; }
+  .bm:hover i{ display:block; }
+  .bm.off{ outline:1px solid var(--lo); }
+  .b-쉬움{ background:#e7f1eb; color:var(--hi); }
+  .b-적정{ background:#f7eede; color:var(--mid); }
+  .b-도전{ background:var(--wash); color:var(--lo); }
+  .b-미달{ background:#f1eee7; color:var(--faint); }
+  .st .s-band{ font-weight:700; }
+  .st .s-검산{ background:var(--lo); color:#fff; }
+  .subrow.na span:last-child{ color:var(--faint); font-style:italic; }
+  .subrow.na .track{ background:repeating-linear-gradient(45deg,var(--bar),var(--bar)3px,transparent 3px,transparent 6px); }
+  .noerr{ color:var(--lo); cursor:help; }
+
+  /* 발굴 수율 판정 — 유효 최우선 0건이면 채널을 바꾸라고 말한다 */
+  .yield:not(:empty){ margin-top:10px; padding:11px 14px; border-radius:9px; font-size:12.5px; line-height:1.5;
+    background:#f7eede; border:1px solid #e3d5b8; color:var(--mid); }
 
   /* 컨트롤 */
   .controls{ position:sticky; top:0; z-index:20; display:flex; flex-wrap:wrap; gap:6px; align-items:center;
@@ -70,6 +105,22 @@
   .q-재검토{ color:var(--lo); background:var(--wash); } .q-후순위{ color:var(--faint); background:#f1eee7; }
   .flags{ margin:7px 0 0; display:flex; flex-wrap:wrap; gap:5px; }
   .flags span{ font-size:10.5px; font-weight:700; color:#fff; background:var(--lo); border-radius:12px; padding:2px 9px; }
+  /* 상태 배지 — 만료·사내전배·자격정합·확신부족·Δ (evaluation §5.6-b·§5.8-b·§5.8-c) */
+  .st{ margin:7px 0 0; display:flex; flex-wrap:wrap; gap:5px; }
+  .st span{ font-size:10.5px; font-weight:700; border-radius:12px; padding:2px 9px; background:var(--wash); color:var(--muted); }
+  .st .s-만료{ background:#f1eee7; color:var(--faint); }
+  .st .s-사내{ background:#e8eaf2; color:#3d4a6b; }
+  .st .s-보류{ background:#f7eede; color:var(--mid); }
+  .st .s-자격{ background:#f7eede; color:var(--mid); }
+  .st .s-상향{ background:#e7f1eb; color:var(--hi); }
+  .st .s-하향{ background:var(--wash); color:var(--lo); }
+  .st .s-보합{ background:var(--wash); color:var(--muted); }
+  /* 기준선 카드 — 현직 대비 판정의 원점 */
+  .base{ border:1px dashed var(--line); border-radius:10px; padding:12px 14px; margin:0 0 12px;
+    background:var(--wash); display:flex; gap:14px; align-items:baseline; flex-wrap:wrap; }
+  .base b{ font-size:13px; color:var(--ink); }
+  .base span{ font-size:11.5px; color:var(--muted); }
+  .base .bq{ font-family:var(--serif); font-size:22px; color:var(--ink); }
   .qual{ margin-top:7px; padding-top:7px; border-top:1px dashed var(--line-2); }
   .qual .qh{ font-size:9.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--faint); margin-bottom:4px; }
   .score{ text-align:right; min-width:150px; }
@@ -107,6 +158,10 @@
   <p class="lead"><b>두 점수를 분리해서 봅니다</b> — <b>적합도</b>(내가 붙을까) × <b>직장 품질</b>(갈 만한 곳인가). 합치지 않아야 "붙기 쉬운 나쁜 곳"에 속지 않습니다. ⚠️ 적신호는 점수와 별개로 항상 경고(자동 배제는 하지 않음 — 판단은 본인).</p>
   <div class="prof" id="prof"></div>
   <div class="gated" id="gated"></div>
+  <div id="coverage"></div>
+  <div id="baseline"></div>
+  <div id="bandmix"></div>
+  <div class="yield" id="yield"></div>
 
   <div class="controls">
     <select id="sort" onchange="render()">
@@ -114,6 +169,7 @@
       <option value="quality">정렬: 직장 품질순(갈 만한가)</option>
       <option value="deadline">정렬: 마감 임박순</option>
       <option value="growth">정렬: 발전 가능성순</option>
+      <option value="delta">정렬: 현직 대비 Δ순</option>
     </select>
     <div class="seg" id="filters"></div>
     <span class="count" id="count"></span>
@@ -129,11 +185,26 @@
 </div>
 
 <script>
-  const TODAY = '2026-07-23';   // 스킬이 렌더 시 실제 KST로 치환
+  // 기준일 — 스킬이 렌더 시 실제 KST 날짜로 TODAY_PINNED에 채운다.
+  // ★ 치환이 누락되면 **브라우저 현재 날짜로 자동 폴백**한다. 하드코딩된 과거 날짜를 그대로 쓰면
+  //   D-day·마감임박·만료 판정이 전부 조용히 틀린다(실측: 커밋된 템플릿이 이미 과거 날짜였다).
+  const TODAY_PINNED = '';
+  const TODAY = TODAY_PINNED || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
   // 탐색 프로파일 (스킬이 뱅크·프로필로 자동 생성)
   const PROFILE = { role:'제조 오퍼레이션/생산혁신', langs:'국문 + 영어', region:'국내 우선 + 글로벌', level:'미드~시니어' };
   // 게이트되어 상세 미확보된 보드 (정직 표기)
   const GATED = [];
+
+  // 커버리지 원장 (jd-browsing §2 커버리지 규율 4) — 실제로 돌린 축과 수확량.
+  // ★ 규칙이 있어도 건너뛰기 쉬우므로 '미실행'이 화면에 보이게 한다. 빈 배열이면 경고가 뜬다.
+  // ran:false 로 두면 붉게 '미실행'으로 표시된다 — 조용한 누락 방지.
+  const COVERAGE = [
+    { axis:'직무명 변형', detail:'생산기술·공정기술·설비기술·제조기술·생산혁신', ran:true, found:0 },
+    { axis:'자사 채용홈 스윕', detail:'타깃 기업 채용사이트 직접 조회', ran:false, found:0 },
+    { axis:'애그리게이터', detail:'잡코리아·사람인·원티드·인크루트', ran:true, found:0 },
+    { axis:'NCS 직무코드', detail:'코드 기준 재검색', ran:false, found:0 },
+    { axis:'서치펌·리퍼럴', detail:'헤드헌팅·추천 채널', ran:false, found:0 },
+  ];
 
   // JD Browsing 실검색 결과 (샘플 — 스킬이 실제 공고로 치환). 점수 = 적합도(0–100), sub 4축.
   const JOBS = [
@@ -142,7 +213,7 @@
       score:86, grade:'상', confidence:'높음', sub:{role:90, major:88, growth:82, weight:84},
       err:5, quality:78, qsub:{pay:80, grow:75, stable:88, culture:70, personal:75}, qconf:'중간', flags:[],
       whatif:['PMP 자격 +6','영어 인증 +5'],
-      reqs:['생산기술 8년+','IE·데이터 분석','리더십'], deadline:'2026-08-05', link:'#' },
+      reqs:['생산기술 8년+','IE·데이터 분석','리더십'], deadline:'2026-08-05', dlVerified:true, link:'#' },
     { co:'컨설팅 B', mono:'B', title:'Operations Excellence Consultant', region:'글로벌',
       summary:'제조·공급망 오퍼레이션을 진단·개선하는 전략 컨설팅 실행 트랙(학사 가능).',
       score:71, grade:'중상', confidence:'중간', sub:{role:78, major:74, growth:88, weight:52},
@@ -150,7 +221,18 @@
     { co:'반도체 C', mono:'C', title:'공정기술 · 수율 혁신 엔지니어', region:'국내',
       summary:'반도체 기판 공정의 수율·생산성 혁신 — 현재 도메인과 직접 인접.',
       score:79, grade:'중상', confidence:'높음', sub:{role:84, major:80, growth:76, weight:78},
+      qualfit:'오버',   // 요구 하한의 2배+ → 적합도가 아니라 품질(보상·성장)에서 처리(§5.6-b)
       reqs:['공정기술','수율 RCA','통계'], deadline:'2026-08-20', link:'#' },
+    { co:'현직 F', mono:'F', title:'생산기술 — 타 사업장 전배', region:'국내', self:true,
+      summary:'현 소속사 공고 — 적합도는 높지만 이직이 아니라 사내 전배. 4분면에서 제외한다.',
+      score:88, grade:'상', confidence:'높음', sub:{role:92, major:90, growth:58, weight:86},
+      err:5, quality:72, qsub:{pay:80, grow:62, stable:86, culture:70, personal:40}, qconf:'중간', flags:[],
+      whatif:['(사내 이동은 사내 절차)'],
+      reqs:['생산기술','경력'], deadline:'2026-09-10', link:'#' },
+    { co:'만료 G', mono:'G', title:'생산혁신 엔지니어 (마감된 공고)', region:'국내', status:'만료',
+      summary:'마감된 공고 — 목록에는 남기되 채점하지 않는다(리소스 낭비 + 지원 가능 착시 방지).',
+      score:76, grade:'중상', confidence:'중간', sub:{role:80, major:78, growth:70, weight:72},
+      reqs:['생산혁신'], deadline:'2026-01-23', dlVerified:true, link:'#' },
     { co:'PE D', mono:'D', title:'Operating Partner — 제조 실사/개선', region:'글로벌',
       summary:'PE 포트폴리오사의 제조 오퍼레이션 실사·개선을 이끄는 operating partner(성장 트랙).',
       score:64, grade:'중', confidence:'낮음', sub:{role:66, major:70, growth:92, weight:40},
@@ -177,30 +259,199 @@
     if(fit>=65 && qual< 65) return '재검토';
     return '후순위';
   }
+
+  // ── 기준선 · Δ · 승격 가드 (evaluation §5.8-c / §5.8-b) ──────────────────
+  // 현직 기준선: 재직자면 스킬이 직장 품질 5축으로 채점해 주입한다.
+  // 무직·첫 취업·공백기면 null 그대로 — Δ를 표기하지 않는다(0으로 가정 금지).
+  const BASELINE = null;   // 예: { co:'현재 회사', label:'현직 선임', quality:71, qsub:{pay:80,grow:65,stable:85,culture:70,personal:80} }
+
+  function delta(j){
+    return (BASELINE && BASELINE.quality!=null && j.quality!=null) ? j.quality - BASELINE.quality : null;
+  }
+  function deltaLabel(d){ return d==null ? null : d>=10 ? '상향' : d<=-10 ? '하향' : '보합'; }
+  function expired(j){ return j.status==='만료' || (dlOk(j) && daysTo(j.deadline)<0); }
+
+  // 최우선 승격 가드 — 라벨을 신뢰할 수 있게 만드는 조건. 사유가 있으면 라벨을 내린다.
+  // ★ 배제가 아니라 보류다: 공고는 목록에 그대로 남는다(자유도 보존).
+  function guardReason(j){
+    if(expired(j))            return '만료';
+    if(j.self)                return '사내 전배';
+    if(!dlOk(j))              return '마감 미확인';
+    if(j.confidence==='낮음') return '확인 필요';
+    const d = delta(j);
+    // ★ 임계는 Δ 배지와 동일한 '하향'(≤-10)을 쓴다. 예전엔 여기만 0이라, 화면에 '보합'으로
+    //   표시되는 공고가 뒤에서 조용히 승격 차단되는 모순이 있었다. 품질 점수는 ±5~20 오차를
+    //   달고 다니므로 0을 하드 임계로 쓰는 건 허위 정밀도다(§5.9).
+    if(d!=null && d<=-10)     return '하향';
+    return null;
+  }
+  // 화면에 실제로 붙는 라벨. 최우선만 가드하고 나머지 분면은 그대로 둔다.
+  function quadLabel(j){
+    const q = quadrant(j.score, j.quality);
+    if(!q) return null;
+    return (q==='최우선' && guardReason(j)) ? null : q;
+  }
+  function statusHTML(j){
+    const out=[];
+    if(expired(j))                out.push(['만료','만료']);
+    if(j.self)                    out.push(['사내','사내 전배 — 이직 아님']);
+    if(j.qualfit==='미달')        out.push(['자격','연차·요건 미달']);
+    if(j.qualfit==='오버')        out.push(['자격','오버스펙 — 직급·연봉 하향 리스크']);
+    if(!dlOk(j))                  out.push(['보류','마감 미확인 — 모집중 여부 불명(추정 금지)']);
+    if(j.confidence==='낮음')     out.push(['보류','확인 필요 — 취득 실패로 확신 낮음']);
+    const d=delta(j), dl=deltaLabel(d);
+    if(dl) out.push([dl, `Δ ${d>0?'+':''}${d} · 현직 대비 ${dl}`]);
+    if(!out.length) return '';
+    return `<div class="st">`+out.map(([c,t])=>`<span class="s-${c}">${escHtml(t)}</span>`).join('')+`</div>`;
+  }
+  // 커버리지 원장 렌더 — 미실행 축을 숨기지 않는다(누락이 침묵하지 않게).
+  function coverageHTML(){
+    const el=document.getElementById('coverage'); if(!el) return;
+    if(!COVERAGE || !COVERAGE.length){
+      el.innerHTML = `<div class="cov"><b>커버리지 원장 없음</b> <span>— 어떤 축을 실제로 돌렸는지 기록되지 않았습니다. 누락 여부를 판단할 수 없습니다.</span></div>`;
+      return;
+    }
+    const miss = COVERAGE.filter(c=>!c.ran);
+    el.innerHTML = `<div class="cov"><b>커버리지 원장</b>`
+      + COVERAGE.map(c=>`<span class="cv ${c.ran?'on':'off'}">${escHtml(c.axis)}${c.ran?` · ${c.found}건`:' · 미실행'}<i>${escAttr(c.detail)}</i></span>`).join('')
+      + (miss.length?`<span class="cvwarn">⚠ ${miss.length}개 축 미실행 — 이 결과는 완전하지 않습니다</span>`:'')
+      + `</div>`;
+  }
+
+
+  // ── 난이도 밴드 (evaluation §5.6-c) — "어디에 몇 개를 넣을까"에 답하는 축 ──────────
+  // 적합도만으로 정한다(품질은 '갈 만한가'이지 '붙을까'가 아니다).
+  const BAND_TARGET = { '쉬움':[20,30], '적정':[50,60], '도전':[10,20] };   // 권장 비중 %
+  function band(j){
+    const f = j.score;
+    if (f == null) return null;
+    if (j.qualfit === '미달') return '미달';        // 하드필터 — 배제하지 않되 밴드에서 분리
+    let b = f >= 80 ? '쉬움' : f >= 60 ? '적정' : f >= 40 ? '도전' : '미달';
+    // 확신 낮음이면 한 단계 보수적으로(취득 실패로 점수가 부풀 수 있다)
+    if (j.confidence === '낮음') b = b === '쉬움' ? '적정' : b === '적정' ? '도전' : b;
+    // 재직자 특례: 하향은 '안전 카드'가 될 수 없다 — 현직이 이미 안전판이다
+    const d = delta(j);
+    if (b === '쉬움' && d != null && d <= -10) b = '적정';
+    return b;
+  }
+  function bandNote(j){
+    const b = band(j);
+    if (b === '쉬움' && j.qualfit === '오버') return '오버스펙 — 직급·연봉 하향 확인';
+    if (b === '쉬움') return '안전 카드 — 빠르게 제출';
+    if (b === '적정') return '주력 — 문서·면접 준비에 시간 투입';
+    if (b === '도전') return '상향 — 갭 1개만 보강 후 제출';
+    if (b === '미달') return '하드필터 미충족 — 무엇을 채우면 되는지 확인';
+    return '';
+  }
+  function bandMixHTML(){
+    const el = document.getElementById('bandmix'); if (!el) return;
+    const live = JOBS.filter(j => !expired(j));
+    const counts = {}; let tot = 0;
+    live.forEach(j => { const b = band(j); if (!b || b === '미달') return; counts[b] = (counts[b]||0)+1; tot++; });
+    if (!tot) { el.innerHTML = ''; return; }
+    const rows = Object.keys(BAND_TARGET).map(b => {
+      const n = counts[b] || 0, pct = Math.round(n / tot * 100);
+      const [lo, hi] = BAND_TARGET[b];
+      const off = pct < lo ? '부족' : pct > hi ? '과다' : '';
+      return `<span class="bm b-${b} ${off?'off':''}">${b} ${n}건 · ${pct}%<i>권장 ${lo}–${hi}% ${off?'· '+off:'· 적정'}</i></span>`;
+    }).join('');
+    const bad = Object.keys(BAND_TARGET).filter(b => {
+      const pct = Math.round((counts[b]||0)/tot*100); return pct < BAND_TARGET[b][0] || pct > BAND_TARGET[b][1];
+    });
+    el.innerHTML = `<div class="cov"><b>지원 배분</b>${rows}`
+      + (bad.length ? `<span class="cvwarn">⚠ ${escHtml(bad.join('·'))} 밴드가 권장 비중을 벗어남 — 한쪽에만 몰아넣으면 하향 취업하거나 전멸합니다</span>` : '')
+      + `</div>`;
+  }
+
+
+  // ── 총점 검산 (evaluation §5.6·§5.8) ────────────────────────────────────
+  // ★ 총점과 축 점수를 각각 손으로 적으면 서로 어긋난다(실측: 실사용 보드 13건 중 6건 불일치,
+  //   최대 −6). 여기서 축으로부터 다시 계산해 대조하고, 벌어지면 화면에 경고한다.
+  const FIT_W  = { weight:0.40, role:0.25, major:0.25, growth:0.10 };   // §5.6 무게중심 ×0.40
+  const QUAL_W = { pay:0.25, grow:0.25, stable:0.20, culture:0.15, personal:0.15 };
+  function wsum(obj, W){
+    if(!obj) return null;
+    let n=0, d=0;
+    for(const k in W) if(obj[k]!=null){ n+=obj[k]*W[k]; d+=W[k]; }   // N/A 축은 재정규화(0점 처리 금지)
+    return d ? Math.round(n/d) : null;
+  }
+  const calcFit  = j => wsum(j.sub,  FIT_W);
+  const calcQual = j => wsum(j.qsub, QUAL_W);
+  const TOL = 3;   // 반올림 여유
+  function mismatch(j){
+    const out=[];
+    const f=calcFit(j),  q=calcQual(j);
+    // 하드필터 미충족(§5.6-b '미달')은 총점을 **의도적으로 낮추는** 상한이다 — 하향 편차는 정상.
+    // 다만 위로 벌어지는 것은 어느 경우에도 오류다(상한이 상향을 만들 수는 없다).
+    const capped = j.qualfit === '미달';
+    if(f!=null && j.score!=null){
+      const d = j.score - f;
+      if(d > TOL || (!capped && d < -TOL)) out.push(`적합도 ${j.score} vs 4축 ${f}`);
+    }
+    if(q!=null && j.quality!=null && Math.abs(j.quality-q)>TOL) out.push(`품질 ${j.quality} vs 5축 ${q}`);
+    return out;
+  }
+
+  function baselineHTML(){
+    const el=document.getElementById('baseline'); if(!el) return;
+    el.innerHTML = BASELINE ? `<div class="base">
+      <b>기준선 · ${escHtml(BASELINE.co)}</b>
+      <span class="bq">${BASELINE.quality}</span>
+      <span>${escHtml(BASELINE.label||'현직')} — 아래 공고의 Δ는 이 점수 대비입니다. 현직보다 낮은 곳은 <b>최우선으로 올리지 않습니다</b>.</span>
+    </div>` : `<div class="base"><span>기준선 없음 — 현직이 없어 Δ를 표기하지 않습니다(0으로 가정하지 않음). 절대 점수 + 시장 위치 레이어로 판단하세요.</span></div>`;
+  }
   let filter='all';
   const wish = new Set();                 // 안정 키(회사␟직무)로 저장 — 동명 공고 오선택·따옴표 깨짐 방지
   function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
+  // URL 스킴 화이트리스트 — 데이터에서 온 링크가 실행 가능한 스킴으로 렌더되는 것을 차단.
+  // javascript:·data:·vbscript: 등은 클릭 시 코드가 실행된다. 공고 링크는 외부 입력(JSON 임포트·
+  // 스킬 생성)이므로 신뢰할 수 없다. http/https/mailto와 상대경로만 허용하고 나머지는 무력화한다.
+  function safeUrl(u){
+    const raw = String(u == null ? '' : u).trim();
+    if (!raw) return '#';
+    // 제어문자·공백을 제거해 "java\tscript:" 같은 우회를 막는다
+    const flat = raw.replace(/[\u0000-\u001F\u007F\s]/g, '').toLowerCase();
+    if (/^(https?:|mailto:)/.test(flat)) return raw;
+    if (/^[a-z][a-z0-9+.-]*:/.test(flat)) return '#';   // 그 외 모든 스킴 차단
+    return raw;                                          // 상대경로·앵커는 허용
+  }
   function jkey(j){ return (j.co||'')+'␟'+(j.title||''); }
 
   function daysTo(d){ return Math.round((Date.parse(d)-Date.parse(TODAY))/86400000); }
-  function dday(d){ const n=daysTo(d); if(n>0)return {t:'D-'+n,past:false}; if(n===0)return {t:'D-DAY',past:false}; return {t:'마감('+(-n)+'일 경과)',past:true}; }
+
+  // ── 마감일 출처 신뢰도 ────────────────────────────────────────────────
+  // ★ dlVerified:true 는 **공고 원문에서 실제로 확인한 날짜**에만 붙인다.
+  //   검색 목록이 "즉시 지원"·"상시"만 보여줬다면 날짜를 추정해 채우지 않는다(날조 금지).
+  //   deadline을 비워두면 'D-n'을 만들어내지 않고 '마감 [확인 필요]'로 표시하며, 만료 판정도 하지 않는다
+  //   — 모르는 것을 아는 척하지 않는 것이 신선도 게이트의 전제다.
+  function dlOk(j){ return j && j.dlVerified===true && !!j.deadline; }
+  function dday(j){
+    if(!dlOk(j)) return { t:'마감 [확인 필요]', past:false, unknown:true };
+    const n=daysTo(j.deadline);
+    if(n>0)  return { t:'D-'+n,  past:false };
+    if(n===0)return { t:'D-DAY', past:false };
+    return { t:'마감('+(-n)+'일 경과)', past:true };
+  }
 
   function profHTML(){
     document.getElementById('prof').innerHTML =
-      `탐색 프로파일 · <b>${PROFILE.role}</b> · 언어 ${PROFILE.langs} · 지역 ${PROFILE.region} · 연차 ${PROFILE.level} · 조회 ${TODAY}`;
+      `탐색 프로파일 · <b>${escHtml(PROFILE.role)}</b> · 언어 ${escHtml(PROFILE.langs)} · 지역 ${escHtml(PROFILE.region)} · 연차 ${escHtml(PROFILE.level)} · 조회 ${escHtml(TODAY)}`;
     document.getElementById('gated').innerHTML = GATED.length
-      ? `⚠ 게이트되어 상세 미확보(직접 확인 필요): ${GATED.join(' · ')}` : '';
+      ? `⚠ 게이트되어 상세 미확보(직접 확인 필요): ${GATED.map(escHtml).join(' · ')}` : '';
   }
 
   function barsHTML(j){
     let h = `<div class="subs">`+Object.keys(SUBLABEL).map(k=>
       `<div class="subrow"><span>${SUBLABEL[k]}</span><span class="track"><span class="fill" style="width:${j.sub[k]}%"></span></span><span>${j.sub[k]}</span></div>`
     ).join('')+`</div>`;
-    if(j.qsub){ // 직장 품질 5축 — 적합도와 분리해 표시(합치지 않음)
-      h += `<div class="qual"><div class="qh">직장 품질 ${j.quality!=null?j.quality:'—'}${j.qconf?' · 확신 '+escHtml(j.qconf):''}</div><div class="subs">`+
-        Object.keys(QLABEL).filter(k=>j.qsub[k]!=null).map(k=>
-          `<div class="subrow"><span>${QLABEL[k]}</span><span class="track"><span class="fill" style="width:${j.qsub[k]}%"></span></span><span>${j.qsub[k]}</span></div>`
+    if(j.qsub){ // 직장 품질 5축 — 적합도와 분리해 표시(합치지 않음). Δ는 기준선이 있을 때만.
+      const d=delta(j), dtxt = d==null ? '' : ` (Δ ${d>0?'+':''}${d})`;
+      h += `<div class="qual"><div class="qh">직장 품질 ${j.quality!=null?j.quality:'—'}${dtxt}${j.qconf?' · 확신 '+escHtml(j.qconf):''}</div><div class="subs">`+
+        Object.keys(QLABEL).map(k=> j.qsub[k]==null
+          ? `<div class="subrow na"><span>${QLABEL[k]}</span><span class="track"></span><span>N/A</span></div>`
+          : 
+          `<div class="subrow"><span>${QLABEL[k]}</span><span class="track"><span class="fill" style="width:${Number(j.qsub[k])||0}%"></span></span><span>${escHtml(j.qsub[k])}</span></div>`
         ).join('')+`</div></div>`;
     }
     return h;
@@ -216,25 +467,28 @@
     }).join('')+`</div>`;
   }
   function cardHTML(j,i){
-    const d=dday(j.deadline), on=wish.has(jkey(j));
+    const d=dday(j), on=wish.has(jkey(j));
     return `<div class="job ${on?'wished':''}">
       <label class="chk"><input type="checkbox" data-k="${escAttr(jkey(j))}" ${on?'checked':''}></label>
       <div class="rank">${i+1}</div>
       <div class="body">
         <div class="co">${escHtml(j.co)} · ${escHtml(j.region)}</div>
-        <div class="title">${escHtml(j.title)}${(function(q){return q?`<span class="quad q-${q}">${q}</span>`:'';})(quadrant(j.score, j.quality))}</div>
+        <div class="title">${escHtml(j.title)}${(function(q){return q?`<span class="quad q-${q}">${q}</span>`:'';})(quadLabel(j))}</div>
         <div class="sum">${escHtml(j.summary)}</div>
+        ${(function(b){return b?`<div class="st"><span class="s-band b-${b}">${escHtml(b)} · ${escHtml(bandNote(j))}</span></div>`:'';})(band(j))}
+        ${(function(m){return m.length?`<div class="st"><span class="s-검산">⚠ 총점 불일치: ${escHtml(m.join(' · '))}</span></div>`:'';})(mismatch(j))}
+        ${statusHTML(j)}
         ${flagsHTML(j)}
         ${reqHTML(j)}
         ${j.whatif&&j.whatif.length?`<div class="meta"><span>↗ 올리려면: ${j.whatif.map(escHtml).join(' · ')}</span></div>`:''}
         <div class="meta">
           <span class="dday ${d.past?'past':''}">${d.t}</span>
-          <span class="src">출처·조회 ${TODAY} · 확신 ${escHtml(j.confidence)}</span>
-          <a href="${escAttr(j.link)}" target="_blank" rel="noopener">공고 ↗</a>
+          <span class="src">출처·조회 ${escHtml(TODAY)} · 확신 ${escHtml(j.confidence)}</span>
+          <a href="${escAttr(safeUrl(j.link))}" target="_blank" rel="noopener">공고 ↗</a>
         </div>
       </div>
       <div class="score">
-        <div class="num">${j.score}<small>${j.err?' ±'+j.err:''}/100</small></div>
+        <div class="num">${escHtml(j.score)}<small>${j.err?' ±'+escHtml(j.err):'<b class="noerr" title="§5.9: 점수만 단독 제시 금지 — 오차·확신도 병기 필수">±?</b>'}/100</small></div>
         <div class="grade g-${j.grade}">${j.grade}</div>
         <div class="conf">적합도 · 확신 ${escHtml(j.confidence)}</div>
         ${barsHTML(j)}
@@ -243,7 +497,7 @@
   }
 
   function renderFilters(){
-    const opts=[['all','전체'],['top','최우선'],['flag','⚠️ 적신호'],['국내','국내'],['글로벌','글로벌'],['wish','위시리스트']];
+    const opts=[['all','전체'],['top','최우선'],['쉬움','쉬움'],['적정','적정'],['도전','도전'],['up','↑ 상향만'],['live','모집중'],['flag','⚠️ 적신호'],['국내','국내'],['글로벌','글로벌'],['wish','위시리스트']];
     document.getElementById('filters').innerHTML = opts.map(([k,l])=>
       `<button class="${k===filter?'on':''}" onclick="setFilter('${k}')">${l}</button>`).join('');
   }
@@ -251,27 +505,41 @@
   function toggleWish(k){ if(wish.has(k))wish.delete(k); else wish.add(k); render(); }
 
   function render(){
-    profHTML(); renderFilters();
+    profHTML(); renderFilters(); coverageHTML(); baselineHTML(); bandMixHTML();
     const sort=document.getElementById('sort').value;
     let rows=JOBS.slice();
-    rows.sort((a,b)=> sort==='deadline' ? Date.parse(a.deadline)-Date.parse(b.deadline)
+    const dlKey=j=>dlOk(j)?Date.parse(j.deadline):Number.POSITIVE_INFINITY;   // 미확인은 뒤로
+    rows.sort((a,b)=> sort==='deadline' ? dlKey(a)-dlKey(b)
                     : sort==='growth' ? b.sub.growth-a.sub.growth
+                    : sort==='delta' ? ((delta(b)==null?-999:delta(b))-(delta(a)==null?-999:delta(a)))
                     : sort==='quality' ? (b.quality||0)-(a.quality||0) : b.score-a.score);
     let shown = filter==='all'?rows
       : filter==='wish'?rows.filter(j=>wish.has(jkey(j)))
-      : filter==='top'?rows.filter(j=>quadrant(j.score,j.quality)==='최우선')
+      : filter==='top'?rows.filter(j=>quadLabel(j)==='최우선')
+      : filter==='up'?rows.filter(j=>{const d=delta(j); return d!=null && d>=10;})
+      : (filter==='쉬움'||filter==='적정'||filter==='도전')?rows.filter(j=>band(j)===filter)
+      : filter==='live'?rows.filter(j=>!expired(j))
       : filter==='flag'?rows.filter(j=>j.flags&&j.flags.length)
       : rows.filter(j=>j.region===filter);
     document.getElementById('list').innerHTML = shown.length ? shown.map(cardHTML).join('')
       : `<div class="prof">해당 조건의 공고가 없습니다.</div>`;
-    document.getElementById('count').textContent = `발굴 ${JOBS.length} · 위시리스트 ${wish.size}`;
+
+    // 발굴 수율 판정 (jd-browsing §2-(2-e) · job-search-ops §2-b) — 유효 최우선 0건이면 채널 전환.
+    const live = JOBS.filter(j=>!expired(j));
+    const eff  = live.filter(j=>quadLabel(j)==='최우선');
+    document.getElementById('count').innerHTML =
+      `발굴 ${JOBS.length} · 모집중 ${live.length} · <b>유효 최우선 ${eff.length}</b> · 위시리스트 ${escHtml(wish.size)}`;
+    const y=document.getElementById('yield');
+    if(y) y.innerHTML = (JOBS.length>=10 && eff.length===0)
+      ? `⚠ <b>유효 최우선 0건</b> — 공고가 없는 게 아니라 <b>이 채널에 없습니다.</b> 같은 보드를 더 훑지 말고 채널을 바꾸세요: 자사 채용홈 직접 · 서치펌·헤드헌터 · 리퍼럴 · 목표기업 직접 아웃리치.`
+      : '';
   }
 
   function copyWishlist(){
     const picked = JOBS.filter(j=>wish.has(jkey(j)));
     if(!picked.length){ setStatus('체크된 공고가 없습니다.'); return; }
     const lines = ['=== 위시리스트 (관심 단계로 저장) ==='];
-    picked.forEach(j=> lines.push(`- ${j.co} | ${j.title} | 적합도 ${j.score}(${j.grade}) | 마감 ${j.deadline} | ${j.link}`));
+    picked.forEach(j=> lines.push(`- ${j.co} | ${j.title} | 적합도 ${j.score}(${j.grade}) | 마감 ${dlOk(j)?j.deadline:'[확인 필요]'} | ${j.link}`));
     lines.push('=== END ===');
     const txt = lines.join('\n');
     const showOut=(msg)=>{ const o=document.getElementById('out'); o.textContent=txt; o.style.display='block'; setStatus(msg); };

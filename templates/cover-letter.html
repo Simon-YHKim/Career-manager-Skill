@@ -65,10 +65,24 @@
 
   /* 인쇄/PDF = 제출 경로. 작업용 요소(문항 의도 메모·편집 UI)는 항상 숨긴다(제출 안전). */
   @page{ size:A4; margin:18mm; }
+  /* 인쇄 미러 — textarea는 인쇄 시 보이는 영역만 찍히고 나머지가 잘린다(실측: 답변이 통째로 누락).
+     그래서 beforeprint에 값을 이 div로 옮겨 찍고, 화면에서는 숨긴다. */
+  /* 예상 꼬리질문 — 자소서는 면접 대본이므로 본문과 함께 만든다(§2-5.5). 작업용이라 인쇄 제외. */
+  .q-drill{ width:100%; margin-top:7px; border:1px dashed var(--line-2); border-radius:7px; padding:8px 10px;
+    font-family:var(--sans); font-size:11.5px; line-height:1.6; color:var(--mid); background:#fdfbf7; resize:vertical; }
+  .q-drill::placeholder{ color:var(--faint); }
+  .counter b.active{ color:var(--accent); text-decoration:underline; }
+  .limbase{ font-family:var(--sans); font-size:10.5px; border:1px solid var(--line-2); border-radius:5px;
+    padding:1px 4px; margin-left:5px; color:var(--muted); background:#fff; }
+  .print-copy{ display:none; white-space:pre-wrap; font-size:12.5px; line-height:1.75; color:#1b1a17; margin-top:6px; }
   @media print{
     html,body{ background:#fff; }
-    .q-intent{ display:none !important; }
-    .actionbar, .add, .q-del, #out, .lead, .counter{ display:none !important; }
+    /* 작업용 메모는 제출본에 절대 나가지 않는다 */
+    .q-intent, .q-drill{ display:none !important; }   /* 작업용 — 제출본에 절대 미노출 */
+    .actionbar, .add, .q-del, #out, .lead, .counter, .limbase{ display:none !important; }
+    textarea{ display:none !important; }          /* 원본 대신 미러를 찍는다 */
+    .print-copy{ display:block !important; }
+    .q-title{ border:none !important; background:transparent !important; font-weight:700; }
     .q{ break-inside:avoid; }
   }</style>
 </head>
@@ -88,7 +102,8 @@
 </div>
 
 <div class="actionbar">
-  <button onclick="copyAll()">📋 전체 복사</button>
+  <button onclick="copyAll()">📋 제출용 복사</button>
+  <button onclick="copyDrill()">🎤 면접 문제은행 복사</button>
   <span class="status" id="status">문항+답변을 복사 → 제출 폼에 붙여넣기</span>
 </div>
 
@@ -112,23 +127,86 @@
         </div>
         <input class="q-intent" placeholder="문항 의도(역산) — 무엇을 보려는 문항인가 · 배치할 필살기(스킬이 채움)" value="${(data.intent||'').replace(/"/g,'&quot;')}">
         <textarea placeholder="답변 (두괄식: 주장 → 근거 → 맺음말)">${data.a||''}</textarea>
+        <div class="print-copy"></div>
+        <textarea class="q-drill" rows="4" placeholder="예상 꼬리질문 3개 + 답변 골자 (methodology §2-5.5 면접 역산) — 작업용, 제출본 미인쇄">${data.drill||''}</textarea>
         <div class="counter">
           <span>공백 포함 <b class="n cw">0</b>자</span>
           <span>공백 제외 <b class="cn">0</b>자</span>
-          <span class="lim">권장 상한 <input type="number" class="limv" value="${data.lim||1000}"> 자</span>
+          <span class="lim">권장 상한 <input type="number" class="limv" value="${data.lim||1000}"> 자
+            <select class="limbase" title="기업마다 기준이 다르다 — 공고에 명시된 기준을 고르세요">
+              <option value="with">공백 포함 기준</option><option value="no">공백 제외 기준</option>
+            </select></span>
         </div>
       </div>`);
     const ta = node.querySelector('textarea');
     const cw = node.querySelector('.cw'), cn = node.querySelector('.cn'), limv = node.querySelector('.limv');
     const counter = node.querySelector('.counter');
+    const limbase = node.querySelector('.limbase');
+    // ★ 상한 초과 판정 기준을 고정하지 않는다. '공백 제외 1,000자' 공고에서 공백 포함으로 재면
+    //   멀쩡한 분량이 초과로 뜨고 불필요하게 잘라내게 된다(과잉 트림).
     function upd(){ const c=countChars(ta.value); cw.textContent=c.withSpace; cn.textContent=c.noSpace;
-      const lim=parseInt(limv.value)||0; counter.classList.toggle('over', lim>0 && c.withSpace>lim); }
-    ta.addEventListener('input', upd); limv.addEventListener('input', upd);
+      const lim=parseInt(limv.value)||0;
+      const cur = limbase.value==='no' ? c.noSpace : c.withSpace;
+      counter.classList.toggle('over', lim>0 && cur>lim);
+      cw.classList.toggle('active', limbase.value!=='no'); cn.classList.toggle('active', limbase.value==='no'); }
+    ta.addEventListener('input', upd); limv.addEventListener('input', upd); limbase.addEventListener('change', upd);
     document.getElementById('qs').appendChild(node); renumber(); upd();
   }
+  // 제출본에서 작업용 마커를 제거한다 (SKILL §6.0 #7 Truth Tier 제출 게이트).
+  // ★ 게이트가 .work-only 블록만 보면, 답변 '본문 안에' 써넣은 [T2 …]·[확인 필요]는 그대로 새어나간다
+  //   (실측 재현). 여기서 줄 단위로 걷어낸다 — 마커만 있는 줄은 줄째 삭제, 문장 끝의 마커는 잘라낸다.
+  const WORK_MARK = /\[(?:T1|T2|T3|확인 필요|경계|미확인|보강|TODO)[^\]]*\]/g;
+  function stripWorkMarks(text){
+    return String(text || '')
+      .split('\n')
+      .map(function(line){ return line.replace(WORK_MARK, '').replace(/[ \t]+$/, ''); })
+      .filter(function(line, i, arr){
+        if (line.trim()) return true;
+        return i > 0 && i < arr.length - 1 && arr[i-1].trim() && arr[i+1].trim();  // 문단 사이 빈 줄만 유지
+      })
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  // 인쇄 직전 textarea 값을 미러로 복사한다(작업 마커 제거 후). 값이 비면 미러도 비운다.
+  window.addEventListener('beforeprint', function(){
+    document.querySelectorAll('#qs .q').forEach(function(q){
+      const ta=q.querySelector('textarea'), pc=q.querySelector('.print-copy');
+      if(ta && pc) pc.textContent = stripWorkMarks(ta.value);
+    });
+  });
+
   function renumber(){ document.querySelectorAll('#qs .q .q-no').forEach((e,i)=> e.textContent=String(i+1).padStart(2,'0')); }
 
   SAMPLES.forEach(addQ);
+
+  // 자소서에서 만든 꼬리질문을 그대로 ③ 면접 준비로 넘긴다 — 두 번 일하지 않는다(§6.0 #6).
+  function copyDrill(){
+    const co=(document.getElementById('co').value||'').trim(), role=(document.getElementById('role').value||'').trim();
+    let L=[`=== 면접 문제은행 · ${co||'(회사)'} / ${role||'(직무)'} ===`,
+           '(자소서 문항에서 역산한 예상 꼬리질문 — interview-prep.html로 이어붙이세요)'];
+    let n=0;
+    document.querySelectorAll('#qs .q').forEach((q,i)=>{
+      const title=q.querySelector('.q-title').value.trim();
+      const d=(q.querySelector('.q-drill')||{}).value||'';
+      if(!d.trim()) return;
+      n++; L.push(`\n[문항 ${i+1}] ${title}`); L.push(d.trim());
+    });
+    if(!n){ setStatus('꼬리질문이 비어 있습니다 — 문항마다 3개씩 채우세요(§2-5.5)'); return; }
+    L.push('\n=== END ===');
+    const txt=L.join('\n');
+    const showOut=(m)=>{ const o=document.getElementById('out'); o.textContent=txt; o.style.display='block'; setStatus(m); };
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(
+          ()=>setStatus(`${n}개 문항의 꼬리질문 복사됨 — ③ 면접 준비로 붙여넣기`),
+          ()=>showOut('클립보드 차단 — 아래 직접 복사'));
+        return;
+      }
+    }catch(e){}
+    showOut('아래 내용을 직접 복사하세요');
+  }
 
   function copyAll(){
     const co=(document.getElementById('co').value||'').trim(), role=(document.getElementById('role').value||'').trim();

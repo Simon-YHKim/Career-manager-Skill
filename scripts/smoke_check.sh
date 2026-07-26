@@ -43,7 +43,9 @@ if git ls-files 2>/dev/null | grep -qF "insane-search" || grep -rqF "insane-sear
 
 echo "== personal context privacy (D-6) =="
 grep -qE '^\.private/' .gitignore && grep -qE '^reference/private/' .gitignore && grep -qE '^\.env' .gitignore && ok ".gitignore excludes .private/ reference/private/ .env" || no ".gitignore privacy"
-if git ls-files 2>/dev/null | grep -qiE 'profile\.md|/private/|\.pdf$'; then no "private file is git-tracked"; else ok "no private files tracked"; fi
+# ★ 정규식 주의: '/private/'는 '.private/'를 매치하지 못한다(앞에 슬래시가 없음).
+# 실측(2026-07): 이 버그로 .private/experience-bank.md를 스테이징한 상태에서도 [PASS]가 찍혔다.
+if git ls-files 2>/dev/null | grep -qiE '(^|/)\.?private/|profile\.md|\.pdf$'; then no "private file is git-tracked"; else ok "no private files tracked"; fi
 
 echo "== no persona/router in SKILL.md (D-4) =="
 # Must DECLARE absence (§5) and must NOT implement active menu/engine/command-center signatures.
@@ -93,16 +95,26 @@ SECRET_RE='sk-ant-[A-Za-z0-9]|sk-proj-[A-Za-z0-9_-]{20,}|AKIA[0-9A-Z]{16}|gh[pou
 hits=$(git ls-files -z | grep -zv '^scripts/smoke_check\.sh$' | xargs -0 grep -lE "$SECRET_RE" 2>/dev/null || true)
 [ -z "$hits" ] && ok "추적 파일 전체 시크릿 스캔 0건" || no "secret-like string in: $hits"
 # --- 동작 회귀 게이트 (문자열 존재가 아니라 '실제로 동작하는가' — 최종검증에서 발견된 결함 재발 방지) ---
-# (a) hub esc()가 진짜 이스케이프하는가 (no-op이면 저장형 XSS → 워커 토큰 유출)
+# (a) XSS: 런타임 실증 — 악성 값을 데이터에 심고 실제로 렌더해 살아나는지 본다.
+# ★ 옛 게이트는 esc() 정의만 격리 실행해 호출부를 다 지워도 통과했다. 정적 sink 스캔은 오탐이 많다.
+#   그래서 chromium으로 실제 렌더 후 (i) onerror 발화 (ii) 엘리먼트 파싱 (iii) 위험 스킴 href를 검사한다.
+node scripts/check_xss.js 2>/dev/null \
+  && ok "XSS: 런타임 실증(페이로드 미실행·미파싱·위험스킴 href 없음)" || no "XSS: 페이로드가 살아있는 마크업/링크로 렌더됨"
+# (b) worker provider: 클라이언트가 벤더를 절대 못 정하는가 (키 오전송 방지) — 문자열이 아니라 실제 로직 실행
+# ★ 이전 게이트는 순수 grep이라 주석에 문자열만 남기고 우선순위를 뒤집어도 통과했다.
+#   또한 AI_PROVIDER 미설정(기본 배포)이라는 핵심 케이스를 아예 검사하지 않았다.
 if node -e "
-const fs=require('fs');const s=fs.readFileSync('templates/hub.html','utf8');
-const m=s.match(/function esc\(s\)\{[\s\S]*?\}/); if(!m){process.exit(2);}
-const esc=new Function('return ('+m[0].replace('function esc','function')+')')();
-process.exit(esc('<img src=x>').includes('&lt;') ? 0 : 1);
-" 2>/dev/null; then ok "hub esc(): 실제 이스케이프(XSS 회귀 게이트)"; else no "hub esc() is a no-op → XSS 위험"; fi
-# (b) worker provider: 서버 시크릿(env.AI_PROVIDER)이 클라이언트 body보다 우선하는가 (키 오전송 방지)
-grep -qE 'env\.AI_PROVIDER\s*\|\|\s*b\.provider' worker/src/index.js \
-  && ok "worker: provider 서버 시크릿 우선(키 오전송 방지)" || no "worker: client provider가 서버 시크릿을 이김"
+const fs=require('fs');const s=fs.readFileSync('worker/src/index.js','utf8');
+const m=s.match(/const provider = [^;]+;/); if(!m) process.exit(2);
+const pick=(env,b)=>new Function('env','b','\"use strict\";'+m[0]+'return provider;')(env,b);
+const t=[];
+t.push(['시크릿 미설정+클라 openai → anthropic 유지', pick({},{provider:'openai'})==='anthropic']);
+t.push(['시크릿 미설정+클라 미지정 → anthropic',      pick({},{})==='anthropic']);
+t.push(['시크릿 openai → openai',                   pick({AI_PROVIDER:'openai'},{})==='openai']);
+t.push(['시크릿 openai+클라 anthropic → openai 유지', pick({AI_PROVIDER:'openai'},{provider:'anthropic'})==='openai']);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "worker: 벤더는 서버만 결정(미설정 기본 구성 포함) — 키 오전송 차단"; else no "worker: 클라이언트가 벤더를 정할 수 있음(키 오전송 위험)"; fi
 # (c) report.html 토글 특이도 교정(한/영 중복 노출 방지)
 grep -qE 'body:not\(\.lang-en\) \.en\{display:none\}' templates/report.html \
   && grep -qE 'body:not\(\.mode-easy\) \.easy\{display:none\}' templates/report.html \
@@ -117,6 +129,300 @@ grep -qiE 'is-inside-work-tree|워크트리' SKILL.md && grep -qF ".gitignore" S
 # (f) ⑤ 무데이터 가드(0/0 방지, 초보 낙담 방지)
 grep -qiE '무데이터|분모가 0|N/A\(자료 없음\)' reference/evaluation.md \
   && ok "evaluation §5.5: 무데이터 선행 가드(N/A·0/0 금지)" || no "evaluation no-data guard"
+# (h) 4분면 승격 가드가 '실제로' 라벨을 내리는가 — 만료/자사/확신낮음/하향이 최우선으로 새면 실사용에서 오판
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
+const grab=(re)=>{const m=s.match(re); if(!m) throw new Error('not found: '+re); return m[0];};
+const src=[/function daysTo\(d\)\{[^}]*\}/, /function dlOk\(j\)\{[^}]*\}/, /function quadrant\(fit, qual\)\{[\s\S]*?\n  \}/,
+  /function delta\(j\)\{[\s\S]*?\n  \}/, /function expired\(j\)\{[^}]*\}/,
+  /function guardReason\(j\)\{[\s\S]*?\n  \}/, /function quadLabel\(j\)\{[\s\S]*?\n  \}/].map(grab).join('\n');
+const FIX='const TODAY='+JSON.stringify('2026-07-26')+';';
+const base=(b)=>new Function('BASELINE','J','\"use strict\";'+FIX+src+'return quadLabel(J);');
+const hi={score:90,quality:90,confidence:'높음',deadline:'2099-01-01',dlVerified:true};
+const t=[];
+t.push(['정상 최우선', base()(null,hi)==='최우선']);
+t.push(['만료 차단',   base()(null,Object.assign({},hi,{deadline:'2000-01-01'}))!=='최우선']);
+t.push(['자사 차단',   base()(null,Object.assign({},hi,{self:true}))!=='최우선']);
+t.push(['확신낮음 차단',base()(null,Object.assign({},hi,{confidence:'낮음'}))!=='최우선']);
+t.push(['하향(Δ<=-10) 차단', base()({quality:105},hi)!=='최우선']);
+t.push(['보합(Δ=-3)은 통과 — 배지와 임계 일치', base()({quality:93},hi)==='최우선']);
+t.push(['상향 통과',   base()({quality:60},hi)==='최우선']);
+t.push(['기준선없음 Δ미적용', base()(null,hi)==='최우선']);
+t.push(['다른분면 유지', base()(null,{score:40,quality:40,confidence:'높음',deadline:'2099-01-01',dlVerified:true})==='후순위']);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+process.exit(0);
+" 2>/dev/null; then ok "jd-discovery: 4분면 승격 가드 동작(만료·자사·확신낮음·하향 차단 / 상향 통과)"; else no "jd-discovery 승격 가드가 동작하지 않음"; fi
+# (i) Δ는 기준선이 있을 때만 — 없는데 0으로 가정하면 무직 사용자에게 허위 판정
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
+const m=s.match(/function delta\(j\)\{[\s\S]*?\n  \}/); if(!m) process.exit(2);
+const f=new Function('BASELINE','j','\"use strict\";'+m[0]+'return delta(j);');
+process.exit((f(null,{quality:50})===null && f({quality:70},{quality:50})===-20 && f({quality:70},{})===null) ? 0 : 1);
+" 2>/dev/null; then ok "jd-discovery: Δ는 기준선 있을 때만(무직 0-가정 금지)"; else no "delta() 기준선 처리 오류"; fi
+# (h13) PII 보호가 '선언'이 아니라 '결과 검증'인가 — 임시 저장소로 실제 유출을 재현해 확인
+# ★ 실측: .gitignore에 줄을 적어도 경로가 이미 추적 중이면 무효인데, 스킬은 "등록했습니다"라고 보고했다.
+if bash -c '
+set -e
+T=$(mktemp -d); cd "$T"
+git init -q . && git config user.email t@t && git config user.name t
+mkdir -p .private reference/private
+echo secret > .private/profile.md
+echo resume > reference/private/resume.pdf
+git add -A -f >/dev/null && git commit -qm init          # 개인정보가 이미 추적 중인 상태
+printf ".private/\nreference/private/\n" > .gitignore   # 규칙 ②만 이행
+# 낡은 절차(텍스트 확인)는 여기서 "보호됨"이라 판정했다:
+grep -q "^\.private/$" .gitignore || exit 9
+# 새 절차(결과 검증)는 반드시 실패를 감지해야 한다:
+if git check-ignore -q .private/profile.md; then exit 1; fi   # 추적 중이므로 무시 안 됨 → 감지 성공
+git ls-files --error-unmatch .private/profile.md >/dev/null 2>&1 || exit 2
+# 안내대로 조치하면 보호가 실제로 성립하는가
+git rm --cached -r -q .private reference/private
+git check-ignore -q .private/profile.md || exit 3
+git check-ignore -q reference/private/resume.pdf || exit 4
+cd /; rm -rf "$T"
+' 2>/dev/null; then ok "PII: check-ignore 결과 검증(추적중 감지 + 조치 후 실제 보호)"; else no "PII 보호가 결과로 검증되지 않음"; fi
+grep -qF 'git check-ignore' SKILL.md && grep -qF 'git rm --cached' SKILL.md \
+  && grep -qF 'reference/private/' SKILL.md \
+  && grep -qiE '선언은 보호가 아니다' SKILL.md \
+  && ok "SKILL §2: PII 가드가 결과 검증 절차(두 경로·중단·재고지)" || no "SKILL PII 절차가 텍스트 확인에 머무름"
+# (h12) 퍼널 병목 판정 — 서류에서 떨어지는 사람에게 "자소서 수정은 우선순위가 아니다"라고 하지 않는가
+# ★ 실측 오진: 배타 if-else 사슬이라 서류통과 1건이면 docRate<=0.05를 빠져나가 '면접 전환' 병목으로 갔다.
+#   서류통과 5%(19건 중 1건)인데 "서류는 통과하는데"라고 단정 — 리소스 배분을 정확히 반대로 돌린다.
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/application-tracker.html','utf8');
+const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
+const src=[g(/const STAGES = \[[^\]]*\];/), g(/const STAGE_ALIAS = \{[\s\S]*?\};/), g(/function normStage\(a\)\{[\s\S]*?\n  \}/),
+  g(/const MIN_SAMPLE = 10;/), g(/function reached\(app, idx\)\{[\s\S]*?\n  \}/)].join('\n');
+const body=g(/    \/\/ ── 병목 판정[\s\S]*?\n    \}\n/);
+function run(n,dp,itv,fin,off){
+  const APPS=[];
+  for(let k=0;k<n;k++){ let st='불합격',la='서류접수',re='fail';
+    if(k<off){st='최종';la='최종';re='pass';} else if(k<fin){st='최종';la='최종';re='progress';}
+    else if(k<itv){st='1차면접';la='1차면접';re='progress';} else if(k<dp){st='서류합격';la='서류합격';re='progress';}
+    APPS.push({applied:'2026-01-01',stage:st,lastStage:la,result:re}); }
+  const pre=src+'\nconst escHtml=x=>String(x);const applied=APPS.filter(a=>a.applied);'+
+   'const iDoc=STAGES.indexOf(\"서류합격\"),i1=STAGES.indexOf(\"1차면접\"),iF=STAGES.indexOf(\"최종\");'+
+   'const n=applied.length;const docPass=applied.filter(a=>reached(a,iDoc)).length;'+
+   'const itv=applied.filter(a=>reached(a,i1)).length;const fin=applied.filter(a=>reached(a,iF)).length;'+
+   'const offer=applied.filter(a=>a.result===\"pass\").length;';
+  return new Function('APPS',pre+body+'return verdict;')(APPS);
+}
+const t=[];
+t.push(['서류 5%는 문서 병목',   /문서·타겟팅/.test(run(19,1,0,0,0))]);
+t.push(['서류 10%도 문서 병목',  /문서·타겟팅/.test(run(10,1,0,0,0))]);
+t.push(['서류 0%도 문서 병목',   /문서·타겟팅/.test(run(10,0,0,0,0))]);
+t.push(['서류 저조시 면접병목 아님', !/면접 전환/.test(run(19,1,0,0,0))]);
+t.push(['분모 1로 임원병목 단정 금지', !/임원·컬처핏/.test(run(10,1,1,0,0))]);
+t.push(['계산 근거 병기',        /근거:/.test(run(19,1,0,0,0))]);
+t.push(['표본 부족은 보류',      /표본 부족/.test(run(5,0,0,0,0))]);
+t.push(['건강한 퍼널은 병목 없음', !/병목:/.test(run(20,10,7,3,2))]);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "tracker: 퍼널 병목 argmin 판정(서류 저조 오진 방지·분모 가드·근거 병기)"; else no "퍼널 병목 오진 — 서류 저조인데 면접/임원 병목으로 판정"; fi
+# (h11) 총점 검산 — 총점과 축을 각각 손으로 적으면 어긋난다(실측: 실사용 보드 13건 중 6건 불일치)
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
+const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
+const src=[g(/const FIT_W  = \{[^}]*\};/), g(/const QUAL_W = \{[^}]*\};/), g(/function wsum\(obj, W\)\{[\s\S]*?\n  \}/),
+  g(/const calcFit[^\n]*\n/), g(/const calcQual[^\n]*\n/), g(/const TOL = \d+;[^\n]*\n/), g(/function mismatch\(j\)\{[\s\S]*?\n  \}/)].join('\n');
+const M=(j)=>new Function('j',src+'return mismatch(j);')(j);
+const S4=(v)=>({role:v,major:v,growth:v,weight:v}), S5=(v)=>({pay:v,grow:v,stable:v,culture:v,personal:v});
+const t=[];
+t.push(['일치는 통과',       M({score:80,sub:S4(80),quality:70,qsub:S5(70)}).length===0]);
+t.push(['적합도 불일치 검출', M({score:70,sub:S4(85),quality:70,qsub:S5(70)}).length>0]);
+t.push(['품질 불일치 검출',   M({score:80,sub:S4(80),quality:60,qsub:S5(80)}).length>0]);
+t.push(['N/A 축 재정규화',    M({score:80,sub:S4(80),quality:80,qsub:{pay:80,grow:80,stable:80,personal:80}}).length===0]);
+t.push(['하드필터 하향상한 허용', M({score:38,sub:S4(60),quality:70,qsub:S5(70),qualfit:'미달'}).length===0]);
+t.push(['상한인데 상향은 오류',   M({score:90,sub:S4(60),quality:70,qsub:S5(70),qualfit:'미달'}).length>0]);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "jd-discovery: 총점 검산(축 가중합 대조·N/A 재정규화·하드필터 상한 구분)"; else no "총점 검산이 동작하지 않음"; fi
+# §5.9 오차 병기 강제 + N/A 명시 렌더
+grep -qE 'class="noerr"' templates/jd-discovery.html \
+  && grep -qiE '점수만 단독 제시 금지' templates/jd-discovery.html \
+  && ok "jd-discovery §5.9: 오차 누락 시 화면 경고(±?)" || no "오차 없는 단독 점수가 조용히 렌더됨"
+grep -qE 'subrow na' templates/jd-discovery.html && grep -qE ">N/A<" templates/jd-discovery.html \
+  && ok "jd-discovery: N/A 축 명시 렌더(null 문자열·0점 취급 방지)" || no "N/A 축이 null/0으로 렌더됨"
+# (h10) 자소서 = 면접 대본 (methodology §2-5.5) — 원칙이 아니라 산출물로 강제되는가
+grep -qiE '면접 역산 설계' reference/methodology.md \
+  && grep -qiE '내가 쓴 모든 문장이 곧 내가 받을 질문' reference/methodology.md \
+  && grep -qiE '훅\(Hook\)|훅 유형' reference/methodology.md \
+  && grep -qiE '지뢰 제거' reference/methodology.md \
+  && grep -qiE '예상 꼬리질문 3개' reference/methodology.md \
+  && ok "methodology §2-5.5: 면접 역산 설계(훅·지뢰제거·꼬리질문 산출)" || no "자소서 면접역산 절차 누락"
+grep -qF 'q-drill' templates/cover-letter.html && grep -qF 'copyDrill' templates/cover-letter.html \
+  && grep -qE '\.q-intent, \.q-drill\{ display:none !important' templates/cover-letter.html \
+  && ok "cover-letter: 문항별 꼬리질문 필드 + 면접 문제은행 추출(제출본 미노출)" || no "꼬리질문 필드/추출 미구현"
+# 통과 판정 기준에도 반영됐는가(체크리스트가 실행을 강제한다)
+grep -qiE '훅이 1–2개 심겨' reference/methodology.md \
+  && grep -qiE '답을 준비 못 한 문장이 남아' reference/methodology.md \
+  && ok "methodology §2-6: 통과 판정에 면접역산 4항 반영" || no "통과 판정 미반영"
+# (h9) 자소서 제출본: 답변이 실제로 인쇄되는가 + 본문 속 작업 마커가 제거되는가
+# ★ 실측 2건: (i) textarea는 인쇄 시 잘려 답변이 통째로 누락됐다(PDF 25자)
+#   (ii) 제출 게이트가 .work-only 블록만 봐서 답변 '본문 안에' 쓴 [T2 …]가 그대로 새어나갔다
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/cover-letter.html','utf8');
+const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
+const f=new Function(g(/const WORK_MARK = [^;]+;/)+'\n'+g(/function stripWorkMarks\(text\)\{[\s\S]*?\n  \}/)+'return stripWorkMarks;')();
+const t=[];
+t.push(['마커 전용 줄 삭제', !/T2/.test(f('본문\n\n[T2 — 메모]\n\n계속'))]);
+t.push(['문미 마커 제거',   f('문장입니다. [확인 필요]')==='문장입니다.']);
+t.push(['T3도 제거',       !/T3/.test(f('a\n[T3 미검증]\nb'))]);
+t.push(['본문 보존',       f('정상 문단\n\n둘째 문단')==='정상 문단\n\n둘째 문단']);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "cover-letter: 제출 마커 스트리퍼 동작([T1-3]·확인 필요 제거)"; else no "제출본에 작업 마커가 남는다"; fi
+grep -qE 'print-copy' templates/cover-letter.html && grep -qE 'textarea\{ display:none !important' templates/cover-letter.html \
+  && grep -qF 'beforeprint' templates/cover-letter.html \
+  && ok "cover-letter: 인쇄 미러(textarea 잘림 방지)" || no "cover-letter 인쇄 시 답변 누락"
+# (h8) 난이도 밴드(쉬움/적정/도전)가 실제로 판정되는가 — 사용자가 "어디에 몇 개 넣을지"를 정하는 축
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
+const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
+const src=[g(/function delta\(j\)\{[\s\S]*?\n  \}/), g(/const BAND_TARGET = \{[^}]*\};/), g(/function band\(j\)\{[\s\S]*?\n  \}/)].join('\n');
+const B=(BL,j)=>new Function('BASELINE','j','\"use strict\";'+src+'return band(j);')(BL,j);
+const t=[];
+t.push(['80+ → 쉬움',       B(null,{score:88,quality:70,confidence:'높음'})==='쉬움']);
+t.push(['60–79 → 적정',     B(null,{score:70,quality:60,confidence:'중간'})==='적정']);
+t.push(['40–59 → 도전',     B(null,{score:45,quality:80,confidence:'중간'})==='도전']);
+t.push(['<40 → 미달',       B(null,{score:35,quality:80,confidence:'중간'})==='미달']);
+t.push(['확신낮음 보수화',   B(null,{score:88,quality:70,confidence:'낮음'})==='적정']);
+t.push(['하드필터 미달 우선', B(null,{score:90,quality:80,confidence:'높음',qualfit:'미달'})==='미달']);
+t.push(['재직자 하향은 안전카드 아님', B({quality:90},{score:88,quality:70,confidence:'높음'})==='적정']);
+t.push(['재직자 보합은 안전카드 유지', B({quality:75},{score:88,quality:70,confidence:'높음'})==='쉬움']);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "jd-discovery: 난이도 밴드 판정(확신 보수화·하드필터·재직자 특례)"; else no "난이도 밴드 판정이 동작하지 않음"; fi
+grep -qiE '난이도 밴드' reference/evaluation.md && grep -qiE '권장 비중' reference/evaluation.md \
+  && grep -qiE '한 밴드에만 몰아' reference/evaluation.md \
+  && ok "evaluation §5.6-c: 난이도 밴드 + 지원 배분 규율" || no "evaluation 난이도 밴드 누락"
+grep -qF "bandMixHTML" templates/jd-discovery.html && grep -qiE '몰아넣으면' templates/jd-discovery.html \
+  && ok "jd-discovery: 배분 쏠림 경고 렌더" || no "배분 경고 미구현"
+# (h6) TODAY 하드코딩 방지 — 치환 누락 시 브라우저 현재 날짜로 폴백하는가
+# ★ 실측: 커밋된 템플릿의 TODAY가 이미 과거(2026-07-22/23)여서 D-day·만료가 조용히 틀렸다.
+for T in templates/jd-discovery.html templates/application-tracker.html templates/roadmap.html; do
+  if grep -qE "const TODAY = TODAY_PINNED \|\| new Date\(\)" "$T" && grep -qE "timeZone: 'Asia/Seoul'" "$T"; then
+    ok "TODAY 자동 폴백: $(basename $T)"
+  else no "TODAY가 하드코딩(치환 누락 시 과거 날짜로 계산): $(basename $T)"; fi
+done
+# (h7) 트래커도 마감일 검증·단계 정규화를 하는가 — 하류에서 무너지면 발굴보드 수정이 무의미
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/application-tracker.html','utf8');
+const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss '+re); return m[0];};
+const src=[/const STAGES = \[[^\]]*\];/, /function daysBetween\(a,b\)\{[^}]*\}/, /function dlOk\(a\)\{[^}]*\}/,
+  /function ddayText\(a\)\{[\s\S]*?\n  \}/, /const STAGE_ALIAS = \{[\s\S]*?\};/,
+  /function normStage\(a\)\{[\s\S]*?\n  \}/].map(g).join('\n');
+const FIX='const TODAY='+JSON.stringify('2026-07-26')+';';
+const R=(b)=>new Function('A','\"use strict\";'+FIX+src+b);
+const dd=R('return ddayText(A);'), ns=R('return normStage(A);');
+const t=[];
+t.push(['미검증 마감 → D-day 금지', dd({deadline:'2099-01-01'}).unknown===true]);
+t.push(['빈 마감 → NaN 금지', !/NaN/.test(dd({}).t)]);
+t.push(['검증 마감 → D-day 계산', /^D-/.test(dd({deadline:'2099-01-01',dueVerified:true}).t)]);
+t.push(['최종합격 → 최종 단계로 정규화', ns({stage:'최종합격'})==='최종']);
+t.push(['불합격 → 직전 단계 유지', ns({stage:'불합격',lastStage:'서류합격'})==='서류합격']);
+t.push(['정상 단계 보존', ns({stage:'1차면접'})==='1차면접']);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "tracker: 마감 검증 + 전형단계 정규화(퍼널 붕괴 방지)"; else no "tracker: 마감 미검증/단계 어휘 불일치가 그대로 통과"; fi
+# P8 문서 어휘가 트래커 STAGES와 어긋나지 않는가
+if python3 - <<'PYEOF' 2>/dev/null
+import re,sys,pathlib
+tr=pathlib.Path('templates/application-tracker.html').read_text(encoding='utf-8')
+st=set(re.findall(r"'([^']+)'", re.search(r"const STAGES = \[([^\]]*)\]", tr).group(1)))
+doc=pathlib.Path('reference/portfolio-builder.md').read_text(encoding='utf-8')
+m=re.search(r'전형 단계 파이프라인[^`]*`([^`]+)`', doc)
+sys.exit(1 if not m else (0 if {x.strip() for x in m.group(1).split('→')} <= st else 1))
+PYEOF
+then ok "P8 전형단계 어휘 ⊆ 트래커 STAGES(퍼널 어휘 정합)"; else no "P8 전형단계 어휘가 트래커 STAGES에 없음"; fi
+# (h4) 미검증 마감일이 D-day로 둔갑하지 않는가 — 실사용에서 11건 중 10건이 추정 날짜였다(날조 금지의 구멍)
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
+const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
+const src=[/function daysTo\(d\)\{[^}]*\}/, /function dlOk\(j\)\{[^}]*\}/,
+  /function dday\(j\)\{[\s\S]*?\n  \}/, /function expired\(j\)\{[^}]*\}/,
+  /function delta\(j\)\{[\s\S]*?\n  \}/, /function guardReason\(j\)\{[\s\S]*?\n  \}/,
+  /function quadrant\(fit, qual\)\{[\s\S]*?\n  \}/, /function quadLabel\(j\)\{[\s\S]*?\n  \}/].map(g).join('\n');
+const FIX='const TODAY='+JSON.stringify('2026-07-26')+';';
+const F=(body)=>new Function('BASELINE','J','\"use strict\";'+FIX+src+body);
+const dd=(j)=>F('return dday(J);')(null,j);
+const ex=(j)=>F('return expired(J);')(null,j);
+const ql=(j)=>F('return quadLabel(J);')(null,j);
+const t=[];
+// 미검증 날짜: D-day 만들지 않고, 만료로도 단정하지 않는다
+t.push(['미검증→D-day 금지', dd({deadline:'2099-01-01'}).unknown===true && !/^D-/.test(dd({deadline:'2099-01-01'}).t)]);
+t.push(['미검증 과거날짜→만료 단정 금지', ex({deadline:'2000-01-01'})===false]);
+t.push(['미검증→최우선 승격 차단', ql({score:90,quality:90,confidence:'높음',deadline:'2099-01-01'})!=='최우선']);
+// 검증된 날짜는 정상 동작
+t.push(['검증→D-day 계산', /^D-/.test(dd({deadline:'2099-01-01',dlVerified:true}).t)]);
+t.push(['검증 과거→만료',   ex({deadline:'2000-01-01',dlVerified:true})===true]);
+t.push(['검증→최우선 허용', ql({score:90,quality:90,confidence:'높음',deadline:'2099-01-01',dlVerified:true})==='최우선']);
+// status:'만료'는 날짜 없이도 만료
+t.push(['status 만료 존중', ex({status:'만료'})===true]);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "jd-discovery: 미검증 마감일→D-day/만료 단정 금지(추정 날짜 차단)"; else no "미검증 마감일이 확정 날짜처럼 렌더됨"; fi
+grep -qiE '마감일을 추정으로 채우지 않는다' reference/jd-browsing.md \
+  && ok "jd-browsing §2-(2-c): 마감일 추정 금지 명문화" || no "마감일 추정 금지 규칙 누락"
+# (h2) 커버리지 원장이 '미실행'을 실제로 노출하는가 — 조용한 누락 방지(규칙만으로는 두 번 실패했다)
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
+const m=s.match(/function coverageHTML\(\)\{[\s\S]*?\n  \}/); if(!m) process.exit(2);
+const esc=(x)=>String(x==null?'':x);
+const run=(COVERAGE)=>{ let out=''; const el={set innerHTML(v){out=v;}};
+  const f=new Function('COVERAGE','document','escHtml','escAttr','\"use strict\";'+m[0]+'coverageHTML();');
+  f(COVERAGE,{getElementById:()=>el},esc,esc); return out; };
+const miss=run([{axis:'ZZAXIS',detail:'d',ran:false,found:0}]);
+// 경고 배너를 제거한 뒤에도 '칩 자체'가 미실행을 표시해야 한다(배너 하나로 두 검사를 통과시키지 않기 위함)
+const chipOnly=miss.replace(/<span class=\"cvwarn\">[\s\S]*?<\/span>/g,'');
+const t=[];
+t.push(['미실행 칩 라벨', chipOnly.includes('ZZAXIS') && chipOnly.includes('미실행')]);
+t.push(['미실행 칩 off클래스', chipOnly.includes('cv off')]);
+t.push(['미실행 경고 배너',   miss.includes('완전하지 않')]);
+t.push(['전부 실행시 경고없음', !run([{axis:'a',detail:'d',ran:true,found:3}]).includes('완전하지 않')]);
+t.push(['실행 축은 건수 표시', run([{axis:'a',detail:'d',ran:true,found:3}]).includes('3건')]);
+t.push(['원장 자체 부재도 경고', run([]).includes('커버리지 원장 없음')]);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "jd-discovery: 커버리지 원장이 미실행 축을 노출(조용한 누락 방지)"; else no "커버리지 원장이 미실행을 숨김"; fi
+# (h5) 헤더 조작 금지선 — SPA 데이터경로 조항이 우회의 빌미가 되지 않는가 (안전 회귀)
+if grep -qiE '헤더 조작 금지선' reference/jd-browsing.md \
+   && grep -qiE '차단당하면 (그것으로 )?종료' reference/jd-browsing.md \
+   && grep -qiE 'X-Requested-With' reference/jd-browsing.md \
+   && grep -qiE '위조방지 토큰|antiforgery|CSRF' reference/jd-browsing.md \
+   && grep -qiE '레이트리밋을 (피하지|회피)' reference/jd-browsing.md \
+   && grep -qiE '헤더 조작 금지선' SKILL.md; then
+  ok "안전: 헤더 조작 금지선(차단 후 재시도 금지) — 문서·SKILL 양쪽 명시"
+else no "SPA 데이터경로 조항에 우회 금지선이 없음(헤더 위조로 미끄러질 수 있음)"; fi
+# 금지선이 §0 원칙에도 있어야 한다(문서 앞부분만 읽어도 새지 않게)
+awk '/^## 0\. 원칙/,/^## 1\./' reference/jd-browsing.md | grep -qiE '차단당하면 종료' \
+  && ok "안전: §0 원칙에도 차단-종료 규칙 존재" || no "§0 원칙에 차단-종료 규칙 없음"
+# (h3) SPA 데이터 경로 폴백 + 첨부·분리된 직무목록 회수 + 직무명 사전
+grep -qiE '데이터 경로 직접 조회' reference/jd-browsing.md \
+  && grep -qiE 'POST form-urlencoded|form-urlencoded' reference/jd-browsing.md \
+  && grep -qiE '우회가 아니다' reference/jd-browsing.md \
+  && ok "jd-browsing §1-(2): SPA 데이터 경로 폴백(+우회 경계 명시)" || no "SPA 폴백 단계 누락"
+grep -qiE 'addFiles|첨부파일 목록을 반드시' reference/jd-browsing.md \
+  && grep -qiE '직무 목록이 별도 사이트' reference/jd-browsing.md \
+  && ok "jd-browsing §1-(2-b): 첨부·분리 직무목록 회수 의무" || no "부속 데이터 회수 규칙 누락"
+grep -qiE '직무명 사전' reference/jd-browsing.md && grep -qiE '설비기술' reference/jd-browsing.md \
+  && grep -qiE '커버리지 원장' reference/jd-browsing.md \
+  && ok "jd-browsing §2: 직무명 사전 + 커버리지 원장" || no "직무명 사전/원장 누락"
+# (j) 취득 실패 taxonomy + 폴백 사다리 + 첨부 PDF 회수 경로
+grep -qiE 'G 게이트' reference/jd-browsing.md && grep -qiE 'R 미렌더' reference/jd-browsing.md \
+  && grep -qiE 'M 오조준' reference/jd-browsing.md && grep -qiE '폴백 사다리' reference/jd-browsing.md \
+  && grep -qiE 'PyMuPDF|텍스트 레이어' reference/jd-browsing.md \
+  && ok "jd-browsing §1: 취득실패 유형분류·폴백사다리·첨부PDF 회수" || no "jd-browsing 취득실패 구조"
+# (k) 신선도 게이트 · 기준선 · 발굴 수율→채널전환
+grep -qiE '신선도 게이트' reference/jd-browsing.md && grep -qiE '기준선' reference/jd-browsing.md \
+  && grep -qiE '이 채널에 없다' reference/jd-browsing.md \
+  && ok "jd-browsing §2: 신선도·기준선·수율 채널전환" || no "jd-browsing 발굴 규율"
+grep -qiE '발굴 수율' reference/job-search-ops.md && grep -qiE '이 채널에 없다' reference/job-search-ops.md \
+  && ok "job-search-ops §2-b: 지원 이전 단계 병목(발굴 수율)" || no "job-search-ops 발굴 수율"
+grep -qiE '자격 정합' reference/evaluation.md && grep -qiE '오버스펙|오버' reference/evaluation.md \
+  && grep -qiE '기준선 델타|Δ' reference/evaluation.md \
+  && ok "evaluation §5.6-b·§5.8-c: 자격 정합 3상태 + 기준선 Δ" || no "evaluation 자격/기준선"
 # (g) 무게중심 축이 직무군별로 보편화됐는가(비테크 40% 가중 축 부재 방지)
 grep -qiE '직무군별 축 라이브러리' reference/methodology.md && grep -qiE '영업|디자인|금융' reference/methodology.md \
   && ok "methodology: 직무군별 무게중심 축 라이브러리(비테크 포함)" || no "methodology axis library"
