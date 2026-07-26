@@ -9,7 +9,13 @@ Renders an HTML file to PDF with headless Chromium, then verifies with PyMuPDF:
 Usage: python3 scripts/check_a4.py <file.html> [out.pdf]
 Exit 0 = PASS, 1 = FAIL.
 """
-import subprocess, sys, glob, os, fitz
+import subprocess, sys, glob, os
+try:
+    import fitz
+except ImportError:
+    # ★ 이 게이트는 **건너뛰지 않는다**(A4 규격 이탈은 제출본 사고로 직결). 다만 맨 트레이스백은
+    #   "코드 회귀"로 오독된다 — 새 컨테이너에서 6줄이 빨갛게 뜨는데 원인이 의존성이었다(실측).
+    sys.exit("의존성 없음: PyMuPDF — `pip install -r scripts/requirements.txt` 후 다시 실행하세요.")
 
 A4_W, A4_H = 595.0, 842.0          # points
 TOL = 3.0                          # pt tolerance on page size

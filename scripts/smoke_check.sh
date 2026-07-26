@@ -8,6 +8,16 @@ pass=0; fail=0
 ok(){ echo "  [PASS] $1"; pass=$((pass+1)); }
 no(){ echo "  [FAIL] $1"; fail=$((fail+1)); }
 
+# ── 사전 점검(비-집계) ─────────────────────────────────────────────────────────
+# ★ 새로 클론한 컨테이너에서 A4 게이트 6건이 실패했는데 원인은 PyMuPDF 미설치였다(실측).
+#   빨간 줄만 보면 코드 회귀로 오독된다 → 게이트를 돌리기 **전에** 원인을 먼저 알린다.
+#   경고일 뿐 집계에 넣지 않는다. 게이트 자체는 그대로 실패시킨다(조용한 스킵 금지).
+if ! python3 -c 'import fitz' 2>/dev/null; then
+  echo "!! 의존성 없음: PyMuPDF — A4 인쇄 게이트가 실패합니다(코드 회귀 아님)."
+  echo "   설치: pip install -r scripts/requirements.txt"
+  echo
+fi
+
 echo "== files =="
 for f in SKILL.md BUILD_SPEC.md GOAL_CONDITION.txt README.md .gitignore \
          reference/methodology.md reference/evaluation.md reference/gems/techniques.md \
