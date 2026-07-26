@@ -129,7 +129,8 @@ const EXEMPT = {
   'templates/a4-doc.html':      '정적 편집 문서 — 데이터 전역·마크업 싱크 없음',
   'templates/report.html':      '정적 리포트 — 스킬이 파일 자체를 생성, 런타임 렌더 없음',
   'templates/resume-ats.html':  '정적 이력서 — 런타임 렌더 없음',
-  'templates/jd-filter.html':   '필터 **출력** 전용 — 입력은 폼, 출력은 textContent(JSON.stringify). 마크업 싱크 0',
+  'templates/jd-filter.html':   'JSON을 받지만 마크업 싱크 0 — 파싱 결과는 폼 요소의 .value/.checked로만 들어가고 '
+                              + '출력은 textContent(JSON.stringify)다. 싱크가 생기면 이 면제는 무효 → CASES로 옮길 것',
   'templates/intake-form.html': 'el() 싱크는 있으나 전부 정적 리터럴 — 인자 v를 보간하지 않음',
 };
 
