@@ -56,7 +56,8 @@ def visible_text(html: str) -> str:
 
 
 def strip_existing(html: str) -> str:
-    """이전에 넣은 내장 블록과 CDN link 태그를 제거한다."""
+    """이전에 넣은 내장 블록·고지와 CDN link 태그를 제거한다(멱등)."""
+    html = re.sub(r"<!--\s*Embedded webfont subset\..*?-->", "", html, flags=re.S)
     html = re.sub(
         rf'<style id="{MARKER}">.*?</style>\s*', "", html, flags=re.S | re.I
     )
@@ -128,7 +129,13 @@ def main() -> int:
               file=sys.stderr)
         return 2
 
-    block = f'<style id="{MARKER}">' + "".join(faces) + "</style>"
+    # ★ 폰트 라이선스 고지를 **항상** 산출물에 남긴다. 서브셋해 base64로 내장하면 원본 파일이
+    #   사라져 고지가 통째로 증발한다 — 배포되는 HTML만 보면 어떤 폰트인지 알 수 없다.
+    notice = ("<!-- Embedded webfont subset. Font files are NOT part of this repository.\n"
+              "     The font's own license applies; if using Pretendard:\n"
+              "     Pretendard (c) 2021 Kil Hyung-jin — SIL Open Font License 1.1\n"
+              "     https://github.com/orioncactus/pretendard -->")
+    block = notice + f'<style id="{MARKER}">' + "".join(faces) + "</style>"
     if "</head>" in html:
         html = html.replace("</head>", block + "\n</head>", 1)
     else:

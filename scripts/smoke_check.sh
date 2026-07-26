@@ -184,6 +184,27 @@ then ok "임계 SSOT 일치(룰북 §7 표 ↔ check_polish.py 상수)"; else no
 # 실행 검사 — 문자열이 아니라 동작
 if [ "$(python3 scripts/check_polish.py --after /dev/null 2>/dev/null; echo $?)" = "3" ]; then
   ok "check_polish: 축 미지정 시 판정 보류(추정 금지)"; else no "check_polish 축 미지정 처리"; fi
+# 폴백 축은 [일] — 규칙 많은 쪽이 아니라 오탐 비용 낮은 쪽
+grep -qE '\[일\]' reference/polish-rulebook.md && grep -qF '"일반": "일"' scripts/check_polish.py \
+  && ok "룰북 §1: 일반 산출 축[일] 존재(폴백이 자소서 규칙을 안 씀)" || no "일반 산출 축 누락"
+# 하한 비율이 템플릿과 스크립트에서 같은 값인가
+if python3 - <<'PYEOF' 2>/dev/null
+import re,sys
+c=re.search(r'LEN_FLOOR_RATIO\s*=\s*([\d.]+)',open('scripts/check_polish.py',encoding='utf-8').read()).group(1)
+h=re.search(r'FLOOR_RATIO\s*=\s*([\d.]+)',open('templates/cover-letter.html',encoding='utf-8').read()).group(1)
+sys.exit(0 if float(c)==float(h) else 1)
+PYEOF
+then ok "하한 비율 일치(check_polish ↔ cover-letter)"; else no "하한 비율이 스크립트와 템플릿에서 다름"; fi
+# ATS 시트에 구분자 모호 문자가 없는가 — 기계가 읽는 제출본이다
+if python3 -c "
+import sys
+s=open('templates/resume-ats.html',encoding='utf-8').read()
+b=s[s.index('<div class=\"sheet\" id=\"sheet\">'):s.index('<script>')]
+sys.exit(0 if not any(c in b for c in '—–·') else 1)" 2>/dev/null
+then ok "resume-ats: 시트에 모호 구분자 0건(em/en dash·middot)"; else no "resume-ats 시트에 모호 구분자 잔존"; fi
+# 폰트 고지 — 서브셋 내장은 원본 파일을 지우므로 고지가 증발한다
+grep -qF 'SIL Open Font License' scripts/embed_fonts.py \
+  && ok "embed_fonts: 폰트 라이선스 고지를 산출물에 배출" || no "embed_fonts 고지 누락"
 # intake form + tracker have the required affordances
 grep -qF "데이터 복사" templates/intake-form.html && ok "intake-form: 데이터 복사 button" || no "intake-form copy button"
 grep -qiE '전형|D-day|dday' templates/application-tracker.html && ok "application-tracker: 전형/D-day" || no "application-tracker content"

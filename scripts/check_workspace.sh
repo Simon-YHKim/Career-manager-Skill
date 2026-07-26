@@ -47,7 +47,9 @@ done < <(find "$WS/.private" -type f \( -name '*.py' -o -name '*.sh' -o -name '*
 if [ "$logic" -eq 0 ]; then
   ok "P1 실행 로직 0건 (래퍼 ${wrapped}건은 허용)"
 else
-  no "P1 개인 워크스페이스에 로직 존재 →$offenders  (스킬로 승격하고 래퍼로 교체할 것)"
+  # ★ 경로를 원문 그대로 찍지 않는다 — 워크스페이스 경로·파일명이 로그에 남으면
+  #   검사가 그 자체로 개인정보 유출 경로가 된다. 워크스페이스 루트는 <ws>로 가린다.
+  no "P1 개인 워크스페이스에 로직 존재 ${logic}건 →$(printf '%s' "$offenders" | sed "s|${WS}/.private|<ws>|g")  (스킬로 승격하고 래퍼로 교체할 것)"
 fi
 
 # ── P2. 래퍼는 실제로 스킬 구현을 가리킨다 (죽은 래퍼 금지) ───────────────────
@@ -72,6 +74,28 @@ for t in "$SKILL_DIR"/templates/*.html; do
 done
 [ -z "$forked" ] && ok "P3 템플릿 포크본 0건" \
   || no "P3 스킬 템플릿의 사본 존재 →$forked  (조건은 JSON으로 저장하고 템플릿의 [필터 불러오기]로 복원할 것)"
+
+# ── P4. 스킬 저장소에 개인 식별자가 새지 않았는가 ────────────────────────────
+# ★ 경계 원칙을 이 검사 자신에게 적용한다 — **PII 목록은 데이터**다. 공개 저장소인 스킬 쪽
+#   smoke_check.sh 에 현직사 표기·이메일을 grep 리터럴로 박으면 **PII를 지키려고 PII를
+#   공개 저장소에 커밋**하는 자기모순이 된다. 목록은 비공개 워크스페이스에 두고,
+#   여기(로직)는 그 경로를 인자로 받아 읽기만 한다.
+DENY="$WS/.private/pii-denylist.txt"
+if [ -f "$DENY" ]; then
+  hits=0
+  while IFS= read -r term; do
+    case "$term" in ''|'#'*) continue;; esac
+    if grep -rqF "$term" "$SKILL_DIR" --include='*.md' --include='*.html' \
+         --include='*.py' --include='*.js' --include='*.sh' --include='*.json' 2>/dev/null; then
+      hits=$((hits+1))
+    fi
+  done < "$DENY"
+  # ★ 위반 내용을 출력하지 않는다 — 로그에 PII를 다시 흘리면 검사가 유출 경로가 된다.
+  [ "$hits" -eq 0 ] && ok "P4 스킬 저장소에 개인 식별자 0건" \
+    || no "P4 스킬 저장소에서 개인 식별자 ${hits}건 발견 (항목은 출력하지 않음 — denylist와 대조할 것)"
+else
+  echo "    [SKIP] P4 개인 식별자 검사 — $WS/.private/pii-denylist.txt 없음(만들면 검사됩니다)"
+fi
 
 echo "  -- 워크스페이스: ${pass} passed, ${fail} failed"
 [ "$fail" -eq 0 ] || exit 1

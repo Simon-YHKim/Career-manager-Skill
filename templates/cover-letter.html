@@ -14,7 +14,7 @@
 <style>
   :root{
     --accent:#9a3b2e; --ink:#1b1a17; --muted:#6c675e; --faint:#9b958a;
-    --line:#e7e3da; --line-2:#d4cec3; --wash:#f7efec; --paper:#fff; --over:#b23b2e;
+    --line:#e7e3da; --line-2:#d4cec3; --wash:#f7efec; --paper:#fff; --over:#b23b2e; --under:#8a6a1f;
     --serif:'Iowan Old Style','Palatino Linotype',Palatino,Georgia,serif;
     --sans:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic','Segoe UI',Roboto,sans-serif;
   }
@@ -72,6 +72,11 @@
     font-family:var(--sans); font-size:11.5px; line-height:1.6; color:var(--mid); background:#fdfbf7; resize:vertical; }
   .q-drill::placeholder{ color:var(--faint); }
   .counter b.active{ color:var(--accent); text-decoration:underline; }
+  /* ★ .under/.over 는 .active 보다 **뒤에** 둔다 — 특이도가 동점(0,2,1)이라 소스 순서가
+     승부를 가른다. 앞에 두면 기준축 강조(.active)가 경고를 덮어 하한 미달이 안 보인다. */
+  .counter.over b, .counter.over b.active{ color:var(--over); font-weight:700; text-decoration:none; }
+  .counter.under b, .counter.under b.active{ color:var(--under); font-weight:700; text-decoration:underline dotted; }
+  .counter .limnote{ font-size:10.5px; color:var(--faint); margin-left:6px; }
   .limbase{ font-family:var(--sans); font-size:10.5px; border:1px solid var(--line-2); border-radius:5px;
     padding:1px 4px; margin-left:5px; color:var(--muted); background:#fff; }
   .print-copy{ display:none; white-space:pre-wrap; font-size:12.5px; line-height:1.75; color:#1b1a17; margin-top:6px; }
@@ -108,6 +113,8 @@
 </div>
 
 <script>
+  // 하한 비율 — scripts/check_polish.py 의 LEN_FLOOR_RATIO 와 **같은 값**이어야 한다(스모크가 대조).
+  const FLOOR_RATIO = 0.90;
   const SAMPLES = [
     { q:'지원 동기 및 입사 후 포부 (1,000자)', intent:'왜 경쟁사 아닌 우리 회사인가 + 3·5·10년 기여 시나리오(3C=회사 페인포인트 선행)', a:'', lim:1000 },
     { q:'성장 과정에서 가장 도전적이었던 경험과 배운 점 (800자)', intent:'회복탄력성·직업관 — 객관적 장애물 + 극복 과정(STAR-L)', a:'', lim:800 },
@@ -136,7 +143,8 @@
         <textarea class="q-drill" rows="4" placeholder="예상 꼬리질문 3개 + 답변 골자 (methodology §2-5.5 면접 역산) — 작업용, 제출본 미인쇄">${escHtml(data.drill||'')}</textarea>
         <div class="counter">
           <span>공백 포함 <b class="n cw">0</b>자</span>
-          <span>공백 제외 <b class="cn">0</b>자</span>
+          <span>공백 제외 <b class="n cn">0</b>자</span>
+          <span class="limnote"></span>
           <span class="lim">권장 상한 <input type="number" class="limv" value="${escAttr(data.lim||1000)}"> 자
             <select class="limbase" title="기업마다 기준이 다르다 — 공고에 명시된 기준을 고르세요">
               <option value="with">공백 포함 기준</option><option value="no">공백 제외 기준</option>
@@ -147,12 +155,20 @@
     const cw = node.querySelector('.cw'), cn = node.querySelector('.cn'), limv = node.querySelector('.limv');
     const counter = node.querySelector('.counter');
     const limbase = node.querySelector('.limbase');
+    const limnote = node.querySelector('.limnote');
     // ★ 상한 초과 판정 기준을 고정하지 않는다. '공백 제외 1,000자' 공고에서 공백 포함으로 재면
     //   멀쩡한 분량이 초과로 뜨고 불필요하게 잘라내게 된다(과잉 트림).
-    function upd(){ const c=countChars(ta.value); cw.textContent=c.withSpace; cn.textContent=c.noSpace;
+    // ★ 카운터는 **제출될 문자열**을 센다. 예전에는 ta.value를 그대로 세서 작업 마커([T1]·
+    //   [확인 필요])가 글자수에 포함됐다 — 카운터가 세는 것과 실제 내는 것이 달랐고,
+    //   상한 근처에서 멀쩡한 분량이 초과로 떴다. 인쇄·복사는 이미 마커를 빼고 있었다.
+    function upd(){ const c=countChars(stripWorkMarks(ta.value)); cw.textContent=c.withSpace; cn.textContent=c.noSpace;
       const lim=parseInt(limv.value)||0;
       const cur = limbase.value==='no' ? c.noSpace : c.withSpace;
+      // 하한 = 상한 × FLOOR_RATIO. check_polish.py 의 LEN_FLOOR_RATIO 와 같은 값(게이트가 대조).
+      const floor = Math.floor(lim * FLOOR_RATIO);
       counter.classList.toggle('over', lim>0 && cur>lim);
+      counter.classList.toggle('under', lim>0 && cur>0 && cur<floor);
+      limnote.textContent = lim>0 ? ('권장 하한 ' + floor + '자') : '';
       cw.classList.toggle('active', limbase.value!=='no'); cn.classList.toggle('active', limbase.value==='no'); }
     ta.addEventListener('input', upd); limv.addEventListener('input', upd); limbase.addEventListener('change', upd);
     document.getElementById('qs').appendChild(node); renumber(); upd();

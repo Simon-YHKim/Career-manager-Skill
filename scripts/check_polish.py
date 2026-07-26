@@ -29,7 +29,12 @@ CHANGE_WARN = 0.50          # 변경률 경고 (중단 아님)
 ENDING_FLOOR = 0.90         # 종결 일관성 하한 (경고)
 PRESERVE_REQUIRED = 1.00    # 수치·고유명사·라벨 보존 (중단)
 
-AXES = {"자소서": "자", "이력서KR": "력", "경력기술서": "력", "resume EN": "영", "cover EN": "영"}
+AXES = {"자소서": "자", "이력서KR": "력", "경력기술서": "력",
+        "resume EN": "영", "cover EN": "영",
+        # ★ 리포트·로드맵·모범답변 등 일반 산출물. 스킬 산출의 다수가 여기 속한다.
+        #   폴백을 [자]로 두면 자소서 규칙(종결·분량 밴드)이 리포트에 걸려 오탐이 쏟아진다.
+        #   폴백은 **오탐 비용이 낮은 쪽**이어야 한다 → 공통 티만 보고 나머지는 미적용.
+        "일반": "일", "리포트": "일", "로드맵": "일", "모범답변": "일", "스크립트": "일"}
 
 # 출처 라벨·작업 마커 — 보존 대상이자, 분량 계수에서는 제외 대상
 MARKER = re.compile(r"\[(?:T1|T2|T3|확인 필요|경계|미확인|보강|TODO)[^\]]*\]")
@@ -102,15 +107,29 @@ def main() -> int:
     ap.add_argument("--axis", default="")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--limit-base", choices=["with", "no"])
-    ap.add_argument("--keywords", default="")
+    ap.add_argument("--limit-kind", choices=["quota", "cap"], default="cap",
+                    help="quota=자소서 문항(하한 적용) · cap=플랫폼 필드 상한만(하한 미적용)")
+    ap.add_argument("--keywords", default="", help="JD 필수 키워드(쉼표 구분)")
+    ap.add_argument("--mode", choices=["new", "edit"], default="edit",
+                    help="new=신규 작성(before 없음) · edit=첨삭(before 필요)")
     a = ap.parse_args()
 
     if not a.after:
         print("판정 불가: --after 가 없습니다. 검사를 건너뛰지 말고 입력을 갖추세요.", file=sys.stderr)
         return 3
+    # ★ 신규 작성에는 before가 없다. exit 3은 '모드에 필요한 입력이 빠졌을 때'로만 한정한다.
+    if a.mode == "edit" and not a.before:
+        print("판정 불가: --mode edit 에는 --before 가 필요합니다 (신규 작성이면 --mode new).",
+              file=sys.stderr)
+        return 3
 
-    after = open(a.after, encoding="utf-8").read()
-    before = open(a.before, encoding="utf-8").read() if a.before else None
+    # ★ 작업 마커([T1]·[확인 필요] 등)는 제출되지 않는다. 예전에는 변경률에서만 제거하고
+    #   분량에서는 안 빼서, **카운터가 세는 문자열과 실제 제출되는 문자열이 달랐다.**
+    #   진입점에서 한 번 제거해 모든 지표가 같은 본문을 본다(보존 검사는 원문으로 따로 본다).
+    after_raw = open(a.after, encoding="utf-8").read()
+    before_raw = open(a.before, encoding="utf-8").read() if a.before else None
+    after = strip_markers(after_raw)
+    before = strip_markers(before_raw) if before_raw is not None else None
     axis = AXES.get(a.axis, "")
     rep, worst = {"axis": axis or "(미판정)"}, 0
 
@@ -121,8 +140,8 @@ def main() -> int:
         return 3
 
     # ── 보존 지표 (룰북 §5) — 중단 사유는 여기뿐 ────────────────────────────
-    if before is not None:
-        b, af = atoms(before), atoms(after)
+    if before_raw is not None:
+        b, af = atoms(before_raw), atoms(after_raw)
         for k in ("수치", "라벨", "EXPID"):
             lost = [x for x in b[k] if b[k].count(x) > af[k].count(x)]
             added = [x for x in af[k] if af[k].count(x) > b[k].count(x)]
@@ -138,7 +157,7 @@ def main() -> int:
                 worst = 2
 
         # 변경률 — 참고값(경고만). 구조적 정규화 후 비교한다.
-        nb, na = normalize_structural(strip_markers(before)), normalize_structural(strip_markers(after))
+        nb, na = normalize_structural(before), normalize_structural(after)
         rate = 1 - difflib.SequenceMatcher(None, nb, na).ratio()
         rep["변경률"] = round(rate, 3)
         if rate > CHANGE_WARN:
@@ -147,24 +166,37 @@ def main() -> int:
             worst = max(worst, 1)
 
     # ── 분량 예산 (룰북 §6) ─────────────────────────────────────────────────
-    body = strip_markers(after)
+    body = after
     with_sp, no_sp = len(body), len(re.sub(r"\s", "", body))
     rep["글자수"] = {"공백포함": with_sp, "공백제외": no_sp}
     if a.limit:
+        floor = int(a.limit * LEN_FLOOR_RATIO)
         if not a.limit_base:
-            print(f"판정 보류: 글자수 기준축(--limit-base)이 없습니다. "
-                  f"공백포함 {with_sp}자 · 공백제외 {no_sp}자 — 공고 기준을 확인하세요.\n"
-                  f"  ★ 한국어 자소서의 공백 비율은 20~25%라 **오판 폭이 밴드 폭(10%)보다 크다.** "
-                  f"추정하면 밴드가 무의미해진다.", file=sys.stderr)
-            worst = max(worst, 1)
+            # ★ 기준축을 모를 때 한쪽으로 찍지 않는다. **방향별로** 보수적으로 잡는다 —
+            #   상한 판정은 큰 값(공백포함), 하한 판정은 작은 값(공백제외).
+            #   양쪽 모두 안전한 구간만 통과시키므로 밴드가 좁아진다는 사실을 고지한다.
+            rep["기준축"] = "불명(방향별 보수 판정)"
+            if with_sp > a.limit:
+                print(f"중단: 상한 초과 가능 — 공백포함 {with_sp}/{a.limit}자. "
+                      f"기준축이 공백포함이면 제출 불가입니다.", file=sys.stderr)
+                worst = 2
+            elif a.limit_kind == "quota" and no_sp < floor:
+                print(f"경고: 분량 미달 가능 — 공백제외 {no_sp}/{a.limit}자(하한 {floor}). "
+                      f"기준축이 공백제외면 미달입니다.", file=sys.stderr)
+                worst = max(worst, 1)
+            else:
+                print(f"주의: 기준축 미지정 — 공백포함 {with_sp}자 · 공백제외 {no_sp}자 "
+                      f"양쪽 모두 안전한 구간입니다(밴드가 좁게 잡혔습니다). 공고 기준을 확인하세요.",
+                      file=sys.stderr)
+                worst = max(worst, 1)
         else:
             cur = no_sp if a.limit_base == "no" else with_sp
             rep["기준글자수"] = cur
             if cur > a.limit:
                 print(f"중단: 상한 초과 {cur}/{a.limit}자 — 제출 불가입니다.", file=sys.stderr)
                 worst = 2
-            elif cur < a.limit * LEN_FLOOR_RATIO:
-                print(f"경고: 분량 미달 {cur}/{a.limit}자 (하한 {int(a.limit*LEN_FLOOR_RATIO)}자). "
+            elif a.limit_kind == "quota" and cur < floor:
+                print(f"경고: 분량 미달 {cur}/{a.limit}자 (하한 {floor}자). "
                       f"★ 증량 재료는 경험 뱅크의 사실로 한정하세요 — 상투구를 다시 심으면 안 됩니다.",
                       file=sys.stderr)
                 worst = max(worst, 1)
@@ -185,8 +217,12 @@ def main() -> int:
         gone = [k for k in kws if k not in after]
         rep["키워드_소실"] = gone
         if gone:
-            print(f"경고: JD 키워드가 결과에서 사라졌습니다 {gone} — ATS 매칭이 떨어집니다.", file=sys.stderr)
-            worst = max(worst, 1)
+            # ★ 윤문이 깨는 것은 ATS **파싱**만이 아니라 **매칭 점수**다. methodology는 JD 핵심
+            #   키워드를 문서 전반에 그대로 넣으라고 요구하는데, 윤문이 동의어로 바꾸면
+            #   사람 눈에는 멀쩡하고 ATS에서는 탈락한다 — 보이지 않는 손실이라 중단으로 다룬다.
+            print(f"중단: JD 필수 키워드가 결과에서 사라졌습니다 {gone} — "
+                  f"ATS 매칭 점수가 떨어집니다. 원문 표기를 그대로 되살리세요.", file=sys.stderr)
+            worst = 2
 
     print(json.dumps(rep, ensure_ascii=False, indent=1))
     return worst
