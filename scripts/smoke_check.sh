@@ -43,7 +43,9 @@ if git ls-files 2>/dev/null | grep -qF "insane-search" || grep -rqF "insane-sear
 
 echo "== personal context privacy (D-6) =="
 grep -qE '^\.private/' .gitignore && grep -qE '^reference/private/' .gitignore && grep -qE '^\.env' .gitignore && ok ".gitignore excludes .private/ reference/private/ .env" || no ".gitignore privacy"
-if git ls-files 2>/dev/null | grep -qiE 'profile\.md|/private/|\.pdf$'; then no "private file is git-tracked"; else ok "no private files tracked"; fi
+# ★ 정규식 주의: '/private/'는 '.private/'를 매치하지 못한다(앞에 슬래시가 없음).
+# 실측(2026-07): 이 버그로 .private/experience-bank.md를 스테이징한 상태에서도 [PASS]가 찍혔다.
+if git ls-files 2>/dev/null | grep -qiE '(^|/)\.?private/|profile\.md|\.pdf$'; then no "private file is git-tracked"; else ok "no private files tracked"; fi
 
 echo "== no persona/router in SKILL.md (D-4) =="
 # Must DECLARE absence (§5) and must NOT implement active menu/engine/command-center signatures.
@@ -100,9 +102,21 @@ const m=s.match(/function esc\(s\)\{[\s\S]*?\}/); if(!m){process.exit(2);}
 const esc=new Function('return ('+m[0].replace('function esc','function')+')')();
 process.exit(esc('<img src=x>').includes('&lt;') ? 0 : 1);
 " 2>/dev/null; then ok "hub esc(): 실제 이스케이프(XSS 회귀 게이트)"; else no "hub esc() is a no-op → XSS 위험"; fi
-# (b) worker provider: 서버 시크릿(env.AI_PROVIDER)이 클라이언트 body보다 우선하는가 (키 오전송 방지)
-grep -qE 'env\.AI_PROVIDER\s*\|\|\s*b\.provider' worker/src/index.js \
-  && ok "worker: provider 서버 시크릿 우선(키 오전송 방지)" || no "worker: client provider가 서버 시크릿을 이김"
+# (b) worker provider: 클라이언트가 벤더를 절대 못 정하는가 (키 오전송 방지) — 문자열이 아니라 실제 로직 실행
+# ★ 이전 게이트는 순수 grep이라 주석에 문자열만 남기고 우선순위를 뒤집어도 통과했다.
+#   또한 AI_PROVIDER 미설정(기본 배포)이라는 핵심 케이스를 아예 검사하지 않았다.
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('worker/src/index.js','utf8');
+const m=s.match(/const provider = [^;]+;/); if(!m) process.exit(2);
+const pick=(env,b)=>new Function('env','b','\"use strict\";'+m[0]+'return provider;')(env,b);
+const t=[];
+t.push(['시크릿 미설정+클라 openai → anthropic 유지', pick({},{provider:'openai'})==='anthropic']);
+t.push(['시크릿 미설정+클라 미지정 → anthropic',      pick({},{})==='anthropic']);
+t.push(['시크릿 openai → openai',                   pick({AI_PROVIDER:'openai'},{})==='openai']);
+t.push(['시크릿 openai+클라 anthropic → openai 유지', pick({AI_PROVIDER:'openai'},{provider:'anthropic'})==='openai']);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "worker: 벤더는 서버만 결정(미설정 기본 구성 포함) — 키 오전송 차단"; else no "worker: 클라이언트가 벤더를 정할 수 있음(키 오전송 위험)"; fi
 # (c) report.html 토글 특이도 교정(한/영 중복 노출 방지)
 grep -qE 'body:not\(\.lang-en\) \.en\{display:none\}' templates/report.html \
   && grep -qE 'body:not\(\.mode-easy\) \.easy\{display:none\}' templates/report.html \

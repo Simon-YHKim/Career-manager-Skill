@@ -46,11 +46,14 @@ export default {
     if (path.endsWith('/ai') && req.method === 'POST') {
       if (!env.AI_KEY) return J({ error: 'AI 미설정 — AI_KEY 시크릿을 추가하세요.' }, 400);
       const b = await req.json().catch(() => ({}));
-      // 제공자는 **서버 시크릿이 최우선**. 클라이언트가 provider를 바꿔 다른 벤더로 키가 전송되는 것을 막는다
-      // (예: AI_KEY가 OpenAI 키인데 body.provider='anthropic'이면 OpenAI 키가 Anthropic으로 나감).
-      const provider = (env.AI_PROVIDER || b.provider || 'anthropic').toLowerCase();
-      if (env.AI_PROVIDER && b.provider && b.provider.toLowerCase() !== provider)
-        return J({ error: `provider 불일치 — 이 Worker는 '${provider}'로 설정돼 있습니다.` }, 400);
+      // 제공자는 **오직 서버만** 정한다. 클라이언트 입력은 벤더 선택에 절대 관여하지 못한다.
+      // ★ 이전 버전은 `env.AI_PROVIDER || b.provider || 'anthropic'` 이었다. AI_PROVIDER는 선택
+      //   항목이라 기본 배포에서는 비어 있고, 그러면 b.provider가 벤더를 결정해 **사용자의 키가
+      //   엉뚱한 벤더로 전송**됐다(Anthropic 키 → api.openai.com). 서버 시크릿이 설정된 경우만
+      //   막고 있어서 정작 기본 구성이 취약했다. 이제 b.provider는 검증에만 쓰고 선택엔 안 쓴다.
+      const provider = String(env.AI_PROVIDER || 'anthropic').toLowerCase();
+      if (b.provider && String(b.provider).toLowerCase() !== provider)
+        return J({ error: `provider 불일치 — 이 Worker는 '${provider}'로 설정돼 있습니다. 벤더는 서버에서만 지정합니다.` }, 400);
       const prompt = String(b.prompt || '');
       const system = String(b.system || '');
       const max = Math.min(Number(b.max_tokens) || 1024, 4096);
