@@ -23,6 +23,12 @@ import base64
 import io
 import re
 import sys
+
+# ★ 한글 Windows 콘솔은 cp949 다 — 한국어 안내를 print 하면 UnicodeEncodeError 로 죽고,
+#   그 예외가 판정 종료코드를 덮어써 "중단"이 "경고"로 강등된다(실측 2026-07).
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8", errors="replace")
 from pathlib import Path
 
 from fontTools.subset import Subsetter, Options

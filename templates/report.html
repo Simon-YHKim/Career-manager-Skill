@@ -17,7 +17,7 @@
     --bg:#f7f7fb; --panel:#ffffff; --text:#1c1c28; --muted:#63667a; --border:#e6e6ef;
     --accent-soft:#ecebfb; --positive-soft:#e4f3ec; --warn-soft:#faede2;
   }
-  @media (prefers-color-scheme:dark){:root[data-theme="auto"]{
+  @media screen and (prefers-color-scheme:dark){:root[data-theme="auto"]{
     --bg:#0e0f16; --panel:#171826; --text:#e9e9f2; --muted:#9a9db4; --border:#282a3c;
     --accent:#8f8bff; --positive:#4bc699; --warn:#e0925a;
     --accent-soft:#211f3d; --positive-soft:#123026; --warn-soft:#32220f;
@@ -72,7 +72,18 @@
   .src{font-size:12px;color:var(--muted)}
   code{background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px;font-size:12.5px}
   @page{ size:A4; margin:15mm; }
-  @media print{.controls{display:none}}
+  /* ★ 인쇄는 항상 라이트로 고정한다. 다크가 인쇄 경로로 새면 지면의 75%가 잉크로 덮이고
+     배경을 끄면 본문 대비가 2.87:1 까지 떨어져 제출용 PDF 가 붕괴한다(실측 2026-07).
+     data-theme 토글이 어떤 값이든 인쇄에서는 이 블록이 이긴다. */
+  @media print{
+    :root, :root[data-theme="dark"], :root[data-theme="auto"], :root[data-theme="light"]{
+      --bg:#fff; --panel:#fff; --text:#1c1c28; --muted:#63667a; --border:#e6e6ef;
+      --accent:#5b5bd6; --positive:#1a7f5a; --warn:#b3541e;
+      --accent-soft:#ecebfb; --positive-soft:#e4f3ec; --warn-soft:#faede2;
+    }
+    html,body{ background:#fff !important; color:#1c1c28 !important; }
+    .controls{ display:none }
+  }
 </style>
 </head>
 <body class="lang-ko mode-easy">

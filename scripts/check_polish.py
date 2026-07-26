@@ -23,6 +23,12 @@ import json
 import re
 import sys
 
+# ★ 한글 Windows 콘솔은 cp949 다 — 한국어 안내를 print 하면 UnicodeEncodeError 로 죽고,
+#   그 예외가 판정 종료코드를 덮어써 "중단"이 "경고"로 강등된다(실측 2026-07).
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8", errors="replace")
+
 # ── 임계 SSOT — polish-rulebook.md §7 표가 이 값을 인용한다(게이트가 대조) ──────
 LEN_FLOOR_RATIO = 0.90      # 분량 하한 = 상한 × 이 값 (경고)
 CHANGE_WARN = 0.50          # 변경률 경고 (중단 아님)
@@ -60,6 +66,8 @@ def normalize_structural(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+PROPER = re.compile(r"[A-Z][A-Za-z0-9]*[A-Z0-9][A-Za-z0-9]*")
+
 def atoms(s: str):
     """보존해야 할 원자 — 수치·출처 라벨·EXP-ID."""
     body = s
@@ -67,6 +75,10 @@ def atoms(s: str):
         "수치": sorted(x.strip() for x in NUM.findall(body) if x.strip() and any(c.isdigit() for c in x)),
         "라벨": sorted(MARKER.findall(body)),
         "EXPID": sorted(EXPID.findall(body)),
+        # ★ 룰북 §2 는 고유명사를 '즉시 중단' 대상으로 못박았는데 축이 없어 fail-open 이었다.
+        #   회사·기술명(CamelCase·연속대문자·영숫자 혼합)이 통째로 사라져도 exit 0 이었다.
+        #   오탐(보존되면 무해)보다 누락(소실을 놓침)이 위험하므로 넓게 잡는다.
+        "고유명사": sorted(set(PROPER.findall(body))),
     }
 
 
@@ -142,7 +154,7 @@ def main() -> int:
     # ── 보존 지표 (룰북 §5) — 중단 사유는 여기뿐 ────────────────────────────
     if before_raw is not None:
         b, af = atoms(before_raw), atoms(after_raw)
-        for k in ("수치", "라벨", "EXPID"):
+        for k in ("수치", "라벨", "EXPID", "고유명사"):
             lost = [x for x in b[k] if b[k].count(x) > af[k].count(x)]
             added = [x for x in af[k] if af[k].count(x) > b[k].count(x)]
             rep[f"{k}_소실"] = lost

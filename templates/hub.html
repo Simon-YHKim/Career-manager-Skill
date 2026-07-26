@@ -184,7 +184,7 @@
       <p class="guide"><b>로그인만 하면 나머지는 거의 자동</b>: <code>worker/README.md</code>의 "Deploy to Cloudflare" 버튼으로 무료 Worker를 배포(KV·워커 자동 생성) → 시크릿 <b>TOKEN</b>만 설정 → 아래에 <b>Worker 주소 + 토큰</b>을 한 번 붙여넣으면 끝. 이후 동기화·AI가 켜집니다.</p>
       <div class="warn">⚠️ 넣는 값은 <b>Worker 주소 + 접근 토큰</b>뿐. AI 키는 <b>여기 넣지 않습니다</b>(Worker 시크릿에만). 설정은 이 브라우저에만 저장.</div>
       <div class="row c2" style="margin-top:10px;">
-        <div class="fld"><label>Worker 주소 <span class="h">전체 주소(스킴 포함) 붙여넣기</span></label><input id="cfg-base" placeholder="예: career-hub.내계정.workers.dev"></div>
+        <div class="fld"><label>Worker 주소 <span class="h">전체 주소(스킴 포함) 붙여넣기</span></label><input id="cfg-base" placeholder="https://career-hub.내계정.workers.dev"></div>
         <div class="fld"><label>접근 토큰 <span class="h">Worker의 TOKEN</span></label><input id="cfg-token" type="password" placeholder="TOKEN 값"></div>
       </div>
       <div class="btnrow">
@@ -272,7 +272,17 @@
     if(c.provider) document.getElementById('ai-provider').value=c.provider; document.getElementById('ai-model').value=c.model||'';
     refreshBadges();
   }
-  function saveConn(){ setCfg({ base:document.getElementById('cfg-base').value.trim(), token:document.getElementById('cfg-token').value,
+  function saveConn(){
+    // ★ 스킴이 없으면 fetch 가 상대경로로 해석해 토큰과 전 데이터가 **호스팅 오리진**으로 간다.
+    //   조용히 https:// 를 붙이면 오타와 구분되지 않으므로 반려한다.
+    const _raw=document.getElementById('cfg-base').value.trim();
+    if(_raw){
+      let _u=null; try{ _u=new URL(_raw); }catch(e){ _u=null; }
+      const _okScheme = _u && (_u.protocol==='https:' ||
+        (_u.protocol==='http:' && /^(localhost|127\.0\.0\.1)$/.test(_u.hostname)));
+      if(!_okScheme){ syncStatus('Worker 주소는 https:// 로 시작하는 전체 주소여야 합니다.'); return; }
+    }
+    setCfg({ base:document.getElementById('cfg-base').value.trim(), token:document.getElementById('cfg-token').value,
       curl:document.getElementById('cfg-curl').value.trim(), hname:document.getElementById('cfg-hname').value.trim()||'Authorization',
       hval:document.getElementById('cfg-hval').value, method:document.getElementById('cfg-method').value });
     loadCfgUI(); renderBank(); syncStatus('연결 저장됨(이 브라우저에만). '+(aiOn()?'AI 사용 가능 — AI 키가 Worker에 있으면 동작.':'')); }

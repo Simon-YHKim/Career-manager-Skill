@@ -9,6 +9,24 @@
     자체완결 요건(D-7)에 맞춰 제거하고, 두 토글(한/영·제출용/작업용)만 순수 JS로 재구현.
   인쇄: @page A4 14mm + break-inside/break-after(고아 제목 방지), 화면 UI는 print 시 숨김,
     print-color-adjust:exact 로 강조색/배경 인쇄 보존.
+
+  ── 페이지 예산 (섹션이 어중간하게 넘어가는 것을 막는다) ────────────────────────
+  A4 297mm - 상하 마진 28mm = 본문 가용 약 762pt. 섹션 대략 높이:
+    헤더 ~190 · 대표지표 ~150 · 타임라인 ~130 · 학력/자격 ~150 · 핵심역량 ~150 · 프로젝트 1건 ~200
+  ★ 규율: 렌더 후 각 쪽 하단 여백을 실측하고, **150pt 이상 비면 배치를 다시 잡는다.**
+    - 섹션이 다음 쪽 맨 위로 밀렸다면 → 위쪽 여백(섹션 margin·지표 padding·divider)을 20~40pt 압축해 끌어올린다.
+    - 마지막 쪽에 항목이 1개만 남았다면 → 중간 항목에 `break-before:page` 를 걸어 균등 배분한다.
+    - 실측 명령: `python scripts/check_a4.py <file.html>` (쪽수·A4 규격·오버플로 판정)
+  ⛔ break-inside:avoid 만 걸고 끝내면 "안 잘리는 대신 통째로 밀려" 앞 쪽이 텅 빈다.
+
+  ── 로고·엠블럼 (선택) ──────────────────────────────────────────────────────
+  자체완결 요건상 **외부 URL 금지** → 반드시 base64 data URI 로 내장한다.
+    <img src="data:image/svg+xml;base64,…" alt="회사명" style="height:11px;vertical-align:-1px;">
+  · 실제 로고가 없으면 `.brand-mono`(타이포 모노그램)로 통일한다 —
+    한쪽만 실제 로고면 미완성으로 읽힌다.
+  · 로고는 브랜드 컬러를 끌고 온다. 문서 팔레트(accent+ink+paper 3색)를 깨므로 **한 곳에만** 쓴다.
+  · ⛔ **고객사 로고는 넣지 않는다.** 상표 문제 + "그 회사 소속이었나"로 오독된다.
+    전 직장 로고는 이력서 관행상 통용되나, 출처와 라이선스를 확인하고 쓴다(예: Wikimedia Commons 퍼블릭 도메인).
 -->
 <html lang="ko">
 <head>
@@ -59,6 +77,12 @@
   body.work-mode .work-only{ display:block; }
 
   a{ color:inherit; }
+
+  /* 회사 엠블럼 — 실제 로고(base64 img) 또는 타이포 모노그램. 위 주석의 규율 참조 */
+  .brand-mono{ display:inline-grid; place-items:center; width:34px; height:34px;
+    border:1px solid var(--line-2); border-radius:4px; background:var(--wash);
+    color:var(--accent); font-weight:800; font-size:13px; letter-spacing:0.01em; flex:none; }
+  .brand-img{ height:11px; vertical-align:-1px; }
 
   @media print{
     html,body{ background:#fff; }
@@ -120,6 +144,12 @@
         <span style="color:var(--faint);font-size:9px;letter-spacing:0.06em;text-transform:uppercase;padding-top:2px;flex:none;">포트폴리오</span>
         <a href="#" style="color:var(--ink);text-align:right;font-size:11px;text-decoration:none;">yoursite.dev</a>
       </div>
+      <!-- 로고 슬롯(선택): 아래처럼 base64 로 내장한다. 없으면 이 줄을 지운다.
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);">
+        <span style="color:var(--faint);font-size:9px;letter-spacing:0.06em;text-transform:uppercase;padding-top:2px;flex:none;">현직</span>
+        <span style="color:var(--ink);text-align:right;font-size:11px;"><img class="brand-img" src="data:image/svg+xml;base64,…" alt="회사명"> · 직급</span>
+      </div>
+      -->
       <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);">
         <span style="color:var(--faint);font-size:9px;letter-spacing:0.06em;text-transform:uppercase;padding-top:2px;flex:none;">지역</span>
         <span style="color:var(--ink);text-align:right;font-size:11px;">서울, 대한민국</span>

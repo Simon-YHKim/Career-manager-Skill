@@ -82,17 +82,25 @@ done
 #   여기(로직)는 그 경로를 인자로 받아 읽기만 한다.
 DENY="$WS/.private/pii-denylist.txt"
 if [ -f "$DENY" ]; then
-  hits=0
-  while IFS= read -r term; do
+  hits=0; checked=0; first=1
+  # ★ CRLF·BOM·끝줄 개행 없음이면 전 항목이 조용히 건너뛰어져 PII 게이트가 무음 PASS 했다(fail-open).
+  #   || [ -n "$term" ] 로 마지막 줄을 살리고, CR·BOM 을 벗겨야 실제로 대조된다.
+  while IFS= read -r term || [ -n "$term" ]; do
+    term="${term%$''}"
+    [ "$first" = 1 ] && { term="${term#$'ï»¿'}"; first=0; }
     case "$term" in ''|'#'*) continue;; esac
+    checked=$((checked+1))
     if grep -rqF "$term" "$SKILL_DIR" --include='*.md' --include='*.html' \
          --include='*.py' --include='*.js' --include='*.sh' --include='*.json' 2>/dev/null; then
       hits=$((hits+1))
     fi
   done < "$DENY"
   # ★ 위반 내용을 출력하지 않는다 — 로그에 PII를 다시 흘리면 검사가 유출 경로가 된다.
-  [ "$hits" -eq 0 ] && ok "P4 스킬 저장소에 개인 식별자 0건" \
+  # 0개 대조 통과가 눈에 보이게 — "검사했는데 0건"과 "아무것도 안 봤다"를 구별한다.
+  if [ "$checked" -eq 0 ]; then no "P4 denylist 를 한 항목도 읽지 못했습니다 (인코딩/개행 확인 필요)"; else
+  [ "$hits" -eq 0 ] && ok "P4 스킬 저장소에 개인 식별자 0건 (항목 ${checked}개 대조)" \
     || no "P4 스킬 저장소에서 개인 식별자 ${hits}건 발견 (항목은 출력하지 않음 — denylist와 대조할 것)"
+  fi
 else
   echo "    [SKIP] P4 개인 식별자 검사 — $WS/.private/pii-denylist.txt 없음(만들면 검사됩니다)"
 fi
