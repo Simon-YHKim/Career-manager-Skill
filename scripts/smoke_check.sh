@@ -82,6 +82,18 @@ PY
   grep -qF 'career/jd-filter@1' scripts/discover.py && grep -qF 'career/jd-filter@1' templates/jd-filter.html \
     && ok "discover.py ↔ jd-filter.html 스키마 계약 일치(career/jd-filter@1)" || no "필터 스키마 계약 불일치"
   # (d) 3-상태 기록 — '공고 0건'과 '취득 실패'를 뭉뚱그리면 다음 라운드에 같은 곳을 다시 판다
+  # (e) 배지가 제목 자리를 차지하지 않는가 — 목록만 보고 무슨 공고인지 알 수 있어야 한다
+  if python3 - <<'PYEOF' 2>/dev/null
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("d", "scripts/discover.py")
+d = importlib.util.module_from_spec(spec); spec.loader.exec_module(d)
+seg = ('data-sentry-component="CardJob"<a href="/Recruit/GI_Read/123">'
+       '<img alt="테스트전자 로고"><span>오늘 마감! 놓치지 마세요!</span>'
+       '<span>공정기술 엔지니어 경력 채용</span><span>테스트전자</span>')
+rows = d.parse_jobkorea(seg, [])
+sys.exit(0 if rows and not d.BADGE.match(rows[0]["fields"][0]) else 1)
+PYEOF
+  then ok "discover.py: 배지가 제목 자리를 차지하지 않음"; else no "discover.py 제목 자리에 광고 배지 유입"; fi
   grep -qF '공고 0건(정상 응답)' scripts/discover.py && grep -qF '취득 실패' scripts/discover.py \
     && grep -qF 'agent_todo' scripts/discover.py \
     && ok "discover.py: 3-상태 기록 + 에이전트 작업 목록 배출" || no "discover.py 3-상태/작업목록 누락"
