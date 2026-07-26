@@ -195,6 +195,18 @@ t.push(['원장 자체 부재도 경고', run([]).includes('커버리지 원장 
 const bad=t.filter(x=>!x[1]).map(x=>x[0]);
 if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
 " 2>/dev/null; then ok "jd-discovery: 커버리지 원장이 미실행 축을 노출(조용한 누락 방지)"; else no "커버리지 원장이 미실행을 숨김"; fi
+# (h5) 헤더 조작 금지선 — SPA 데이터경로 조항이 우회의 빌미가 되지 않는가 (안전 회귀)
+if grep -qiE '헤더 조작 금지선' reference/jd-browsing.md \
+   && grep -qiE '차단당하면 (그것으로 )?종료' reference/jd-browsing.md \
+   && grep -qiE 'X-Requested-With' reference/jd-browsing.md \
+   && grep -qiE '위조방지 토큰|antiforgery|CSRF' reference/jd-browsing.md \
+   && grep -qiE '레이트리밋을 (피하지|회피)' reference/jd-browsing.md \
+   && grep -qiE '헤더 조작 금지선' SKILL.md; then
+  ok "안전: 헤더 조작 금지선(차단 후 재시도 금지) — 문서·SKILL 양쪽 명시"
+else no "SPA 데이터경로 조항에 우회 금지선이 없음(헤더 위조로 미끄러질 수 있음)"; fi
+# 금지선이 §0 원칙에도 있어야 한다(문서 앞부분만 읽어도 새지 않게)
+awk '/^## 0\. 원칙/,/^## 1\./' reference/jd-browsing.md | grep -qiE '차단당하면 종료' \
+  && ok "안전: §0 원칙에도 차단-종료 규칙 존재" || no "§0 원칙에 차단-종료 규칙 없음"
 # (h3) SPA 데이터 경로 폴백 + 첨부·분리된 직무목록 회수 + 직무명 사전
 grep -qiE '데이터 경로 직접 조회' reference/jd-browsing.md \
   && grep -qiE 'POST form-urlencoded|form-urlencoded' reference/jd-browsing.md \

@@ -83,6 +83,7 @@ description: Personalized job-search and career-change manager. In one conversat
 - **Durable 방법론은 내장** — [`reference/methodology.md`](reference/methodology.md)(자소서·이력서·면접·로드맵·매칭·연봉), [`reference/evaluation.md`](reference/evaluation.md)(채점), [`reference/gems/techniques.md`](reference/gems/techniques.md). 먼저 이걸 근거로 삼는다.
 - **시의성 데이터는 런타임 JD Browsing으로 수집**(프리즈 금지) — 스킬 **내장·자체완결** 웹 리서치 모듈 [`reference/jd-browsing.md`](reference/jd-browsing.md)(외부 스킬 의존 없음). 대상: 공고 발굴·채용시장·기업 최신정보·직무 트렌드·평판·JD 원문·연봉 밴드·인재상 문구 등. 방법론 문서의 `§런타임 재수집 목록`도 참조.
   - **공개 콘텐츠 Phase 0→3**로 수집. **로그인/페이월 도달 시 즉시 정지 → "인증 필요" 보고**(우회·자격증명 저장/전송 금지).
+  - **차단당하면 종료 (헤더 조작 금지선).** 403·429·봇 차단 응답을 받은 순간 그 경로는 끝이다. **UA·Origin·Referer·X-Requested-With·쿠키를 차단 통과 목적으로 조작하지 않고**, 프록시·IP 변경·요청 간격 조절로 레이트리밋을 피하지 않으며, 위조방지 토큰을 역산하지 않는다. 다른 폴백 경로로 가거나 사용자에게 요청한다([`jd-browsing.md`](reference/jd-browsing.md) §0·§1-(2)). *(SPA 데이터 경로 조회는 **차단 없는 공개 경로**에 한해 허용되는 것이지, 차단을 뚫으라는 뜻이 아니다.)*
   - 못 찾으면 지어내지 말고 **'데이터 확보 실패' 명시** + 사용자에게 요청.
   - 인용은 **Truth Tier**(S 공식/원천·A 정부·메이저·B 커뮤니티 주의) 라벨 + **조회일** 부착. 리포트 하단 '참조 출처'에 평문으로.
 - **내장 정적정보엔 최신성 주석** — 방법론 문서 상단에 추출 시점 명시(예시·수치는 예시로만, 근거 고정 금지).
