@@ -65,10 +65,17 @@
 
   /* 인쇄/PDF = 제출 경로. 작업용 요소(문항 의도 메모·편집 UI)는 항상 숨긴다(제출 안전). */
   @page{ size:A4; margin:18mm; }
+  /* 인쇄 미러 — textarea는 인쇄 시 보이는 영역만 찍히고 나머지가 잘린다(실측: 답변이 통째로 누락).
+     그래서 beforeprint에 값을 이 div로 옮겨 찍고, 화면에서는 숨긴다. */
+  .print-copy{ display:none; white-space:pre-wrap; font-size:12.5px; line-height:1.75; color:#1b1a17; margin-top:6px; }
   @media print{
     html,body{ background:#fff; }
+    /* 작업용 메모는 제출본에 절대 나가지 않는다 */
     .q-intent{ display:none !important; }
     .actionbar, .add, .q-del, #out, .lead, .counter{ display:none !important; }
+    textarea{ display:none !important; }          /* 원본 대신 미러를 찍는다 */
+    .print-copy{ display:block !important; }
+    .q-title{ border:none !important; background:transparent !important; font-weight:700; }
     .q{ break-inside:avoid; }
   }</style>
 </head>
@@ -112,6 +119,7 @@
         </div>
         <input class="q-intent" placeholder="문항 의도(역산) — 무엇을 보려는 문항인가 · 배치할 필살기(스킬이 채움)" value="${(data.intent||'').replace(/"/g,'&quot;')}">
         <textarea placeholder="답변 (두괄식: 주장 → 근거 → 맺음말)">${data.a||''}</textarea>
+        <div class="print-copy"></div>
         <div class="counter">
           <span>공백 포함 <b class="n cw">0</b>자</span>
           <span>공백 제외 <b class="cn">0</b>자</span>
@@ -126,6 +134,31 @@
     ta.addEventListener('input', upd); limv.addEventListener('input', upd);
     document.getElementById('qs').appendChild(node); renumber(); upd();
   }
+  // 제출본에서 작업용 마커를 제거한다 (SKILL §6.0 #7 Truth Tier 제출 게이트).
+  // ★ 게이트가 .work-only 블록만 보면, 답변 '본문 안에' 써넣은 [T2 …]·[확인 필요]는 그대로 새어나간다
+  //   (실측 재현). 여기서 줄 단위로 걷어낸다 — 마커만 있는 줄은 줄째 삭제, 문장 끝의 마커는 잘라낸다.
+  const WORK_MARK = /\[(?:T1|T2|T3|확인 필요|경계|미확인|보강|TODO)[^\]]*\]/g;
+  function stripWorkMarks(text){
+    return String(text || '')
+      .split('\n')
+      .map(function(line){ return line.replace(WORK_MARK, '').replace(/[ \t]+$/, ''); })
+      .filter(function(line, i, arr){
+        if (line.trim()) return true;
+        return i > 0 && i < arr.length - 1 && arr[i-1].trim() && arr[i+1].trim();  // 문단 사이 빈 줄만 유지
+      })
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  // 인쇄 직전 textarea 값을 미러로 복사한다(작업 마커 제거 후). 값이 비면 미러도 비운다.
+  window.addEventListener('beforeprint', function(){
+    document.querySelectorAll('#qs .q').forEach(function(q){
+      const ta=q.querySelector('textarea'), pc=q.querySelector('.print-copy');
+      if(ta && pc) pc.textContent = stripWorkMarks(ta.value);
+    });
+  });
+
   function renumber(){ document.querySelectorAll('#qs .q .q-no').forEach((e,i)=> e.textContent=String(i+1).padStart(2,'0')); }
 
   SAMPLES.forEach(addQ);

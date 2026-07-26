@@ -160,6 +160,24 @@ const m=s.match(/function delta\(j\)\{[\s\S]*?\n  \}/); if(!m) process.exit(2);
 const f=new Function('BASELINE','j','\"use strict\";'+m[0]+'return delta(j);');
 process.exit((f(null,{quality:50})===null && f({quality:70},{quality:50})===-20 && f({quality:70},{})===null) ? 0 : 1);
 " 2>/dev/null; then ok "jd-discovery: Δ는 기준선 있을 때만(무직 0-가정 금지)"; else no "delta() 기준선 처리 오류"; fi
+# (h9) 자소서 제출본: 답변이 실제로 인쇄되는가 + 본문 속 작업 마커가 제거되는가
+# ★ 실측 2건: (i) textarea는 인쇄 시 잘려 답변이 통째로 누락됐다(PDF 25자)
+#   (ii) 제출 게이트가 .work-only 블록만 봐서 답변 '본문 안에' 쓴 [T2 …]가 그대로 새어나갔다
+if node -e "
+const fs=require('fs');const s=fs.readFileSync('templates/cover-letter.html','utf8');
+const g=(re)=>{const m=s.match(re); if(!m) throw new Error('miss'); return m[0];};
+const f=new Function(g(/const WORK_MARK = [^;]+;/)+'\n'+g(/function stripWorkMarks\(text\)\{[\s\S]*?\n  \}/)+'return stripWorkMarks;')();
+const t=[];
+t.push(['마커 전용 줄 삭제', !/T2/.test(f('본문\n\n[T2 — 메모]\n\n계속'))]);
+t.push(['문미 마커 제거',   f('문장입니다. [확인 필요]')==='문장입니다.']);
+t.push(['T3도 제거',       !/T3/.test(f('a\n[T3 미검증]\nb'))]);
+t.push(['본문 보존',       f('정상 문단\n\n둘째 문단')==='정상 문단\n\n둘째 문단']);
+const bad=t.filter(x=>!x[1]).map(x=>x[0]);
+if(bad.length){ console.error('FAILED: '+bad.join(', ')); process.exit(1); }
+" 2>/dev/null; then ok "cover-letter: 제출 마커 스트리퍼 동작([T1-3]·확인 필요 제거)"; else no "제출본에 작업 마커가 남는다"; fi
+grep -qE 'print-copy' templates/cover-letter.html && grep -qE 'textarea\{ display:none !important' templates/cover-letter.html \
+  && grep -qF 'beforeprint' templates/cover-letter.html \
+  && ok "cover-letter: 인쇄 미러(textarea 잘림 방지)" || no "cover-letter 인쇄 시 답변 누락"
 # (h8) 난이도 밴드(쉬움/적정/도전)가 실제로 판정되는가 — 사용자가 "어디에 몇 개 넣을지"를 정하는 축
 if node -e "
 const fs=require('fs');const s=fs.readFileSync('templates/jd-discovery.html','utf8');
