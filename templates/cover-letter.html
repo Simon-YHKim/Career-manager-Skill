@@ -67,11 +67,15 @@
   @page{ size:A4; margin:18mm; }
   /* 인쇄 미러 — textarea는 인쇄 시 보이는 영역만 찍히고 나머지가 잘린다(실측: 답변이 통째로 누락).
      그래서 beforeprint에 값을 이 div로 옮겨 찍고, 화면에서는 숨긴다. */
+  /* 예상 꼬리질문 — 자소서는 면접 대본이므로 본문과 함께 만든다(§2-5.5). 작업용이라 인쇄 제외. */
+  .q-drill{ width:100%; margin-top:7px; border:1px dashed var(--line-2); border-radius:7px; padding:8px 10px;
+    font-family:var(--sans); font-size:11.5px; line-height:1.6; color:var(--mid); background:#fdfbf7; resize:vertical; }
+  .q-drill::placeholder{ color:var(--faint); }
   .print-copy{ display:none; white-space:pre-wrap; font-size:12.5px; line-height:1.75; color:#1b1a17; margin-top:6px; }
   @media print{
     html,body{ background:#fff; }
     /* 작업용 메모는 제출본에 절대 나가지 않는다 */
-    .q-intent{ display:none !important; }
+    .q-intent, .q-drill{ display:none !important; }   /* 작업용 — 제출본에 절대 미노출 */
     .actionbar, .add, .q-del, #out, .lead, .counter{ display:none !important; }
     textarea{ display:none !important; }          /* 원본 대신 미러를 찍는다 */
     .print-copy{ display:block !important; }
@@ -95,7 +99,8 @@
 </div>
 
 <div class="actionbar">
-  <button onclick="copyAll()">📋 전체 복사</button>
+  <button onclick="copyAll()">📋 제출용 복사</button>
+  <button onclick="copyDrill()">🎤 면접 문제은행 복사</button>
   <span class="status" id="status">문항+답변을 복사 → 제출 폼에 붙여넣기</span>
 </div>
 
@@ -120,6 +125,7 @@
         <input class="q-intent" placeholder="문항 의도(역산) — 무엇을 보려는 문항인가 · 배치할 필살기(스킬이 채움)" value="${(data.intent||'').replace(/"/g,'&quot;')}">
         <textarea placeholder="답변 (두괄식: 주장 → 근거 → 맺음말)">${data.a||''}</textarea>
         <div class="print-copy"></div>
+        <textarea class="q-drill" rows="4" placeholder="예상 꼬리질문 3개 + 답변 골자 (methodology §2-5.5 면접 역산) — 작업용, 제출본 미인쇄">${data.drill||''}</textarea>
         <div class="counter">
           <span>공백 포함 <b class="n cw">0</b>자</span>
           <span>공백 제외 <b class="cn">0</b>자</span>
@@ -162,6 +168,33 @@
   function renumber(){ document.querySelectorAll('#qs .q .q-no').forEach((e,i)=> e.textContent=String(i+1).padStart(2,'0')); }
 
   SAMPLES.forEach(addQ);
+
+  // 자소서에서 만든 꼬리질문을 그대로 ③ 면접 준비로 넘긴다 — 두 번 일하지 않는다(§6.0 #6).
+  function copyDrill(){
+    const co=(document.getElementById('co').value||'').trim(), role=(document.getElementById('role').value||'').trim();
+    let L=[`=== 면접 문제은행 · ${co||'(회사)'} / ${role||'(직무)'} ===`,
+           '(자소서 문항에서 역산한 예상 꼬리질문 — interview-prep.html로 이어붙이세요)'];
+    let n=0;
+    document.querySelectorAll('#qs .q').forEach((q,i)=>{
+      const title=q.querySelector('.q-title').value.trim();
+      const d=(q.querySelector('.q-drill')||{}).value||'';
+      if(!d.trim()) return;
+      n++; L.push(`\n[문항 ${i+1}] ${title}`); L.push(d.trim());
+    });
+    if(!n){ setStatus('꼬리질문이 비어 있습니다 — 문항마다 3개씩 채우세요(§2-5.5)'); return; }
+    L.push('\n=== END ===');
+    const txt=L.join('\n');
+    const showOut=(m)=>{ const o=document.getElementById('out'); o.textContent=txt; o.style.display='block'; setStatus(m); };
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(
+          ()=>setStatus(`${n}개 문항의 꼬리질문 복사됨 — ③ 면접 준비로 붙여넣기`),
+          ()=>showOut('클립보드 차단 — 아래 직접 복사'));
+        return;
+      }
+    }catch(e){}
+    showOut('아래 내용을 직접 복사하세요');
+  }
 
   function copyAll(){
     const co=(document.getElementById('co').value||'').trim(), role=(document.getElementById('role').value||'').trim();

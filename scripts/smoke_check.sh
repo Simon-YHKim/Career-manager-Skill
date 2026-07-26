@@ -160,6 +160,20 @@ const m=s.match(/function delta\(j\)\{[\s\S]*?\n  \}/); if(!m) process.exit(2);
 const f=new Function('BASELINE','j','\"use strict\";'+m[0]+'return delta(j);');
 process.exit((f(null,{quality:50})===null && f({quality:70},{quality:50})===-20 && f({quality:70},{})===null) ? 0 : 1);
 " 2>/dev/null; then ok "jd-discovery: Δ는 기준선 있을 때만(무직 0-가정 금지)"; else no "delta() 기준선 처리 오류"; fi
+# (h10) 자소서 = 면접 대본 (methodology §2-5.5) — 원칙이 아니라 산출물로 강제되는가
+grep -qiE '면접 역산 설계' reference/methodology.md \
+  && grep -qiE '내가 쓴 모든 문장이 곧 내가 받을 질문' reference/methodology.md \
+  && grep -qiE '훅\(Hook\)|훅 유형' reference/methodology.md \
+  && grep -qiE '지뢰 제거' reference/methodology.md \
+  && grep -qiE '예상 꼬리질문 3개' reference/methodology.md \
+  && ok "methodology §2-5.5: 면접 역산 설계(훅·지뢰제거·꼬리질문 산출)" || no "자소서 면접역산 절차 누락"
+grep -qF 'q-drill' templates/cover-letter.html && grep -qF 'copyDrill' templates/cover-letter.html \
+  && grep -qE '\.q-intent, \.q-drill\{ display:none !important' templates/cover-letter.html \
+  && ok "cover-letter: 문항별 꼬리질문 필드 + 면접 문제은행 추출(제출본 미노출)" || no "꼬리질문 필드/추출 미구현"
+# 통과 판정 기준에도 반영됐는가(체크리스트가 실행을 강제한다)
+grep -qiE '훅이 1–2개 심겨' reference/methodology.md \
+  && grep -qiE '답을 준비 못 한 문장이 남아' reference/methodology.md \
+  && ok "methodology §2-6: 통과 판정에 면접역산 4항 반영" || no "통과 판정 미반영"
 # (h9) 자소서 제출본: 답변이 실제로 인쇄되는가 + 본문 속 작업 마커가 제거되는가
 # ★ 실측 2건: (i) textarea는 인쇄 시 잘려 답변이 통째로 누락됐다(PDF 25자)
 #   (ii) 제출 게이트가 .work-only 블록만 봐서 답변 '본문 안에' 쓴 [T2 …]가 그대로 새어나갔다
