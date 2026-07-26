@@ -21,7 +21,7 @@ fi
 echo "== files =="
 for f in SKILL.md BUILD_SPEC.md GOAL_CONDITION.txt README.md .gitignore \
          reference/methodology.md reference/evaluation.md reference/gems/techniques.md \
-         reference/portfolio-builder.md reference/writing-voice.md reference/jd-browsing.md \
+         reference/portfolio-builder.md reference/writing-voice.md reference/polish-rulebook.md reference/jd-browsing.md \
          reference/handoff.md reference/linkedin.md reference/glossary.md reference/hub-backend.md reference/job-search-ops.md \
          worker/src/index.js worker/wrangler.toml worker/README.md \
          templates/report.html templates/a4-doc.html \
@@ -155,6 +155,35 @@ grep -qF "portfolio-builder.md" SKILL.md && grep -qF "experience-bank" SKILL.md 
   && ok "SKILL ② wired to portfolio builder + bank" || no "SKILL not wired to portfolio builder"
 grep -qiE 'AI-tell|AI 티' reference/writing-voice.md && grep -qiE '이모지' reference/writing-voice.md \
   && ok "writing-voice: AI-tell blacklist + 진지문서 규칙" || no "writing-voice content"
+
+# ── 윤문 룰북 (취업 특화 AI-tell 제거) ───────────────────────────────────────
+# ★ 범용 윤문 지식은 모델 안에 이미 있어서, 지시하지 않으면 두괄식 해체·불릿 산문화가
+#   되살아난다. 반전 목록이 문서에 실재하는지를 게이트로 고정한다.
+grep -qF '문서유형' reference/polish-rulebook.md && grep -qE '판정을 보류|묻는다' reference/polish-rulebook.md \
+  && ok "룰북: 축 판정이 템플릿이 아니라 문서유형 입력(모르면 보류)" || no "룰북 축 판정"
+grep -qE '두괄식' reference/polish-rulebook.md && grep -qE '불릿 → 산문|불릿 산문' reference/polish-rulebook.md \
+  && grep -qE '헤딩 제거' reference/polish-rulebook.md && grep -qE '조사 복원' reference/polish-rulebook.md \
+  && ok "룰북 §3: 반전·비활성 목록 실재(두괄식·불릿·헤딩·조사)" || no "룰북 반전 목록"
+grep -qE 'hedge' reference/polish-rulebook.md && grep -qE '역할 경계' reference/polish-rulebook.md \
+  && grep -qE '수치 원자' reference/polish-rulebook.md \
+  && ok "룰북 §2: 트림 불가침 명문화(수치·역할경계·hedge)" || no "룰북 불가침"
+# 비중복 — 같은 토큰 목록이 두 파일에 있으면 세션마다 갈라진다
+if grep -qF '~에 있어' reference/polish-rulebook.md && ! grep -qF '~에 있어' reference/writing-voice.md; then
+  ok "티 토큰 비중복: 룰북에만 존재(writing-voice는 계약)"; else no "티 토큰이 두 파일에 중복"; fi
+# 임계 SSOT 일치 — 문서와 코드가 각자 숫자를 적으면 어긋난다
+if python3 - <<'PYEOF' 2>/dev/null
+import re,sys
+c=open('scripts/check_polish.py',encoding='utf-8').read()
+d=open('reference/polish-rulebook.md',encoding='utf-8').read()
+floor=re.search(r'LEN_FLOOR_RATIO\s*=\s*([\d.]+)',c).group(1)
+warn=re.search(r'CHANGE_WARN\s*=\s*([\d.]+)',c).group(1)
+end=re.search(r'ENDING_FLOOR\s*=\s*([\d.]+)',c).group(1)
+sys.exit(0 if (floor in d and warn in d and end in d) else 1)
+PYEOF
+then ok "임계 SSOT 일치(룰북 §7 표 ↔ check_polish.py 상수)"; else no "임계값이 문서와 코드에서 어긋남"; fi
+# 실행 검사 — 문자열이 아니라 동작
+if [ "$(python3 scripts/check_polish.py --after /dev/null 2>/dev/null; echo $?)" = "3" ]; then
+  ok "check_polish: 축 미지정 시 판정 보류(추정 금지)"; else no "check_polish 축 미지정 처리"; fi
 # intake form + tracker have the required affordances
 grep -qF "데이터 복사" templates/intake-form.html && ok "intake-form: 데이터 복사 button" || no "intake-form copy button"
 grep -qiE '전형|D-day|dday' templates/application-tracker.html && ok "application-tracker: 전형/D-day" || no "application-tracker content"
