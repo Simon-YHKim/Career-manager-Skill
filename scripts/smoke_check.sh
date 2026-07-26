@@ -107,6 +107,30 @@ sys.exit(1 if bad else 0)
 PY
 then ok "hub: 외부 데이터가 normalize() 한 곳으로만 진입(대입문 전체 검사)"; else no "hub: normalize()를 우회하는 DATA 대입 존재"; fi
 
+# ── 교차 저장소 경계 게이트 ──────────────────────────────────────────────────
+# ★ 승격 세션에서 개인 워크스페이스의 사본을 회수하지 않아 로직이 두 벌이 됐다(실측).
+#   문서·배너는 강제력이 없다 — 이 저장소는 강제력 없는 문서로 이미 한 번 실패했다.
+#   그래서 워크스페이스를 자동 탐색해 검사하고 **그 결과를 이 집계에 편입**한다.
+#   검사 못 한 경우를 '초록'과 구별한다 — 조용히 넘어가면 안 검사한 게 통과로 보인다.
+WS="${CAREER_WORKSPACE:-}"
+if [ -z "$WS" ]; then
+  for c in ../Career ../career "$HOME/Career"; do
+    [ -d "$c/.private" ] && { WS="$c"; break; }
+  done
+fi
+if [ -n "$WS" ] && [ -d "$WS/.private" ]; then
+  echo "== cross-repo workspace boundary =="
+  if bash scripts/check_workspace.sh "$WS"; then
+    ok "워크스페이스 경계 준수 ($WS)"
+  else
+    no "워크스페이스 경계 위반 ($WS) — 위 [FAIL] 참조"
+  fi
+else
+  echo "== cross-repo workspace boundary =="
+  echo "  !! cross-repo: NOT RUN — 개인 워크스페이스를 찾지 못했습니다(CAREER_WORKSPACE 로 지정 가능)."
+  echo "     초록이지만 **교차 검사는 안 된 상태**입니다."
+fi
+
 echo "== no persona/router in SKILL.md (D-4) =="
 # Must DECLARE absence (§5) and must NOT implement active menu/engine/command-center signatures.
 # (Mentions inside the "금지/do-not-port" list are expected and OK.)

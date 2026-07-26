@@ -2,3 +2,7 @@
 # PyMuPDF — A4 인쇄 충실도 게이트(check_a4.py)와 제출 안전 회귀에서 PDF를 열어 검사한다.
 # 없으면 A4 게이트 6건이 실패한다(코드 회귀가 아니라 의존성 누락 — 새 컨테이너에서 실측).
 PyMuPDF>=1.24
+
+# fontTools — 포트폴리오 웹폰트 서브셋 내장(embed_fonts.py). 없으면 폰트 내장이 불가하다.
+fonttools>=4.50
+brotli>=1.1
