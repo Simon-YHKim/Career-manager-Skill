@@ -48,6 +48,7 @@
   .tier.T3{ color:var(--lo); background:var(--wash); }
   .sum{ font-size:12.5px; color:var(--muted); margin:6px 0 0; }
   .sum b{ color:var(--ink); }
+  .sum .flagnote{ color:var(--mid); }
 
   .qs{ margin-top:12px; display:grid; gap:9px; }
   .qa{ border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:9px;
@@ -104,7 +105,7 @@
   // 스킬이 뱅크(+JD Browsing 기업 특화)로 치환. 각 항목 = 예상질문 3개(검증/진위/심화).
   const ITEMS = [
     { title:'결제 게이트웨이 재설계', meta:'핀테크 A · 2023', tier:'T1',
-      summary:'처리량 <b>10×</b> · p99 <b>−38%</b> · 신규 PG 연동 <b>2주→2일</b>',
+      metrics:[{k:'처리량', v:'10×'}, {k:'p99', v:'−38%'}, {k:'신규 PG 연동', v:'2주→2일'}],
       questions:[
         { q:'처리량 10×를 어떤 조건에서 어떻게 측정·검증했나요?', intent:'수치 진위 + 기술 깊이',
           defense:'부하테스트 조건(동시성·기간)·before/after 지표·병목 원인을 구체적으로. 필살기: 유사(대규모)·정량(10×)·인사이트(관측성이 무중단 확장의 전제).',
@@ -117,7 +118,7 @@
           probes:['그 한계가 지금도 남아있나?'] },
       ]},
     { title:'주문 처리 파이프라인 개편', meta:'커머스 B · 2019–2022', tier:'T1',
-      summary:'정산 지연 <b>일→분</b> · 데이터 불일치 <b>−92%</b>',
+      metrics:[{k:'정산 지연', v:'일→분'}, {k:'데이터 불일치', v:'−92%'}],
       questions:[
         { q:'데이터 불일치 −92%는 어떻게 정의하고 측정했나요?', intent:'지표 정의·측정 신뢰성',
           defense:'불일치의 조작적 정의(무슨 데이터·기준)·측정 기간·집계 방법. 멱등/DLQ 설계와 연결.',
@@ -130,7 +131,8 @@
           probes:['그 원칙이 안 통한 경우는?'] },
       ]},
     { title:'관측성 · 모니터링 플랫폼 구축', meta:'스타트업 D · 2016–2019', tier:'T2',
-      summary:'MTTR <b>−65%</b> · 온콜 알림 노이즈 <b>−70%</b> <span style="color:var(--mid)">(⚑ 팀 성과 — 내 기여 프레이밍 필요)</span>',
+      metrics:[{k:'MTTR', v:'−65%'}, {k:'온콜 알림 노이즈', v:'−70%'}],
+      flag:'(⚑ 팀 성과 — 내 기여 프레이밍 필요)',
       questions:[
         { q:'MTTR −65% 개선에서 본인의 구체적 기여는?', intent:'팀 성과의 개인 지분(공격면)',
           defense:'⚑ [T2] 공격 예상 — 내가 주도한 부분(표준 수립·SLO 정의)과 팀 기여를 정직히 분리. 기여도% 준비.',
@@ -145,7 +147,21 @@
   ];
 
   let filter='all';
-  function tierBadge(t){ return t?`<span class="tier ${t}">${t}</span>`:''; }
+  function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
+  function tierBadge(t){ return t?`<span class="tier ${escAttr(t)}">${escHtml(t)}</span>`:''; }
+  // ★ 성과 요약은 **구조화 데이터**로 받는다. 예전에는 `<b>10×</b>`가 박힌 HTML 문자열이라
+  //   이 필드만 이스케이프할 수 없었고, "스킬이 만든 값이니 믿는다"는 가정이 남았다.
+  //   강조는 데이터가 아니라 **렌더러가** 넣는다 → 전 필드 이스케이프가 가능해진다.
+  //   metrics:[{k:'처리량', v:'10×'}] · flag:'(⚑ 팀 성과 — 내 기여 프레이밍 필요)'
+  function sumHTML(it){
+    var parts = (it.metrics||[]).map(function(m){
+      return escHtml(m.k) + ' <b>' + escHtml(m.v) + '</b>';
+    }).join(' · ');
+    // 구버전 데이터(summary 문자열)는 **평문으로** 취급한다 — 마크업으로 되살리지 않는다.
+    if (!parts && it.summary) parts = escHtml(it.summary);
+    if (it.flag) parts += (parts ? ' ' : '') + '<span class="flagnote">' + escHtml(it.flag) + '</span>';
+    return parts;
+  }
   function qaHTML(qa,i){
     const probes = (qa.probes&&qa.probes.length)
       ? `<details><summary>꼬리질문 ${qa.probes.length}개 펼치기</summary><ul>${qa.probes.map(p=>`<li>${escHtml(p)}</li>`).join('')}</ul></details>` : '';
@@ -159,7 +175,7 @@
   function itemHTML(it){
     return `<div class="item">
       <div class="item-top"><span class="t">${escHtml(it.title)}</span><span class="m">${escHtml(it.meta)}</span>${tierBadge(it.tier)}</div>
-      <div class="sum">${it.summary||''}</div>
+      <div class="sum">${sumHTML(it)}</div>
       <div class="qs">${it.questions.slice(0,3).map(qaHTML).join('')}</div>
     </div>`;
   }

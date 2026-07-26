@@ -217,18 +217,21 @@
   const vals = {};                         // id -> 사용자 입력값(토글 재렌더에도 보존)
   SECTIONS.forEach(s=> active[s.key] = !!s.core);
   function chars(s){ return [...s].length; }
-  function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function escHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function escAttr(s){ return escHtml(s).replace(/"/g,'&quot;'); }
+  // ★ 인라인 onclick의 JS 문자열 인자용. 속성 이스케이프만으로는 부족하다 —
+  //   HTML 엔티티는 JS 파싱 **전에** 디코드되므로 따옴표를 엔티티로 바꾸면 문법만 깨진다.
+  function escJsAttr(s){ return escAttr(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")); }
 
   function renderPicker(){
     const groups={};
     SECTIONS.forEach(s=>{ (groups[s.group]=groups[s.group]||[]).push(s); });
     const order=['핵심','Intro 카드','추천','부가','타인 작성'];
     document.getElementById('picker').innerHTML = order.filter(g=>groups[g]).map(g=>
-      `<div class="grp"><div class="gl">${g}</div><div class="chips">`+
+      `<div class="grp"><div class="gl">${escHtml(g)}</div><div class="chips">`+
       groups[g].map(s=> s.core
-        ? `<span class="chip core">✓ ${s.name}</span>`
-        : `<span class="chip ${active[s.key]?'on':''}" onclick="toggle('${s.key}')">${active[s.key]?'✓ ':''}${s.name}</span>`
+        ? `<span class="chip core">✓ ${escHtml(s.name)}</span>`
+        : `<span class="chip ${active[s.key]?'on':''}" onclick="toggle('${escJsAttr(s.key)}')">${active[s.key]?'✓ ':''}${escHtml(s.name)}</span>`
       ).join('')+`</div></div>`
     ).join('');
   }
@@ -236,25 +239,25 @@
 
   function fieldHTML(sk, f){
     const id = sk+'__'+f.k;
-    const limAttr = f.limit>0 ? ` data-limit="${f.limit}"` : '';
+    const limAttr = f.limit>0 ? ` data-limit="${escAttr(f.limit)}"` : '';
     // 편집 유실 방지: 이미 입력한 값(vals[id])이 있으면 그것을, 없으면 샘플을 초기값으로.
     const cur = (vals[id] !== undefined) ? vals[id] : (f.sample||'');
     const input = f.type==='area'
-      ? `<textarea id="${id}" rows="${f.rows||3}"${limAttr} oninput="upd('${id}')">${escHtml(cur)}</textarea>`
-      : `<input type="text" id="${id}"${limAttr} oninput="upd('${id}')" value="${escAttr(cur)}">`;
+      ? `<textarea id="${escAttr(id)}" rows="${escAttr(f.rows||3)}"${limAttr} oninput="upd('${escJsAttr(id)}')">${escHtml(cur)}</textarea>`
+      : `<input type="text" id="${escAttr(id)}"${limAttr} oninput="upd('${escJsAttr(id)}')" value="${escAttr(cur)}">`;
     return `<div class="fld">
-      <div class="fl"><label>${f.label}</label><span class="cnt" id="${id}__c"></span></div>
+      <div class="fl"><label>${escHtml(f.label)}</label><span class="cnt" id="${escAttr(id)}__c"></span></div>
       ${input}
-      ${f.hint?`<div class="hint">${f.hint}</div>`:''}
-      <button class="copy" onclick="copyField('${id}',this)">복사</button>
+      ${f.hint?`<div class="hint">${escHtml(f.hint)}</div>`:''}
+      <button class="copy" onclick="copyField('${escJsAttr(id)}',this)">복사</button>
     </div>`;
   }
   function secHTML(s){
-    return `<section class="sec" data-sec="${s.key}">
-      <div class="sec-top"><span class="n">${s.core?'★':'+'}</span><h3>${s.name}</h3><span class="grpb">${s.group}</span></div>
+    return `<section class="sec" data-sec="${escAttr(s.key)}">
+      <div class="sec-top"><span class="n">${s.core?'★':'+'}</span><h3>${escHtml(s.name)}</h3><span class="grpb">${escHtml(s.group)}</span></div>
       ${s.repeat?`<div class="repeat">↻ 반복 섹션 — LinkedIn에서 항목마다 새로 추가하세요. 아래는 한 항목 예시.</div>`:''}
       ${s.fields.map(f=>fieldHTML(s.key,f)).join('')}
-      <button class="copy sec-copy" onclick="copySection('${s.key}',this)">이 섹션 전체 복사</button>
+      <button class="copy sec-copy" onclick="copySection('${escJsAttr(s.key)}',this)">이 섹션 전체 복사</button>
     </section>`;
   }
   function renderSections(){

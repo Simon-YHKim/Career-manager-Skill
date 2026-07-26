@@ -8,10 +8,20 @@ pass=0; fail=0
 ok(){ echo "  [PASS] $1"; pass=$((pass+1)); }
 no(){ echo "  [FAIL] $1"; fail=$((fail+1)); }
 
+# ── 사전 점검(비-집계) ─────────────────────────────────────────────────────────
+# ★ 새로 클론한 컨테이너에서 A4 게이트 6건이 실패했는데 원인은 PyMuPDF 미설치였다(실측).
+#   빨간 줄만 보면 코드 회귀로 오독된다 → 게이트를 돌리기 **전에** 원인을 먼저 알린다.
+#   경고일 뿐 집계에 넣지 않는다. 게이트 자체는 그대로 실패시킨다(조용한 스킵 금지).
+if ! python3 -c 'import fitz' 2>/dev/null; then
+  echo "!! 의존성 없음: PyMuPDF — A4 인쇄 게이트가 실패합니다(코드 회귀 아님)."
+  echo "   설치: pip install -r scripts/requirements.txt"
+  echo
+fi
+
 echo "== files =="
 for f in SKILL.md BUILD_SPEC.md GOAL_CONDITION.txt README.md .gitignore \
          reference/methodology.md reference/evaluation.md reference/gems/techniques.md \
-         reference/portfolio-builder.md reference/writing-voice.md reference/jd-browsing.md \
+         reference/portfolio-builder.md reference/writing-voice.md reference/polish-rulebook.md reference/jd-browsing.md \
          reference/handoff.md reference/linkedin.md reference/glossary.md reference/hub-backend.md reference/job-search-ops.md \
          worker/src/index.js worker/wrangler.toml worker/README.md \
          templates/report.html templates/a4-doc.html \
@@ -47,6 +57,80 @@ grep -qE '^\.private/' .gitignore && grep -qE '^reference/private/' .gitignore &
 # 실측(2026-07): 이 버그로 .private/experience-bank.md를 스테이징한 상태에서도 [PASS]가 찍혔다.
 if git ls-files 2>/dev/null | grep -qiE '(^|/)\.?private/|profile\.md|\.pdf$'; then no "private file is git-tracked"; else ok "no private files tracked"; fi
 
+# ── discover.py 승격 가드 (개인 저장소 → 스킬) ──────────────────────────────
+# ★ 이 스크립트는 원래 개인 저장소에 있었고 현직·타깃 기업·직무명이 **기본값으로 박혀** 있었다.
+#   승격의 전제가 "개인 값은 전부 필터 입력에서 온다"이므로, 그 전제를 선언이 아니라 **검사**한다.
+#   기본값이 하나라도 되살아나면 남의 조건으로 발굴하고도 그런 줄 모르게 된다.
+if [ -f scripts/discover.py ]; then
+  # (a) 개인 값 하드코딩 금지 — 필터 키를 읽는 코드가 아니라 '값'이 박혀 있는지를 본다
+  if python3 - <<'PY' 2>/dev/null
+import re, sys
+s = open('scripts/discover.py', encoding='utf-8').read()
+# 리스트 리터럴 안의 한글 회사명/직무명이 기본값으로 쓰이는 패턴
+bad = []
+for m in re.finditer(r'(?:currentEmployerNames|targetCompanies|EXCLUDE_EMPLOYERS|TARGET_COMPANIES|ROLES)\s*=\s*([^\n]*)', s):
+    line = m.group(1)
+    if re.search(r'\[[^\]]*["\'][가-힣A-Za-z]', line):   # 비어있지 않은 리터럴 기본값
+        bad.append(m.group(0)[:70])
+sys.exit(1 if bad else 0)
+PY
+  then ok "discover.py: 개인 값 기본값 없음(현직·타깃기업·직무명)"; else no "discover.py에 개인 값 기본값이 박혀 있음"; fi
+  # (b) 필터 없이 실행하면 **반드시 중단** — 기본값으로 조용히 도는 일이 없어야 한다
+  if ! python3 scripts/discover.py >/dev/null 2>&1; then
+    ok "discover.py: 필터 없이 실행 시 중단(무단 기본값 실행 차단)"; else no "discover.py가 필터 없이도 실행됨"; fi
+  # (c) 스키마 고정 — jd-filter.html 출력과 계약이 어긋나면 조용히 빈 매트릭스가 된다
+  grep -qF 'career/jd-filter@1' scripts/discover.py && grep -qF 'career/jd-filter@1' templates/jd-filter.html \
+    && ok "discover.py ↔ jd-filter.html 스키마 계약 일치(career/jd-filter@1)" || no "필터 스키마 계약 불일치"
+  # (d) 3-상태 기록 — '공고 0건'과 '취득 실패'를 뭉뚱그리면 다음 라운드에 같은 곳을 다시 판다
+  grep -qF '공고 0건(정상 응답)' scripts/discover.py && grep -qF '취득 실패' scripts/discover.py \
+    && grep -qF 'agent_todo' scripts/discover.py \
+    && ok "discover.py: 3-상태 기록 + 에이전트 작업 목록 배출" || no "discover.py 3-상태/작업목록 누락"
+else
+  no "scripts/discover.py 없음"
+fi
+
+# ── hub.html 신뢰 경계: 외부 데이터는 normalize() 한 곳만 통과한다 ──────────
+# ★ hub는 스킬에서 유일하게 **사용자가 파일로 가져오는** JSON을 받는다(붙여넣기·BYO 백엔드·localStorage).
+#   경계가 여러 곳이면 새 경로가 생길 때마다 조용히 샌다 → DATA 대입 형태를 강제한다.
+if python3 - <<'PY' 2>/dev/null
+import re, sys
+s = open('templates/hub.html', encoding='utf-8').read()
+bad = []
+# `DATA =`(속성 대입 DATA.x= 는 제외) 대입문마다 **문장 전체**를 보고 정규화 통과를 요구한다.
+# ★ 첫 토큰만 보면 삼항(`DATA = r ? normalize(r) : sampleData()`)을 거짓 검출한다(실측).
+for m in re.finditer(r'\bDATA\s*=(?!=)', s):
+    stmt = s[m.end(): s.find(';', m.end())]
+    if 'normalize(' in stmt or 'sampleData(' in stmt:
+        continue
+    bad.append(stmt.strip()[:60])
+sys.exit(1 if bad else 0)
+PY
+then ok "hub: 외부 데이터가 normalize() 한 곳으로만 진입(대입문 전체 검사)"; else no "hub: normalize()를 우회하는 DATA 대입 존재"; fi
+
+# ── 교차 저장소 경계 게이트 ──────────────────────────────────────────────────
+# ★ 승격 세션에서 개인 워크스페이스의 사본을 회수하지 않아 로직이 두 벌이 됐다(실측).
+#   문서·배너는 강제력이 없다 — 이 저장소는 강제력 없는 문서로 이미 한 번 실패했다.
+#   그래서 워크스페이스를 자동 탐색해 검사하고 **그 결과를 이 집계에 편입**한다.
+#   검사 못 한 경우를 '초록'과 구별한다 — 조용히 넘어가면 안 검사한 게 통과로 보인다.
+WS="${CAREER_WORKSPACE:-}"
+if [ -z "$WS" ]; then
+  for c in ../Career ../career "$HOME/Career"; do
+    [ -d "$c/.private" ] && { WS="$c"; break; }
+  done
+fi
+if [ -n "$WS" ] && [ -d "$WS/.private" ]; then
+  echo "== cross-repo workspace boundary =="
+  if bash scripts/check_workspace.sh "$WS"; then
+    ok "워크스페이스 경계 준수 ($WS)"
+  else
+    no "워크스페이스 경계 위반 ($WS) — 위 [FAIL] 참조"
+  fi
+else
+  echo "== cross-repo workspace boundary =="
+  echo "  !! cross-repo: NOT RUN — 개인 워크스페이스를 찾지 못했습니다(CAREER_WORKSPACE 로 지정 가능)."
+  echo "     초록이지만 **교차 검사는 안 된 상태**입니다."
+fi
+
 echo "== no persona/router in SKILL.md (D-4) =="
 # Must DECLARE absence (§5) and must NOT implement active menu/engine/command-center signatures.
 # (Mentions inside the "금지/do-not-port" list are expected and OK.)
@@ -71,6 +155,76 @@ grep -qF "portfolio-builder.md" SKILL.md && grep -qF "experience-bank" SKILL.md 
   && ok "SKILL ② wired to portfolio builder + bank" || no "SKILL not wired to portfolio builder"
 grep -qiE 'AI-tell|AI 티' reference/writing-voice.md && grep -qiE '이모지' reference/writing-voice.md \
   && ok "writing-voice: AI-tell blacklist + 진지문서 규칙" || no "writing-voice content"
+
+# ── 윤문 룰북 (취업 특화 AI-tell 제거) ───────────────────────────────────────
+# ★ 범용 윤문 지식은 모델 안에 이미 있어서, 지시하지 않으면 두괄식 해체·불릿 산문화가
+#   되살아난다. 반전 목록이 문서에 실재하는지를 게이트로 고정한다.
+grep -qF '문서유형' reference/polish-rulebook.md && grep -qE '판정을 보류|묻는다' reference/polish-rulebook.md \
+  && ok "룰북: 축 판정이 템플릿이 아니라 문서유형 입력(모르면 보류)" || no "룰북 축 판정"
+grep -qE '두괄식' reference/polish-rulebook.md && grep -qE '불릿 → 산문|불릿 산문' reference/polish-rulebook.md \
+  && grep -qE '헤딩 제거' reference/polish-rulebook.md && grep -qE '조사 복원' reference/polish-rulebook.md \
+  && ok "룰북 §3: 반전·비활성 목록 실재(두괄식·불릿·헤딩·조사)" || no "룰북 반전 목록"
+grep -qE 'hedge' reference/polish-rulebook.md && grep -qE '역할 경계' reference/polish-rulebook.md \
+  && grep -qE '수치 원자' reference/polish-rulebook.md \
+  && ok "룰북 §2: 트림 불가침 명문화(수치·역할경계·hedge)" || no "룰북 불가침"
+# 비중복 — 같은 토큰 목록이 두 파일에 있으면 세션마다 갈라진다
+if grep -qF '~에 있어' reference/polish-rulebook.md && ! grep -qF '~에 있어' reference/writing-voice.md; then
+  ok "티 토큰 비중복: 룰북에만 존재(writing-voice는 계약)"; else no "티 토큰이 두 파일에 중복"; fi
+# 임계 SSOT 일치 — 문서와 코드가 각자 숫자를 적으면 어긋난다
+if python3 - <<'PYEOF' 2>/dev/null
+import re,sys
+c=open('scripts/check_polish.py',encoding='utf-8').read()
+d=open('reference/polish-rulebook.md',encoding='utf-8').read()
+floor=re.search(r'LEN_FLOOR_RATIO\s*=\s*([\d.]+)',c).group(1)
+warn=re.search(r'CHANGE_WARN\s*=\s*([\d.]+)',c).group(1)
+end=re.search(r'ENDING_FLOOR\s*=\s*([\d.]+)',c).group(1)
+sys.exit(0 if (floor in d and warn in d and end in d) else 1)
+PYEOF
+then ok "임계 SSOT 일치(룰북 §7 표 ↔ check_polish.py 상수)"; else no "임계값이 문서와 코드에서 어긋남"; fi
+# 실행 검사 — 문자열이 아니라 동작
+if [ "$(python3 scripts/check_polish.py --after /dev/null 2>/dev/null; echo $?)" = "3" ]; then
+  ok "check_polish: 축 미지정 시 판정 보류(추정 금지)"; else no "check_polish 축 미지정 처리"; fi
+# 폴백 축은 [일] — 규칙 많은 쪽이 아니라 오탐 비용 낮은 쪽
+grep -qE '\[일\]' reference/polish-rulebook.md && grep -qF '"일반": "일"' scripts/check_polish.py \
+  && ok "룰북 §1: 일반 산출 축[일] 존재(폴백이 자소서 규칙을 안 씀)" || no "일반 산출 축 누락"
+# 하한 비율이 템플릿과 스크립트에서 같은 값인가
+if python3 - <<'PYEOF' 2>/dev/null
+import re,sys
+c=re.search(r'LEN_FLOOR_RATIO\s*=\s*([\d.]+)',open('scripts/check_polish.py',encoding='utf-8').read()).group(1)
+h=re.search(r'FLOOR_RATIO\s*=\s*([\d.]+)',open('templates/cover-letter.html',encoding='utf-8').read()).group(1)
+sys.exit(0 if float(c)==float(h) else 1)
+PYEOF
+then ok "하한 비율 일치(check_polish ↔ cover-letter)"; else no "하한 비율이 스크립트와 템플릿에서 다름"; fi
+# ATS 시트에 구분자 모호 문자가 없는가 — 기계가 읽는 제출본이다
+if python3 -c "
+import sys
+s=open('templates/resume-ats.html',encoding='utf-8').read()
+b=s[s.index('<div class=\"sheet\" id=\"sheet\">'):s.index('<script>')]
+sys.exit(0 if not any(c in b for c in '—–·') else 1)" 2>/dev/null
+then ok "resume-ats: 시트에 모호 구분자 0건(em/en dash·middot)"; else no "resume-ats 시트에 모호 구분자 잔존"; fi
+# 폰트 고지 — 서브셋 내장은 원본 파일을 지우므로 고지가 증발한다
+grep -qF 'SIL Open Font License' scripts/embed_fonts.py \
+  && ok "embed_fonts: 폰트 라이선스 고지를 산출물에 배출" || no "embed_fonts 고지 누락"
+
+# ── 배포 라이선스 ────────────────────────────────────────────────────────────
+# ★ 라이선스 없는 공개 저장소는 법적으로 '모든 권리 유보' — 아무도 쓸 수 없다.
+#   LICENSE·plugin.json·NOTICE 세 곳이 어긋나면 이용 조건이 모호해지므로 함께 검사한다.
+[ -f LICENSE ] && ok "exists: LICENSE" || no "LICENSE 없음 — 공개 배포 시 아무도 쓸 수 없다"
+if python3 - <<'PYEOF' 2>/dev/null
+import json, sys, re
+lic = open('LICENSE', encoding='utf-8').read()
+pj = json.load(open('.claude-plugin/plugin.json', encoding='utf-8'))
+notice = open('NOTICE', encoding='utf-8').read()
+ok = ('MIT License' in lic
+      and pj.get('license') == 'MIT'
+      and 'MIT License' in notice
+      and re.search(r'Copyright \(c\) \d{4}', lic))
+sys.exit(0 if ok else 1)
+PYEOF
+then ok "라이선스 일치(LICENSE ↔ plugin.json ↔ NOTICE) + 저작권 표기"; else no "라이선스 표기가 세 파일에서 어긋남"; fi
+# 제3자 고지가 살아 있는가 — 파생 사실을 지우면 원본 MIT 조건 위반
+grep -qF 'epoko77-ai' NOTICE && grep -qF 'MIT License' NOTICE \
+  && ok "NOTICE: 제3자 저작권 고지 유지" || no "제3자 고지 누락(원본 MIT 조건 위반)"
 # intake form + tracker have the required affordances
 grep -qF "데이터 복사" templates/intake-form.html && ok "intake-form: 데이터 복사 button" || no "intake-form copy button"
 grep -qiE '전형|D-day|dday' templates/application-tracker.html && ok "application-tracker: 전형/D-day" || no "application-tracker content"

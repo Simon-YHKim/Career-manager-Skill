@@ -1,0 +1,59 @@
+# 제3자 고지 (THIRD-PARTY NOTICES)
+
+이 저장소는 아래 외부 저작물에서 **아이디어·분류 체계를 참고**해 취업 도메인용으로
+새로 작성한 부분을 포함한다. 원문 표현을 그대로 옮기지 않았더라도, 참고 사실과
+원 저작권 고지를 남긴다.
+
+---
+
+## 한국어 AI 문체 탐지 분류 체계
+
+`reference/polish-rulebook.md` 의 AI 티 분류 축(번역투·영어 인용 과다·구조 패턴·
+관용구·리듬 균일성 등)과 심각도 3단계(S1 결정적 / S2 반복 시 / S3 중첩 시) 모델은
+아래 저작물의 분류 체계를 참고했다.
+
+    im-not-ai (humanize-korean)
+    https://github.com/epoko77-ai/im-not-ai
+    MIT License
+    Copyright (c) 2026 epoko77-ai
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+**무엇이 다른가:** 원본은 범용 한국어 윤문기다. 이 저장소의 룰북은 **취업 문서 전용**으로,
+자소서(문항·글자수 제한·격식체)와 이력서(불릿·액션동사·ATS)에 맞춰 규칙을 다시 썼다.
+특히 원본 처방 중 **국내 취업 문서 규범을 정면으로 깨는 15건**(두괄식 해체·불릿 산문화·
+헤딩 제거·조사 복원 등)은 비활성 또는 역방향으로 재정의했다. 처방·임계·예문은 이 도메인의
+실측을 근거로 새로 작성했다.
+
+---
+
+## 웹폰트
+
+`scripts/embed_fonts.py` 는 폰트를 **인자로 받는 로직**일 뿐, 이 저장소는 폰트 바이너리를
+포함하지 않는다. Pretendard 등 웹폰트를 사용하는 경우 해당 폰트의 라이선스
+(Pretendard: SIL Open Font License 1.1) 고지 의무는 **사용자에게** 있다.
+
+---
+
+> 이 저장소 자체는 **MIT License** 로 배포된다 → [`LICENSE`](LICENSE).
+> 참고한 원본도 MIT 이므로 라이선스 충돌은 없다. 이 NOTICE 는 제3자 저작물에 대한 고지이고,
+> 이 저장소의 이용 조건은 LICENSE 가 정한다.
+>
+> **폰트는 이 라이선스의 적용 대상이 아니다.** `scripts/embed_fonts.py` 는 폰트를 인자로 받는
+> 로직일 뿐이고, 저장소에 폰트 바이너리가 없다. 내장한 폰트의 라이선스는 각자 따른다.

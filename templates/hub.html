@@ -239,8 +239,12 @@
   function normalize(j){ const d=sampleData(); if(!j||typeof j!=='object') return d;
     return { meta:j.meta||{updated:''}, profile:j.profile||d.profile, bank:Array.isArray(j.bank)?j.bank:[], applications:Array.isArray(j.applications)?j.applications:[] }; }
 
-  let DATA; try{ DATA=JSON.parse(localStorage.getItem(KEY)); }catch(e){ DATA=null; }
-  DATA = DATA ? normalize(DATA) : sampleData();
+  // ★ 신뢰 경계는 **normalize() 한 곳**이다. 외부 데이터가 들어오는 경로는 셋 —
+  //   ① localStorage ② 붙여넣기 가져오기 ③ BYO 백엔드 원격 로드. 전부 여기를 통과해야 한다.
+  //   그래서 DATA에는 normalize()/sampleData() 결과만 대입한다(원시 파싱 결과를 잠깐이라도 담지 않는다).
+  //   경로가 늘어나도 이 규칙만 지키면 경계가 새지 않는다 — smoke_check가 대입 형태를 검사한다.
+  let _raw = null; try{ _raw = JSON.parse(localStorage.getItem(KEY)); }catch(e){ _raw = null; }
+  let DATA = _raw ? normalize(_raw) : sampleData();
 
   function persist(){ DATA.meta.updated=stamp();
     try{ localStorage.setItem(KEY, JSON.stringify(DATA)); document.getElementById('sv').textContent='저장됨 · '+DATA.meta.updated; }

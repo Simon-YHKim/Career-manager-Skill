@@ -31,7 +31,7 @@
   h2{ font-size:11pt; font-weight:700; text-transform:uppercase; letter-spacing:.5pt;
     border-bottom:1px solid #000; padding-bottom:2pt; margin:14pt 0 6pt; }
   .job{ margin:0 0 9pt; }
-  .job .line1{ font-weight:700; }                        /* Title — Company */
+  .job .line1{ font-weight:700; }                        /* Title | Company */
   .job .line2{ font-size:10pt; }                         /* Location · MM/YYYY – MM/YYYY */
   ul{ margin:3pt 0 0; padding-left:16pt; }
   li{ margin:2pt 0; }
@@ -56,28 +56,28 @@
 <div class="sheet" id="sheet">
 
   <p class="name">{{FULL NAME}}</p>
-  <p class="headline">{{Target Title — e.g., Manufacturing Operations Engineer}}</p>
+  <p class="headline">{{Target Title, e.g., Manufacturing Operations Engineer}}</p>
   <p class="contact">{{City, Country}} | {{+00 00-0000-0000}} | {{name@email.com}} | {{linkedin.com/in/username}}</p>
 
   <h2>Summary</h2>
-  <p>{{3–4 sentence value proposition. Lead with role identity + top quantified outcomes. Plain sentences, no graphics. e.g., Manufacturing engineer with 6+ years defending CapEx and driving operational excellence across automotive, mobile, and semiconductor.}}</p>
+  <p>{{3-4 sentence value proposition. Lead with role identity + top quantified outcomes. Plain sentences, no graphics. e.g., Manufacturing engineer with 6+ years defending CapEx and driving operational excellence across automotive, mobile, and semiconductor.}}</p>
 
   <h2>Skills</h2>
   <p>{{Comma-separated, ATS-keyword aligned to the JD: e.g., CapEx Defense, Cost Optimization, DOE, Industrial Engineering, MTBF/OEE, Python, CATIA, PLC}}</p>
 
   <h2>Professional Experience</h2>
   <div class="job">
-    <p class="line1">{{Title}} — {{Company}}</p>
-    <p class="line2">{{City, Country}} · {{MM/YYYY}} – {{MM/YYYY or Present}}</p>
+    <p class="line1">{{Title}} | {{Company}}</p>
+    <p class="line2">{{City, Country}} | {{MM/YYYY}} - {{MM/YYYY or Present}}</p>
     <ul>
       <li>{{Action verb + what + quantified result (X-Y-Z). e.g., Defended $8.8M in CapEx by uncovering hidden capacity via DOE, raising productivity 12.8%.}}</li>
-      <li>{{Bullet — end with a number (%/$/count).}}</li>
+      <li>{{Bullet: end with a number (%/$/count).}}</li>
       <li>{{Bullet.}}</li>
     </ul>
   </div>
   <div class="job">
-    <p class="line1">{{Title}} — {{Company}}</p>
-    <p class="line2">{{City, Country}} · {{MM/YYYY}} – {{MM/YYYY}}</p>
+    <p class="line1">{{Title}} | {{Company}}</p>
+    <p class="line2">{{City, Country}} | {{MM/YYYY}} - {{MM/YYYY}}</p>
     <ul>
       <li>{{Bullet.}}</li>
       <li>{{Bullet.}}</li>
@@ -85,20 +85,30 @@
   </div>
 
   <h2>Education</h2>
-  <p class="edu-line">{{Degree, Major}} — {{University}} · {{City, Country}} · {{MM/YYYY}} – {{MM/YYYY}}{{ · GPA x.x/4.5}}</p>
+  <p class="edu-line">{{Degree, Major}} | {{University}} | {{City, Country}} | {{MM/YYYY}} - {{MM/YYYY}}{{ | GPA x.x/4.5}}</p>
 
   <h2>Certifications</h2>
   <ul>
-    <li>{{Certification}} — {{Issuer}}, {{YYYY}}</li>
-    <li>{{Certification}} — {{Issuer}}, {{YYYY}}</li>
+    <li>{{Certification}} | {{Issuer}}, {{YYYY}}</li>
+    <li>{{Certification}} | {{Issuer}}, {{YYYY}}</li>
   </ul>
 
 </div>
 
 <script>
   // ATS 지원 폼 붙여넣기용 플레인 텍스트 추출(레이아웃 제거, 순수 텍스트만)
+  // ATS char policy: dashes and middots carry structure here, so a single meaning per glyph.
+  // Curly quotes and em/en dashes survive copy-paste into ATS forms but parse inconsistently;
+  // "-" is reserved for date ranges only, so company names keeping their own hyphen (Coca-Cola)
+  // never collide with a field separator. Field separator is always " | ".
+  function atsSafe(s){
+    return s.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"')
+            .replace(/\u2014/g, ' | ').replace(/\u00B7/g, ' | ')
+            .replace(/\u2013/g, '-').replace(/\u2026/g, '...')
+            .replace(/[ \t]{2,}/g, ' ').replace(/ \|( \|)+/g, ' |');
+  }
   function copyPlain(){
-    var t = document.getElementById('sheet').innerText.replace(/\n{3,}/g,'\n\n').trim();
+    var t = atsSafe(document.getElementById('sheet').innerText).replace(/\n{3,}/g,'\n\n').trim();
     // Existence guard: navigator.clipboard is undefined on insecure origins — avoid a hard throw.
     try{
       if(navigator.clipboard && navigator.clipboard.writeText){
