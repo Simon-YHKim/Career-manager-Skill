@@ -98,12 +98,12 @@ const CASES = [
   },
   {
     file: 'templates/interview-prep.html',
-    // ⚠️ `summary`는 **의도적 리치텍스트**다(스킬이 `<b>10×</b>` 같은 강조를 넣는다) → 오염 대상에서 뺀다.
-    //    나머지 필드는 전부 이스케이프 대상. summary의 신뢰는 "스킬 생성물"이라는 가정에 기대며,
-    //    이 가정이 깨지면(사용자 임포트 등) 구조화 데이터로 바꿔야 한다 — HANDOFF 미결 항목.
+    // 성과 요약을 구조화 데이터(metrics/flag)로 바꿔 **예외 없이 전 필드**를 오염시킨다.
+    // 예전에는 summary가 리치텍스트 HTML이라 이 필드만 검사에서 뺐다 — 그 가정이 사라졌다.
     inject: `
       ITEMS.length = 0;
-      ITEMS.push({ title:P, meta:P, tier:P, summary:'<b>고정</b>',
+      ITEMS.push({ title:P, meta:P, tier:P, flag:P,
+        metrics:[{ k:P, v:P }],
         questions:[{ q:P, intent:P, defense:P, probes:[P] }] });
       renderFilters(); render();
     `,

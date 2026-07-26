@@ -57,6 +57,56 @@ grep -qE '^\.private/' .gitignore && grep -qE '^reference/private/' .gitignore &
 # 실측(2026-07): 이 버그로 .private/experience-bank.md를 스테이징한 상태에서도 [PASS]가 찍혔다.
 if git ls-files 2>/dev/null | grep -qiE '(^|/)\.?private/|profile\.md|\.pdf$'; then no "private file is git-tracked"; else ok "no private files tracked"; fi
 
+# ── discover.py 승격 가드 (개인 저장소 → 스킬) ──────────────────────────────
+# ★ 이 스크립트는 원래 개인 저장소에 있었고 현직·타깃 기업·직무명이 **기본값으로 박혀** 있었다.
+#   승격의 전제가 "개인 값은 전부 필터 입력에서 온다"이므로, 그 전제를 선언이 아니라 **검사**한다.
+#   기본값이 하나라도 되살아나면 남의 조건으로 발굴하고도 그런 줄 모르게 된다.
+if [ -f scripts/discover.py ]; then
+  # (a) 개인 값 하드코딩 금지 — 필터 키를 읽는 코드가 아니라 '값'이 박혀 있는지를 본다
+  if python3 - <<'PY' 2>/dev/null
+import re, sys
+s = open('scripts/discover.py', encoding='utf-8').read()
+# 리스트 리터럴 안의 한글 회사명/직무명이 기본값으로 쓰이는 패턴
+bad = []
+for m in re.finditer(r'(?:currentEmployerNames|targetCompanies|EXCLUDE_EMPLOYERS|TARGET_COMPANIES|ROLES)\s*=\s*([^\n]*)', s):
+    line = m.group(1)
+    if re.search(r'\[[^\]]*["\'][가-힣A-Za-z]', line):   # 비어있지 않은 리터럴 기본값
+        bad.append(m.group(0)[:70])
+sys.exit(1 if bad else 0)
+PY
+  then ok "discover.py: 개인 값 기본값 없음(현직·타깃기업·직무명)"; else no "discover.py에 개인 값 기본값이 박혀 있음"; fi
+  # (b) 필터 없이 실행하면 **반드시 중단** — 기본값으로 조용히 도는 일이 없어야 한다
+  if ! python3 scripts/discover.py >/dev/null 2>&1; then
+    ok "discover.py: 필터 없이 실행 시 중단(무단 기본값 실행 차단)"; else no "discover.py가 필터 없이도 실행됨"; fi
+  # (c) 스키마 고정 — jd-filter.html 출력과 계약이 어긋나면 조용히 빈 매트릭스가 된다
+  grep -qF 'career/jd-filter@1' scripts/discover.py && grep -qF 'career/jd-filter@1' templates/jd-filter.html \
+    && ok "discover.py ↔ jd-filter.html 스키마 계약 일치(career/jd-filter@1)" || no "필터 스키마 계약 불일치"
+  # (d) 3-상태 기록 — '공고 0건'과 '취득 실패'를 뭉뚱그리면 다음 라운드에 같은 곳을 다시 판다
+  grep -qF '공고 0건(정상 응답)' scripts/discover.py && grep -qF '취득 실패' scripts/discover.py \
+    && grep -qF 'agent_todo' scripts/discover.py \
+    && ok "discover.py: 3-상태 기록 + 에이전트 작업 목록 배출" || no "discover.py 3-상태/작업목록 누락"
+else
+  no "scripts/discover.py 없음"
+fi
+
+# ── hub.html 신뢰 경계: 외부 데이터는 normalize() 한 곳만 통과한다 ──────────
+# ★ hub는 스킬에서 유일하게 **사용자가 파일로 가져오는** JSON을 받는다(붙여넣기·BYO 백엔드·localStorage).
+#   경계가 여러 곳이면 새 경로가 생길 때마다 조용히 샌다 → DATA 대입 형태를 강제한다.
+if python3 - <<'PY' 2>/dev/null
+import re, sys
+s = open('templates/hub.html', encoding='utf-8').read()
+bad = []
+# `DATA =`(속성 대입 DATA.x= 는 제외) 대입문마다 **문장 전체**를 보고 정규화 통과를 요구한다.
+# ★ 첫 토큰만 보면 삼항(`DATA = r ? normalize(r) : sampleData()`)을 거짓 검출한다(실측).
+for m in re.finditer(r'\bDATA\s*=(?!=)', s):
+    stmt = s[m.end(): s.find(';', m.end())]
+    if 'normalize(' in stmt or 'sampleData(' in stmt:
+        continue
+    bad.append(stmt.strip()[:60])
+sys.exit(1 if bad else 0)
+PY
+then ok "hub: 외부 데이터가 normalize() 한 곳으로만 진입(대입문 전체 검사)"; else no "hub: normalize()를 우회하는 DATA 대입 존재"; fi
+
 echo "== no persona/router in SKILL.md (D-4) =="
 # Must DECLARE absence (§5) and must NOT implement active menu/engine/command-center signatures.
 # (Mentions inside the "금지/do-not-port" list are expected and OK.)
